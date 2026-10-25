@@ -499,7 +499,7 @@ async function endDay(text,bonus){
 async function pickAff(c,opts){
   const C=CHARS[c];const i=await choose(opts.map(o=>({t:o.t,dis:o.dis,s:o.s})),false);const o=opts[i];
   if(o.d)addAff(c,o.d);if(o.fx)o.fx();showWho(C.look,o.face||(o.d>=6?'blush':o.d>0?'smile':'sad'));affPop(o.d||0);
-  for(const l of o.r)await say(l[0]==='-'?'':C.n,l.replace(/^-/,''));return i;
+  for(const raw of o.r){const l=Array.isArray(raw)?raw[0]:String(raw);await say(l[0]==='-'?'':C.n,l.replace(/^-/,''));}return i;
 }
 async function confession(c,lines,yes,no){
   const C=CHARS[c];for(const l of lines)await say(l[0]==='-'?'':C.n,l.replace(/^-/,''),C.look,l[0]==='-'?'blush':'blush');
