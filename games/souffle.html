@@ -835,6 +835,7 @@ showBest();
 function scoreColor(v){return v>=80?'var(--good)':v>=50?'var(--yolk)':'var(--bad)';}
 function showResult(){
   const qf=.4+.6*clamp(S.q||0,0,1);let total=0;ROWS.forEach(([k,,w])=>{total+=(S.scores[k]||0)*w*(k==='bake'||k==='serve'?qf:1);});total=Math.round(total);
+  try{window.GC&&GC.report('souffle',{score:total});}catch(e){}
   const g=GRADES.find(x=>total>=x[0]);
   $('#r-score').textContent=total;$('#r-grade').textContent=g[1];$('#r-desc').textContent=g[2];
   const cm=S.finalH*.14;$('#r-rise').textContent=cm<.4?'幾乎沒有膨起來':'高出杯緣 '+cm.toFixed(1)+' 公分';

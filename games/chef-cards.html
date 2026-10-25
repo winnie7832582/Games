@@ -458,6 +458,7 @@ function winRound(){
   const base=[3,4,6][run.stage],left=R.serves,interest=Math.min(5,Math.floor(run.money/5)),cat=has('cat')?3:0;
   const total=base+left+interest+cat;run.money+=total;
   const r=rec();const reached=roundIdx()+1;if(reached>r.best){r.best=reached;saveRec(r);}
+  try{window.GC&&GC.report('chef-cards',{round:reached,dish:R.best,judge:1});}catch(e){}
   const last=run.city===3&&run.stage===2;
   let h='<div class="intro"><p class="k">'+CITIES[run.city]+'・'+judgeName()+'</p><h2>評審滿意了！</h2><p class="tgt">'+fmt(R.score)+'</p><p class="k">目標 '+fmt(target())+'，單道最高 '+fmt(R.best)+'</p></div>';
   h+='<div class="intro rtable" style="text-align:left"><div class="kv"><span>過關獎勵</span><span>$'+base+'</span></div><div class="kv"><span>剩下 '+left+' 次上菜</span><span>$'+left+'</span></div><div class="kv"><span>利息（每 $5 給 $1，最多 $5）</span><span>$'+interest+'</span></div>'+(cat?'<div class="kv"><span>招財貓</span><span>$3</span></div>':'')+'<div class="kv"><b>合計</b><b>$'+total+'</b></div></div>';
@@ -472,6 +473,7 @@ function loseRun(){finishRun(false);}
 function finishRun(won){
   run.phase='over';
   const r=rec();if(won){r.wins=(r.wins||0)+1;r.best=12;}saveRec(r);
+  try{window.GC&&GC.max('chef-cards',{dish:run.bestDish||0,win:won?1:0});}catch(e){}
   try{GCStore.removeItem(KEY);}catch(e){}
   const reached=roundIdx()+(won?1:0);
   $('#over-body').innerHTML='<div class="intro"><p class="k">'+(won?'四座城市都征服了':'旅程結束')+'</p><h2>'+(won?'傳奇主廚':'評審不滿意')+'</h2><p class="tgt">'+(won?'12 / 12':reached+' / 12')+'</p><p class="k">'+(won?'十二位評審全部過關':'在'+CITIES[run.city]+'的'+judgeName()+'這關停下來了，得到 '+fmt(R.score)+' / '+fmt(target())+' 分')+'</p></div>'+

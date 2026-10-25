@@ -1054,6 +1054,7 @@ function showResult() {
   const d = G.dish, scores = d.steps.map(s => G.scores[s.key] || 0), total = Math.round(avg(scores));
   const stars = total >= 85 ? 3 : total >= 65 ? 2 : total >= 40 ? 1 : 0;
   const title = total >= 95 ? '神之料理' : ['黑暗料理', '勉強能吃', '家常好味道', '職人水準'][stars];
+  try{window.GC&&GC.report('sanwei-kitchen',(function(){var o={score:total,stars:stars};o['dish_'+G.id]=1;if(stars>=3)o.stars3=1;return o;})());}catch(e){}
   const best = loadBest(), prev = best[G.id], isNew = !prev || total > prev.score;
   if (isNew) { best[G.id] = { score: total, stars }; saveBest(best); }
   $('#rStars').innerHTML = starsHTML(stars); $('#rStars').setAttribute('aria-label', `${stars} 顆星`);

@@ -497,6 +497,7 @@ showBest();
 const TITLES=[[1000,'排隊名店','門口排到轉角，今天的手速是專業級。'],[700,'巷口人氣店','熟客越來越多，再快一點就要排隊了。'],[400,'穩定營業中','節奏抓到了，下次試著同時顧好珍珠鍋。'],[150,'新手老闆','慢慢來，先記熟每位客人的單再動手。'],[0,'今天先休息','每家名店都有手忙腳亂的第一天。']];
 function endGame(early){
   if(!G||G.over)return;G.over=true;G.pouring=null;
+  try{window.GC&&GC.report('bubble-tea',{money:G.money,served:G.served,perfect:G.perfect,angry:G.angry,lives:G.maxHearts,hardMoney:G.maxHearts<=1?G.money:0});}catch(e){}
   const t=TITLES.find(x=>G.money>=x[0]);
   $('#r-title').textContent=t[1];
   $('#r-sub').textContent=(early?'失誤次數用完，提早打烊了。':'兩分鐘營業結束。')+t[2];

@@ -806,6 +806,7 @@ function finishStage(){
 function showCup(){
   const latte=R.order.type==='latte';const res=latte?evaluateLatte():evaluate();
   RESULTS.push({name:latte?'拿鐵，'+R.order.artName+'拉花':R.bean.name,roast:latte?'拿鐵':R.bean.roast,...res});
+  try{window.GC&&GC.report('cafe',(function(){var o={cup:res.score};o[latte?'latte':'pour']=res.score;return o;})());}catch(e){}
   $('#c-k').textContent='第 '+(R.i+1)+' 杯，'+(latte?'拿鐵':R.bean.roast+'手沖');$('#c-name').textContent=latte?R.order.artName+'拉花拿鐵':R.bean.name;
   $('#c-score').textContent=res.score;$('#c-taste').textContent=res.taste;
   $('#c-quote').textContent=(R.order.who?R.order.who.n:'客人')+'說：「'+QUOTES.find(q=>res.score>=q[0])[1]+'」';
@@ -821,6 +822,7 @@ function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.score=
 showBest();
 function showFinal(){
   const avg=Math.round(RESULTS.reduce((a,r)=>a+r.score,0)/RESULTS.length);const t=TITLES.find(x=>avg>=x[0]);
+  try{window.GC&&GC.max('cafe',{avg:avg});}catch(e){}
   $('#f-score').textContent=avg;$('#f-title').textContent=t[1];$('#f-desc').textContent=t[2];
   $('#f-rows').innerHTML=RESULTS.map(r=>'<div class="row"><div>'+esc(r.name)+'<small>'+r.roast+'，'+esc(r.taste)+'</small></div><b>'+r.score+'</b></div>').join('');
   const best=loadBest();

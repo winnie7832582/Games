@@ -232,7 +232,8 @@ function newGame(name){
 function save(){try{GCStore.setItem(KEY,JSON.stringify(G));}catch(e){}}
 function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
 function gal(){try{return JSON.parse(GCStore.getItem(GAL)||'[]');}catch(e){return [];}}
-function addGal(id){const g=gal();if(!g.includes(id)){g.push(id);try{GCStore.setItem(GAL,JSON.stringify(g));}catch(e){}}}
+function addGal(id){const g=gal();if(!g.includes(id)){g.push(id);try{GCStore.setItem(GAL,JSON.stringify(g));}catch(e){}}
+  try{if(window.GC){var o={endings:gal().length};o['end_'+id]=1;if(id.indexOf('love-')===0)o.love=1;GC.report('corner-cafe',o);}}catch(e){}}
 const wd=()=>(G.day-1)%7;
 function addStat(fx){Object.keys(fx).forEach(k=>{G.stats[k]=clamp(G.stats[k]+fx[k],0,100);});}
 function addAff(c,v){G.aff[c]=clamp(G.aff[c]+v,0,100);return v;}
@@ -488,6 +489,7 @@ function giftShop(){
 }
 function goHubKeep(){$('#h-money').textContent=fmt(G.money);}
 async function endDay(text,bonus){
+  try{window.GC&&GC.add('corner-cafe','days',1);}catch(e){}
   show('scene');setScene(BG.street(''),'夜晚');showWho(null);
   for(const t of text.split('\n'))await say('',t);
   if(G.day>=DAYS){await finale();return;}

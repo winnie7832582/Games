@@ -211,7 +211,8 @@ const SPOTS={head:'頭',chin:'下巴',back:'背'};
 /* ---------- state ---------- */
 const KEY='pethouse-v1';
 let P=null;
-function save(){try{GCStore.setItem(KEY,JSON.stringify(P));}catch(e){}}
+function save(){try{GCStore.setItem(KEY,JSON.stringify(P));}catch(e){}
+  try{if(window.GC&&P){var tr=0;for(var k in P.tricks)if(P.tricks[k]>=5)tr++;var o={adopted:1,bond:bondLv(),tricks:tr,days:Math.floor(ageDays())+1,items:Object.keys(P.owned).length};o['sp_'+P.species]=1;GC.max('pet-house',o);}}catch(e){}}
 function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
 function bondLv(){let l=1;for(let i=0;i<BOND.length;i++)if(P.bond>=BOND[i])l=i+1;return l;}
 function ageDays(){return (Date.now()-P.born)/86400000;}
@@ -332,6 +333,7 @@ $('#a-feed').addEventListener('click',()=>{
 });
 function feed(k){
   const F=FOODS[k];if(!(P.inv[k]>0))return;P.inv[k]--;
+  try{window.GC&&GC.add('pet-house','fed',1);}catch(e){}
   const full=P.hunger>92;P.hunger=clamp(P.hunger+F.h,0,100);
   let m=F.m*(P.pers==='glutton'?1.5:1);if(full){m=-6;toast(P.name+'吃太撐了…');}else toast(P.name+'吃得好開心');
   P.mood=clamp(P.mood+m,0,100);if(F.fav&&!full)P.bond+=2;P.bond+=1;
@@ -686,6 +688,7 @@ function updateGameHud(){
 $('#g-end').addEventListener('click',()=>endGame());
 function endGame(){
   if(!game)return;const g=game;game=null;$('#ghud').hidden=true;
+  try{if(window.GC){var ok=g.type==='clean'?g.spots.some(function(s){return s.done;}):g.type==='toy'?g.hits>0:g.score>0;if(ok)GC.add('pet-house',g.type==='clean'?'cleaned':'played',1);}}catch(e){}
   const toyOwned=has(TOYOF[P.species]);
   if(g.type==='clean'){const frac=g.spots.filter(s=>s.done).length/g.spots.length;P.clean=clamp(Math.max(P.clean,P.clean+(100-P.clean)*frac),0,100);if(frac>=1)P.clean=100;
     let m=P.species==='dog'?3:P.species==='gecko'?4:5;if(P.pers==='neat')m+=6;P.mood=clamp(P.mood+m*frac,0,100);P.bond+=Math.round(3*frac);

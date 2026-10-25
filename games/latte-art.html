@@ -450,6 +450,7 @@ function showResult(){
   let nb='';
   if(level){const prev=D.best[level.id];if(prev==null||r.total>prev){D.best[level.id]=r.total;if(prev!=null)nb='新紀錄！';}
     const prevS=D.stars[level.id]||0;if(st>prevS){D.stars[level.id]=st;if(prevS===0&&levelIdx<LEVELS.length-1)nb=(nb?nb+'　':'')+'解鎖下一課：'+LEVELS[levelIdx+1].name;}save();}
+  try{if(window.GC){var o={score:r.total};if(level){o['s_'+level.id]=r.total;if(st>=3)o.stars3=1;}else o.free=1;GC.report('latte-art',o);var ts=0;for(var k in D.stars)ts+=D.stars[k]||0;GC.max('latte-art',{totalStars:ts});}}catch(e){}
   $('#r-new').textContent=nb;
   const rows=[];if(r.shape!=null)rows.push(['形狀',r.shape]);rows.push(['對稱',r.sym],['置中',r.center],['對比',r.contrast]);
   $('#r-bk').innerHTML=rows.map(([k,v])=>'<div><span>'+k+'</span><i><s style="width:'+v+'%;background:'+(v>=75?'var(--good)':v>=50?'var(--gold)':'var(--bad)')+'"></s></i><b>'+v+'</b></div>').join('');

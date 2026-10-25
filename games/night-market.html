@@ -473,6 +473,7 @@ function endNight(){
   S.cash+=N.revenue-N.extraCost;
   const profit=N.revenue-N.cost.total-N.extraCost;
   const rec={day:S.day,profit:Math.round(profit),served:N.served,weather:S.weather,revenue:N.revenue};
+  try{window.GC&&GC.report('night-market',{dayProfit:rec.profit,served:rec.served,day:rec.day});}catch(e){}
   S.history.push(rec);
   lastDay={rec,cost:N.cost,extra:N.extraCost,left,waste:Math.round(waste),sold:N.sold,start:N.start,lostSold:N.lostSold,lostWait:N.lostWait,lostFull:N.lostFull,repBefore,repAfter:S.rep,loc:S.plan.loc,weather:S.weather,menu:N.menu.slice(),reviews:makeReviews()};
   advanceDay();save();
@@ -651,6 +652,7 @@ const TITLES=[[100000,'夜市之王','觀光客專程來朝聖，你的攤位成
 function bankrupt(){S.ended=true;S.bankrupt=true;save();showEnd();}
 function showEnd(){
   const t=TITLES.find(x=>S.cash>=x[0]);
+  try{window.GC&&GC.max('night-market',{cash:Math.round(S.cash),finished:S.bankrupt?0:1});}catch(e){}
   const days=S.history.filter(r=>!r.rest);const best=days.reduce((m,r)=>r.profit>m.profit?r:m,{profit:-1e9,day:0});
   const served=days.reduce((a,r)=>a+r.served,0);
   let prev=null;try{prev=JSON.parse(GCStore.getItem(BEST)||'null');}catch(e){}
