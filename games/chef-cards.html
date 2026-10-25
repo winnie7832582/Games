@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>主廚牌局</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Noto+Serif+TC:wght@900&display=swap">
+<style>
+:root{
+  --bg:#E4ECE2; --check:#D6E2D3; --surface:#FFFFFF; --ink:#1F2A24; --soft:#5E6B63; --line:#CBD8C8; --panel:#F4F8F2;
+  --gold:#D9961E; --red:#C9443B; --green:#2E8B57; --chips:#2F74C0; --mult:#C9443B; --on-gold:#1F2A24;
+  color-scheme:light;box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#13241B; --check:#172B21; --surface:#203329; --ink:#EEF4EE; --soft:#A3B5A9; --line:#2D4537; --panel:#1A2D23;
+    --gold:#F0B54A; --red:#F07A6E; --green:#6CC793; --chips:#7DB3F0; --mult:#F07A6E; --on-gold:#13241B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13241B; --check:#172B21; --surface:#203329; --ink:#EEF4EE; --soft:#A3B5A9; --line:#2D4537; --panel:#1A2D23;
+  --gold:#F0B54A; --red:#F07A6E; --green:#6CC793; --chips:#7DB3F0; --mult:#F07A6E; --on-gold:#13241B;
+  color-scheme:dark;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;height:100%;overflow:hidden;color:var(--ink);background-color:var(--bg);
+  background-image:linear-gradient(90deg,var(--check) 50%,transparent 50%),linear-gradient(var(--check) 50%,transparent 50%);background-size:44px 44px;background-blend-mode:multiply;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;font-weight:500;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+.app{height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;position:relative}
+.screen{display:none;flex:1;min-height:0;flex-direction:column}
+.screen.on{display:flex}
+.scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 22px}
+.num{font-variant-numeric:tabular-nums}
+.btn{border:2px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .05s}
+.btn:active{transform:translateY(2px)}
+.btn.main{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:900}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn:focus-visible,.card:focus-visible,.tool:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* title */
+#title{align-items:center;justify-content:center;text-align:center;padding:22px}
+.fan{position:relative;width:220px;height:150px;margin:0 auto 10px}
+.fan .card{position:absolute;left:80px;top:10px;pointer-events:none}
+h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp(2.8rem,14vw,4rem);margin:4px 0 8px;letter-spacing:.08em}
+.lede{color:var(--soft);line-height:1.8;max-width:20em;margin:0 0 20px;text-wrap:balance}
+.tb{display:flex;flex-direction:column;gap:10px;width:min(280px,100%)}
+.rec{color:var(--soft);margin:14px 0 0;min-height:1.5em;line-height:1.6}
+
+/* card */
+.card{position:relative;width:100%;aspect-ratio:.72;border-radius:10px;border:2px solid var(--ink);background:#FFFDF8;color:#1F2A24;padding:0;cursor:pointer;
+  display:flex;flex-direction:column;overflow:hidden;text-align:left;touch-action:manipulation;transition:transform .12s;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.card .band{height:20%;display:flex;align-items:center;padding:0 6px;color:#FFFFFF;font-size:.68rem;font-weight:700;letter-spacing:.05em}
+.card .nm{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:1.02rem;line-height:1.15;padding:2px 4px}
+.card .ft{display:flex;align-items:flex-end;justify-content:space-between;padding:0 5px 4px;gap:2px}
+.card .fl{font-weight:900;color:var(--chips);font-size:.95rem;font-variant-numeric:tabular-nums}
+.card .ef{font-size:.6rem;font-weight:700;color:#C9443B;text-align:right;line-height:1.15}
+.card[aria-pressed="true"]{transform:translateY(-10px);box-shadow:0 6px 0 var(--gold),0 0 0 3px var(--gold)}
+.card.hl{transform:scale(1.08);box-shadow:0 0 0 3px var(--gold)}
+.card.dead{opacity:.45}
+.card.sm{width:62px;cursor:default}
+.card.sm .nm{font-size:.82rem}
+
+/* round */
+.hud{padding:8px 12px 0}
+.hud .r1{display:flex;align-items:baseline;gap:8px}
+.hud .judge{font-weight:900;font-size:1.05rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hud .money{font-weight:900;color:var(--gold);font-size:1.1rem}
+.prog{margin-top:6px;height:12px;border-radius:6px;background:var(--line);overflow:hidden;position:relative}
+.prog i{display:block;height:100%;background:var(--green);border-radius:6px;transition:width .3s}
+.hud .r2{display:flex;justify-content:space-between;font-size:.88rem;margin-top:4px;color:var(--soft)}
+.hud .r2 b{color:var(--ink)}
+.chips3{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.pill{font-size:.8rem;padding:3px 9px;border-radius:999px;background:var(--surface);border:1.5px solid var(--line)}
+.pill b{font-variant-numeric:tabular-nums}
+.pill.boss{border-color:var(--red);color:var(--red);font-weight:700}
+.tools{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 2px;scrollbar-width:none}
+.tools::-webkit-scrollbar{display:none}
+.tool{flex:none;border:2px solid var(--ink);background:var(--surface);border-radius:10px;padding:5px 9px;font-size:.82rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.tool.empty{border-style:dashed;border-color:var(--line);color:var(--soft);cursor:default;font-weight:500}
+.tool.hl{background:var(--gold);color:var(--on-gold);border-color:var(--gold)}
+.plate{flex:1;min-height:120px;margin:8px 12px 0;border-radius:16px;background:var(--panel);border:2px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;text-align:center;position:relative;overflow:hidden}
+.plate .rn{font-weight:900;font-size:1.25rem}
+.plate .rn small{font-weight:500;color:var(--soft);font-size:.8rem;margin-left:4px}
+.plate .cm{display:flex;align-items:center;gap:8px;margin-top:6px;font-weight:900;font-size:1.4rem;font-variant-numeric:tabular-nums}
+.plate .cm .c{background:var(--chips);color:#fff;border-radius:8px;padding:2px 10px;min-width:3.2em}
+.plate .cm .m{background:var(--mult);color:#fff;border-radius:8px;padding:2px 10px;min-width:2.6em}
+.plate .tot{margin-top:4px;font-weight:900;font-size:1.05rem;color:var(--soft);min-height:1.5em;font-variant-numeric:tabular-nums}
+.plate .tot.big{font-size:1.6rem;color:var(--ink)}
+.plate .row{display:flex;gap:6px;margin-top:8px;justify-content:center}
+.plate .hint{color:var(--soft);font-size:.92rem;line-height:1.6}
+.plate .warn{color:var(--red);font-size:.85rem;margin-top:4px;min-height:1.2em}
+.pop{position:absolute;font-weight:900;font-size:1.1rem;pointer-events:none;animation:pop .6s ease-out forwards}
+@keyframes pop{from{transform:translateY(0);opacity:1}to{transform:translateY(-26px);opacity:0}}
+.hand{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:16px 12px 4px}
+.acts{display:flex;gap:8px;padding:8px 12px 12px}
+.acts .btn{flex:1;padding:12px 6px}
+.acts .btn.sm{flex:.7;font-size:.9rem}
+
+/* sheet / modal */
+.modal{position:absolute;inset:0;z-index:5;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,20,14,.5)}
+.modal[hidden]{display:none}
+.modal .box{background:var(--surface);width:100%;max-height:86%;overflow-y:auto;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.modal h3{margin:0 0 6px;font-size:1.2rem}
+.modal p{line-height:1.7;margin:0 0 10px}
+.modal .soft{color:var(--soft);font-size:.92rem}
+.modal .btn{width:100%;margin-top:6px}
+.cgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:8px 0}
+.cgrid .card{cursor:pointer}
+.sect{font-weight:900;margin:14px 2px 8px}
+.item{display:flex;gap:12px;align-items:center;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:0 0 8px}
+.item .tx{flex:1;min-width:0}
+.item .tx b{display:block}
+.item .tx span{display:block;color:var(--soft);font-size:.86rem;line-height:1.5}
+.item .btn{flex:none;padding:8px 12px}
+.offers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.offer{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.offer .btn{padding:6px 4px;font-size:.88rem}
+.offer .card{cursor:default}
+.intro{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:18px;margin:0 0 12px;text-align:center}
+.intro .k{color:var(--soft);margin:0}
+.intro h2{margin:4px 0 2px;font-size:1.6rem;font-weight:900}
+.intro .tgt{font-size:2.6rem;font-weight:900;font-variant-numeric:tabular-nums;margin:6px 0 0;line-height:1.1}
+.intro .rule{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:var(--panel);color:var(--red);font-weight:700}
+.map{display:flex;gap:6px;justify-content:center;margin:12px 0 4px}
+.map span{width:28px;height:8px;border-radius:4px;background:var(--line)}
+.map span.done{background:var(--green)}
+.map span.now{background:var(--gold)}
+.kv{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}
+.dock{padding:10px 14px 12px;border-top:2px solid var(--line);background:var(--bg)}
+.dock .btn{width:100%}
+.topbar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:2px solid var(--line);background:var(--bg)}
+.topbar b{flex:1;font-size:1.1rem}
+.topbar .money{font-weight:900;color:var(--gold);font-size:1.15rem}
+.rtable .kv span:last-child{font-variant-numeric:tabular-nums}
+@media (max-height:680px){.card .nm{font-size:.9rem}.hand{padding-top:12px}}
+@media (prefers-reduced-motion:reduce){.card,.btn,.prog i{transition:none}.pop{animation-duration:.01s}}
+</style>
+<script src="../gc.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <section class="screen on" id="title" aria-labelledby="t-h">
+    <div class="fan" id="fan" aria-hidden="true"></div>
+    <h1 id="t-h">主廚牌局</h1>
+    <p class="lede">每張牌都是一種食材。湊出好組合、收集廚具、升級食譜，征服四座城市、十二位評審的味蕾。</p>
+    <div class="tb"><button class="btn main" id="b-cont" type="button" hidden>繼續旅程</button><button class="btn" id="b-new" type="button">開始新旅程</button><button class="btn" id="b-how" type="button">怎麼玩</button></div>
+    <p class="rec" id="rec"></p>
+  </section>
+
+  <section class="screen" id="intro" aria-label="評審登場">
+    <div class="scroll" id="intro-body"></div>
+    <div class="dock"><button class="btn main" id="b-start" type="button">開始做菜</button></div>
+  </section>
+
+  <section class="screen" id="round" aria-label="做菜">
+    <div class="hud">
+      <div class="r1"><span class="judge" id="h-judge"></span><span class="money num" id="h-money"></span></div>
+      <div class="prog" aria-hidden="true"><i id="h-bar"></i></div>
+      <div class="r2"><span>目前 <b class="num" id="h-score">0</b></span><span>目標 <b class="num" id="h-target">0</b></span></div>
+      <div class="chips3"><span class="pill">上菜 <b id="h-serve"></b></span><span class="pill">換牌 <b id="h-disc"></b></span><span class="pill boss" id="h-boss" hidden></span></div>
+    </div>
+    <div class="tools" id="tools"></div>
+    <div class="plate" id="plate" aria-live="polite"></div>
+    <div class="hand" id="hand"></div>
+    <div class="acts">
+      <button class="btn sm" id="b-deck" type="button">牌組</button>
+      <button class="btn sm" id="b-sort" type="button">排序</button>
+      <button class="btn" id="b-disc" type="button">換牌</button>
+      <button class="btn main" id="b-serve" type="button">上菜</button>
+    </div>
+  </section>
+
+  <section class="screen" id="win" aria-label="過關">
+    <div class="scroll" id="win-body"></div>
+    <div class="dock"><button class="btn main" id="b-tomarket" type="button">前往市場</button></div>
+  </section>
+
+  <section class="screen" id="market" aria-label="市場">
+    <div class="topbar"><b>市場</b><span class="money num" id="m-money"></span></div>
+    <div class="scroll" id="market-body"></div>
+    <div class="dock"><button class="btn main" id="b-next" type="button">迎接下一位評審</button></div>
+  </section>
+
+  <section class="screen" id="over" aria-label="結束">
+    <div class="scroll" id="over-body"></div>
+  </section>
+
+  <div class="modal" id="modal" hidden><div class="box" id="mbox" role="dialog" aria-modal="true"></div></div>
+</div>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- data ---------- */
+const CAT={meat:{n:'肉',c:'#C9443B'},sea:{n:'海鮮',c:'#2F74C0'},veg:{n:'蔬菜',c:'#2E8B57'},grain:{n:'主食',c:'#B7831F'},spice:{n:'調味',c:'#8250B0'}};
+const CATS=['meat','sea','veg','grain','spice'];
+const CARDS={
+  pork:{n:'豬肉',cat:'meat',f:5},chicken:{n:'雞肉',cat:'meat',f:4},beef:{n:'牛肉',cat:'meat',f:8,p:4},wagyu:{n:'和牛',cat:'meat',f:16,p:7},duck:{n:'烤鴨',cat:'meat',f:6,p:5,e:'duck',d:'每張主食 +2 倍率',t:'主食+2倍'},
+  shrimp:{n:'蝦仁',cat:'sea',f:5},fish:{n:'魚片',cat:'sea',f:4},squid:{n:'花枝',cat:'sea',f:7,p:4},lobster:{n:'龍蝦',cat:'sea',f:18,p:7},clam:{n:'蛤蜊',cat:'sea',f:3,p:4,e:'clam',d:'同道菜每多 1 張海鮮 +3 倍率',t:'海鮮+3倍'},
+  cabbage:{n:'高麗菜',cat:'veg',f:3},bokchoy:{n:'青江菜',cat:'veg',f:3},mushroom:{n:'香菇',cat:'veg',f:6,p:4},truffle:{n:'松露',cat:'veg',f:6,p:8,e:'truffle',d:'倍率 ×1.5',t:'×1.5'},basil:{n:'九層塔',cat:'veg',f:3,p:4,e:'basil',d:'同道菜有海鮮時 +5 倍率',t:'配海鮮+5倍'},
+  rice:{n:'白飯',cat:'grain',f:4},noodle:{n:'麵條',cat:'grain',f:4},bao:{n:'刈包',cat:'grain',f:7,p:4},ricecake:{n:'年糕',cat:'grain',f:3,p:5,e:'ricecake',d:'這道菜每張牌 +1 倍率',t:'每張+1倍'},
+  salt:{n:'鹽',cat:'spice',f:2,e:'salt',d:'+2 倍率',t:'+2倍'},soy:{n:'醬油',cat:'spice',f:2,e:'soy',d:'+3 倍率',t:'+3倍'},
+  chili:{n:'辣椒',cat:'spice',f:3,p:4,e:'chili',d:'每張肉 +3 倍率',t:'肉+3倍'},garlic:{n:'蒜頭',cat:'spice',f:2,p:4,e:'garlic',d:'其他每張牌 +5 美味',t:'其他+5味'},
+  sugar:{n:'冰糖',cat:'spice',f:2,p:5,e:'sugar',d:'倍率 ×1.3',t:'×1.3'},umami:{n:'鮮味粉',cat:'spice',f:1,p:7,e:'umami',d:'倍率 ×2',t:'×2'}
+};
+const START=['pork','pork','pork','chicken','chicken','chicken','shrimp','shrimp','shrimp','fish','fish','fish','cabbage','cabbage','cabbage','bokchoy','bokchoy','bokchoy','rice','rice','rice','noodle','noodle','noodle','salt','salt','soy','soy'];
+const RECIPES=[
+  {id:'single',n:'單點',base:5,mult:1,lb:10,lm:1,d:'沒有任何組合'},
+  {id:'pair',n:'雙拼',base:10,mult:2,lb:15,lm:1,d:'2 張同類'},
+  {id:'twopair',n:'雙拼套餐',base:20,mult:2,lb:20,lm:1,d:'兩組各 2 張同類'},
+  {id:'teishoku',n:'定食',base:25,mult:3,lb:20,lm:2,d:'肉或海鮮＋蔬菜＋主食'},
+  {id:'three',n:'三拼',base:30,mult:3,lb:20,lm:2,d:'3 張同類'},
+  {id:'rainbow',n:'百味拼盤',base:35,mult:4,lb:30,lm:3,d:'5 張各不同類'},
+  {id:'full',n:'豪華套餐',base:40,mult:4,lb:25,lm:2,d:'3 張同類＋2 張同類'},
+  {id:'four',n:'主廚特餐',base:60,mult:7,lb:30,lm:3,d:'4 張同類'},
+  {id:'five',n:'同味全席',base:80,mult:8,lb:35,lm:3,d:'5 張同類'}
+];
+const RMAP={};RECIPES.forEach(r=>RMAP[r.id]=r);
+const TOOLS={
+  wok:{n:'中華炒鍋',d:'雙拼、雙拼套餐 +5 倍率',p:5,k:'add'},
+  claypot:{n:'砂鍋',d:'豪華套餐 倍率 ×2',p:7,k:'x'},
+  steamer:{n:'竹蒸籠',d:'每張主食 +8 美味',p:5,k:'card'},
+  grill:{n:'炭烤架',d:'每張肉 +3 倍率',p:6,k:'card'},
+  knife:{n:'主廚刀',d:'每張蔬菜 +7 美味',p:5,k:'card'},
+  sashimi:{n:'生魚片刀',d:'每張海鮮 倍率 ×1.2',p:8,k:'card'},
+  spicebox:{n:'香料櫃',d:'每張調味 +3 倍率',p:6,k:'card'},
+  bento:{n:'便當盒',d:'定食 +40 美味、+5 倍率',p:6,k:'add'},
+  plating:{n:'擺盤夾',d:'用 5 張牌上菜 +8 倍率',p:6,k:'add'},
+  minimal:{n:'極簡主義',d:'只用 1–2 張牌上菜 倍率 ×3',p:7,k:'x'},
+  firstwok:{n:'快炒爐',d:'每關第一道菜 倍率 ×2',p:7,k:'x'},
+  secret:{n:'祖傳秘方',d:'倍率 ×1.5',p:8,k:'x'},
+  fridge:{n:'雙門冰箱',d:'每關多 1 次換牌',p:5,k:'pass'},
+  tray:{n:'多層托盤',d:'每關多 1 次上菜',p:9,k:'pass'},
+  cat:{n:'招財貓',d:'每次過關多拿 $3',p:5,k:'pass'},
+  apron:{n:'圍裙',d:'手牌上限 +1',p:7,k:'pass'}
+};
+const CITIES=['台北','台南','香港','東京'];
+const JUDGES=[['巷口阿伯','美食部落客'],['廟口老饕','美食作家'],['茶餐廳老闆','食評專欄家'],['築地職人','米其林密探']];
+const TARGETS=[[300,600,1000],[1500,2300,3400],[4500,6500,9500],[13000,19000,28000]];
+const BOSSES=[
+  {id:'veg',n:'素食評審',d:'肉和海鮮的美味變成 0'},
+  {id:'bland',n:'清淡派評審',d:'調味牌沒有任何效果'},
+  {id:'hurry',n:'急性子評審',d:'只能上菜 2 次'},
+  {id:'five',n:'挑嘴評審',d:'每道菜都要剛好 5 張牌'},
+  {id:'lowcarb',n:'減醣評審',d:'主食的美味變成 0'},
+  {id:'nodup',n:'老饕評審',d:'同一種料理只能出一次'}
+];
+const MAXTOOLS=5;
+
+/* ---------- state ---------- */
+const KEY='chefcards-v1',REC='chefcards-rec';
+let run=null,R=null;let uidN=1;
+function mkCard(id){return{id,u:uidN++};}
+function newRun(){
+  uidN=1;
+  run={v:1,city:0,stage:0,money:4,deck:START.map(mkCard),tools:[],levels:{},bosses:shuffle(BOSSES.map(b=>b.id)).slice(0,4),phase:'intro',offer:null,bestDish:0,uid:uidN};
+  save();
+}
+function save(){if(run){run.uid=uidN;try{GCStore.setItem(KEY,JSON.stringify(run));}catch(e){}}}
+function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');if(v&&v.v===1){uidN=v.uid||999;return v;}}catch(e){}return null;}
+function rec(){try{return JSON.parse(GCStore.getItem(REC)||'null')||{best:0,dish:0,wins:0};}catch(e){return{best:0,dish:0,wins:0};}}
+function saveRec(o){try{GCStore.setItem(REC,JSON.stringify(o));}catch(e){}}
+function roundIdx(){return run.city*3+run.stage;}
+function isBoss(){return run.stage===2;}
+function boss(){return isBoss()?BOSSES.find(b=>b.id===run.bosses[run.city]):null;}
+function judgeName(){return isBoss()?boss().n:JUDGES[run.city][run.stage];}
+function target(){return TARGETS[run.city][run.stage];}
+function has(t){return run.tools.includes(t);}
+function lvl(r){return run.levels[r]||0;}
+
+/* ---------- scoring ---------- */
+function detect(cards){
+  const cnt={};cards.forEach(c=>{const k=CARDS[c.id].cat;cnt[k]=(cnt[k]||0)+1;});
+  const v=Object.values(cnt).sort((a,b)=>b-a),c0=v[0]||0,c1=v[1]||0,distinct=v.length;
+  if(c0===5)return 'five';if(c0===4)return 'four';if(c0===3&&c1===2)return 'full';if(distinct===5)return 'rainbow';if(c0===3)return 'three';
+  if((cnt.meat||cnt.sea)&&cnt.veg&&cnt.grain)return 'teishoku';if(c0===2&&c1===2)return 'twopair';if(c0===2)return 'pair';return 'single';
+}
+function evalDish(cards,first){
+  const B=boss(),bid=B?B.id:'';const rid=detect(cards),RC=RMAP[rid];
+  let chips=RC.base+lvl(rid)*RC.lb,mult=RC.mult+lvl(rid)*RC.lm;const steps=[{k:'recipe',chips,mult}];
+  const cnt={};cards.forEach(c=>{const k=CARDS[c.id].cat;cnt[k]=(cnt[k]||0)+1;});
+  const garlic=bid==='bland'?0:cards.filter(c=>CARDS[c.id].e==='garlic').length;
+  cards.forEach((c,i)=>{
+    const D=CARDS[c.id];let f=D.f+(garlic-(D.e==='garlic'?1:0))*5;
+    if(bid==='veg'&&(D.cat==='meat'||D.cat==='sea'))f=0;
+    if(bid==='lowcarb'&&D.cat==='grain')f=0;
+    if(has('steamer')&&D.cat==='grain'&&f>0)f+=8;
+    if(has('knife')&&D.cat==='veg'&&f>0)f+=7;
+    chips+=f;let addM=0,xM=1;
+    const spiceOn=!(bid==='bland'&&D.cat==='spice');
+    if(spiceOn&&D.e){switch(D.e){
+      case'salt':addM+=2;break;case'soy':addM+=3;break;case'chili':addM+=3*(cnt.meat||0);break;case'sugar':xM*=1.3;break;case'umami':xM*=2;break;
+      case'truffle':xM*=1.5;break;case'basil':if(cnt.sea)addM+=5;break;case'clam':addM+=3*Math.max(0,(cnt.sea||0)-1);break;case'ricecake':addM+=cards.length;break;case'duck':addM+=2*(cnt.grain||0);break;}}
+    if(has('grill')&&D.cat==='meat')addM+=3;
+    if(has('spicebox')&&D.cat==='spice'&&bid!=='bland')addM+=3;
+    if(has('sashimi')&&D.cat==='sea')xM*=1.2;
+    mult+=addM;mult*=xM;
+    steps.push({k:'card',i,f,addM,xM,chips,mult});
+  });
+  const tl=run.tools.slice().sort((a,b)=>(TOOLS[a].k==='x')-(TOOLS[b].k==='x'));
+  tl.forEach(t=>{let ok=false;
+    if(t==='wok'&&(rid==='pair'||rid==='twopair')){mult+=5;ok=true;}
+    if(t==='bento'&&rid==='teishoku'){chips+=40;mult+=5;ok=true;}
+    if(t==='plating'&&cards.length===5){mult+=8;ok=true;}
+    if(t==='claypot'&&rid==='full'){mult*=2;ok=true;}
+    if(t==='minimal'&&cards.length<=2){mult*=3;ok=true;}
+    if(t==='firstwok'&&first){mult*=2;ok=true;}
+    if(t==='secret'){mult*=1.5;ok=true;}
+    if(ok)steps.push({k:'tool',t,chips,mult});});
+  let total=Math.floor(chips*mult);
+  let warn='';
+  if(bid==='nodup'&&R&&R.used.includes(rid)){total=0;warn='老饕評審說：這道已經吃過了，不計分。';}
+  return{rid,chips,mult,total,steps,warn};
+}
+
+/* ---------- card element ---------- */
+function cardEl(c,opts){
+  opts=opts||{};const D=CARDS[c.id],C=CAT[D.cat];const b=document.createElement(opts.div?'div':'button');
+  if(!opts.div)b.type='button';b.className='card'+(opts.sm?' sm':'');
+  b.innerHTML='<span class="band" style="background:'+C.c+'">'+C.n+'</span><span class="nm">'+D.n+'</span><span class="ft"><span class="fl">+'+D.f+'</span><span class="ef">'+(D.t||'')+'</span></span>';
+  b.setAttribute('aria-label',D.n+'，'+C.n+'，美味 '+D.f+(D.d?'，'+D.d:''));
+  return b;
+}
+
+/* ---------- screens ---------- */
+let screen='title';
+function show(n){screen=n;['title','intro','round','win','market','over'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;}
+function modal(html,onBind){$('#mbox').innerHTML=html;$('#modal').hidden=false;if(onBind)onBind($('#mbox'));const f=$('#mbox').querySelector('button');if(f)f.focus();}
+function closeModal(){$('#modal').hidden=true;}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+function titleInit(){
+  const fan=$('#fan');fan.innerHTML='';['wagyu','truffle','lobster','umami','bao'].forEach((id,i)=>{const el=cardEl({id},{div:true});el.style.width='64px';el.style.transform='rotate('+((i-2)*12)+'deg) translate('+((i-2)*26)+'px,'+(Math.abs(i-2)*6)+'px)';el.style.transformOrigin='50% 120%';fan.appendChild(el);});
+  const sv=load();$('#b-cont').hidden=!(sv&&sv.phase!=='over');
+  const r=rec();$('#rec').innerHTML=r.best?'最遠走到第 '+r.best+' 位評審'+(r.wins?'，通關 '+r.wins+' 次':'')+'<br>單道最高 '+fmt(r.dish)+' 分':'';
+}
+$('#b-new').addEventListener('click',()=>{newRun();goIntro();});
+$('#b-cont').addEventListener('click',()=>{run=load();if(!run){newRun();}if(run.phase==='market')goMarket();else goIntro();});
+$('#b-how').addEventListener('click',()=>showHow());
+function showHow(){
+  modal('<h3>怎麼玩</h3><p>每位評審都有目標分數。從手牌選 1 到 5 張食材上菜，分數是「美味 × 倍率」。</p><p>美味來自料理組合的基礎值加上每張食材的數字；倍率來自料理組合、調味和廚具。上菜次數用完前達到目標就過關。不喜歡手牌可以換牌，次數有限。</p>'+
+    '<p class="soft">料理組合（由高到低）</p>'+RECIPES.slice().reverse().map(r=>'<div class="kv"><span><b>'+r.n+'</b>　'+r.d+'</span><span class="num">'+r.base+' × '+r.mult+'</span></div>').join('')+
+    '<p class="soft" style="margin-top:12px">過關後可以在市場買食材、廚具、升級食譜，或丟掉不要的牌。每座城市的第三位是主廚評審，會有特殊規則。</p><button class="btn main" type="button" id="hw-ok">知道了</button>',b=>b.querySelector('#hw-ok').addEventListener('click',closeModal));
+}
+
+/* ---------- intro ---------- */
+function goIntro(){
+  run.phase='intro';save();
+  const B=boss(),t=target();
+  const map=Array.from({length:12},(_,i)=>'<span class="'+(i<roundIdx()?'done':i===roundIdx()?'now':'')+'"></span>').join('');
+  const reward=[3,4,6][run.stage];
+  $('#intro-body').innerHTML='<div class="intro"><p class="k">'+CITIES[run.city]+'，第 '+(run.stage+1)+' / 3 位評審</p><h2>'+judgeName()+'</h2><p class="tgt">'+fmt(t)+'</p><p class="k">目標分數</p>'+
+    (B?'<p class="rule">特殊規則：'+B.d+'</p>':'')+'<div class="map" aria-label="進度：第 '+(roundIdx()+1)+' / 12 位評審">'+map+'</div><p class="k">過關獎勵 $'+reward+'，每剩一次上菜再加 $1</p></div>'+
+    '<div class="intro" style="text-align:left"><p class="k" style="margin-bottom:6px">你的廚具</p><p>'+(run.tools.length?run.tools.map(t=>'<b>'+TOOLS[t].n+'</b>：'+TOOLS[t].d).join('<br>'):'還沒有廚具，過關後可以在市場買。')+'</p></div>';
+  show('intro');
+}
+$('#b-start').addEventListener('click',startRound);
+
+/* ---------- round ---------- */
+function handSize(){return 8+(has('apron')?1:0);}
+function startRound(){
+  const B=boss();
+  R={score:0,serves:(B&&B.id==='hurry'?2:4)+(has('tray')?1:0),discards:3+(has('fridge')?1:0),draw:shuffle(run.deck.slice()),hand:[],sel:[],used:[],first:true,busy:false,sortBy:'cat',best:0};
+  draw();renderRound();show('round');
+}
+function draw(){while(R.hand.length<handSize()&&R.draw.length)R.hand.push(R.draw.pop());sortHand();}
+function sortHand(){const o=CATS;R.hand.sort(R.sortBy==='cat'?(a,b)=>o.indexOf(CARDS[a.id].cat)-o.indexOf(CARDS[b.id].cat)||CARDS[b.id].f-CARDS[a.id].f:(a,b)=>CARDS[b.id].f-CARDS[a.id].f);}
+function renderHud(){
+  $('#h-judge').textContent=CITIES[run.city]+'・'+judgeName();$('#h-money').textContent='$'+run.money;
+  $('#h-score').textContent=fmt(R.score);$('#h-target').textContent=fmt(target());$('#h-bar').style.width=clamp(R.score/target()*100,0,100)+'%';
+  $('#h-serve').textContent=R.serves;$('#h-disc').textContent=R.discards;
+  const B=boss();$('#h-boss').hidden=!B;if(B)$('#h-boss').textContent=B.d;
+}
+function renderTools(hlT){
+  const box=$('#tools');box.innerHTML='';
+  for(let i=0;i<MAXTOOLS;i++){const t=run.tools[i];const b=document.createElement('button');b.type='button';
+    if(t){b.className='tool'+(hlT===t?' hl':'');b.textContent=TOOLS[t].n;b.addEventListener('click',()=>modal('<h3>'+TOOLS[t].n+'</h3><p>'+TOOLS[t].d+'</p><button class="btn" type="button" id="m-ok">關閉</button>',m=>m.querySelector('#m-ok').addEventListener('click',closeModal)));}
+    else{b.className='tool empty';b.textContent='空位';b.disabled=true;}
+    box.appendChild(b);}
+}
+function renderHand(){
+  const box=$('#hand');box.innerHTML='';
+  R.hand.forEach(c=>{const el=cardEl(c);const on=R.sel.includes(c.u);el.setAttribute('aria-pressed',String(on));
+    el.addEventListener('click',()=>{if(R.busy)return;const i=R.sel.indexOf(c.u);if(i>=0)R.sel.splice(i,1);else if(R.sel.length<5)R.sel.push(c.u);else{flashPlate('一道菜最多 5 張牌');return;}buzz(5);renderHand();renderPreview();});
+    box.appendChild(el);});
+}
+function selCards(){return R.sel.map(u=>R.hand.find(c=>c.u===u)).filter(Boolean);}
+function renderPreview(){
+  const p=$('#plate'),cs=selCards();const B=boss();
+  if(!cs.length){p.innerHTML='<p class="hint">選 1 到 5 張牌組成一道菜<br>手牌 '+R.hand.length+' 張，牌庫剩 '+R.draw.length+' 張</p>';}
+  else{const ev=evalDish(cs,R.first);const RC=RMAP[ev.rid];
+    p.innerHTML='<div class="rn">'+RC.n+'<small>Lv'+(lvl(ev.rid)+1)+'</small></div><div class="cm"><span class="c">'+fmt(ev.chips)+'</span>×<span class="m">'+fmtM(ev.mult)+'</span></div><div class="tot">預估 '+fmt(ev.total)+' 分</div><div class="warn">'+esc(ev.warn||(B&&B.id==='five'&&cs.length!==5?'挑嘴評審：要剛好 5 張牌才能上菜':''))+'</div>';}
+  const canServe=cs.length>0&&!(B&&B.id==='five'&&cs.length!==5)&&R.serves>0&&!R.busy;
+  $('#b-serve').disabled=!canServe;$('#b-disc').disabled=!(cs.length>0&&R.discards>0&&!R.busy);
+  $('#b-sort').disabled=R.busy;$('#b-deck').disabled=R.busy;
+}
+function fmtM(m){return m>=100?fmt(m):(Math.round(m*10)/10).toString();}
+function flashPlate(msg){const p=$('#plate');const w=p.querySelector('.warn');if(w){w.textContent=msg;}else{p.insertAdjacentHTML('beforeend','<div class="warn">'+esc(msg)+'</div>');}}
+function renderRound(){renderHud();renderTools();renderHand();renderPreview();}
+$('#b-sort').addEventListener('click',()=>{R.sortBy=R.sortBy==='cat'?'f':'cat';sortHand();renderHand();$('#b-sort').textContent=R.sortBy==='cat'?'排序':'依美味';});
+$('#b-disc').addEventListener('click',()=>{
+  if(R.busy||!R.sel.length||R.discards<=0)return;
+  R.hand=R.hand.filter(c=>!R.sel.includes(c.u));R.sel=[];R.discards--;draw();buzz(10);renderRound();
+});
+$('#b-deck').addEventListener('click',()=>showDeck(false));
+function showDeck(removeMode,onPick){
+  const all=run.deck.slice().sort((a,b)=>CATS.indexOf(CARDS[a.id].cat)-CATS.indexOf(CARDS[b.id].cat)||CARDS[b.id].f-CARDS[a.id].f);
+  const inDraw=R&&screen==='round'?new Set(R.draw.map(c=>c.u)):null;
+  modal('<h3>'+(removeMode?'選一張牌丟掉':'牌組（'+all.length+' 張）')+'</h3>'+(inDraw?'<p class="soft">顏色淡的是這一關已經用過或在手上的牌</p>':'')+'<div class="cgrid" id="dg"></div><button class="btn" type="button" id="m-ok">'+(removeMode?'取消':'關閉')+'</button>',m=>{
+    const g=m.querySelector('#dg');all.forEach(c=>{const el=cardEl(c,{div:!removeMode});if(inDraw&&!inDraw.has(c.u))el.classList.add('dead');if(removeMode)el.addEventListener('click',()=>{closeModal();onPick(c);});g.appendChild(el);});
+    m.querySelector('#m-ok').addEventListener('click',closeModal);});
+}
+$('#b-serve').addEventListener('click',serve);
+async function serve(){
+  if(R.busy)return;const cs=selCards();if(!cs.length||R.serves<=0)return;const B=boss();if(B&&B.id==='five'&&cs.length!==5)return;
+  R.busy=true;renderPreview();
+  const ev=evalDish(cs,R.first);R.first=false;R.serves--;R.used.push(ev.rid);
+  R.hand=R.hand.filter(c=>!R.sel.includes(c.u));R.sel=[];renderHand();renderHud();
+  const p=$('#plate');const RC=RMAP[ev.rid];
+  p.innerHTML='<div class="row" id="pl"></div><div class="rn" style="margin-top:8px">'+RC.n+'</div><div class="cm"><span class="c" id="pc">0</span>×<span class="m" id="pm">0</span></div><div class="tot" id="pt"></div>';
+  const row=$('#pl');const els=cs.map(c=>{const e=cardEl(c,{div:true,sm:true});row.appendChild(e);return e;});
+  const fast=reduceMotion?0:1;
+  for(const s of ev.steps){
+    $('#pc').textContent=fmt(s.chips);$('#pm').textContent=fmtM(s.mult);
+    if(s.k==='card'){const e=els[s.i];e.classList.add('hl');popAt(e,(s.f?'+'+s.f:'')+(s.addM?' +'+fmtM(s.addM)+'倍':'')+(s.xM!==1?' ×'+fmtM(s.xM):''),s.addM||s.xM!==1?'var(--mult)':'var(--chips)');buzz(4);await sleep(230*fast);e.classList.remove('hl');}
+    else if(s.k==='tool'){renderTools(s.t);await sleep(300*fast);renderTools();}
+    else await sleep(260*fast);
+  }
+  $('#pt').className='tot big';await countUp($('#pt'),ev.total,ev.warn);
+  const before=R.score;R.score+=ev.total;R.best=Math.max(R.best,ev.total);run.bestDish=Math.max(run.bestDish||0,ev.total);
+  const r=rec();if(ev.total>r.dish){r.dish=ev.total;saveRec(r);}
+  renderHud();await sleep(500*fast+150);
+  if(R.score>=target()){R.busy=false;winRound();return;}
+  if(R.serves<=0){R.busy=false;loseRun();return;}
+  draw();R.busy=false;renderRound();
+}
+function popAt(el,text,color){if(!text.trim())return;const p=$('#plate'),r=el.getBoundingClientRect(),pr=p.getBoundingClientRect();const s=document.createElement('span');s.className='pop';s.textContent=text;s.style.color=color;s.style.left=(r.left-pr.left)+'px';s.style.top=(r.top-pr.top-18)+'px';p.appendChild(s);setTimeout(()=>s.remove(),650);}
+async function countUp(el,to,warn){if(warn){el.textContent='0 分';flashPlate(warn);return;}if(reduceMotion){el.textContent=fmt(to)+' 分';return;}const n=18;for(let i=1;i<=n;i++){el.textContent=fmt(to*i/n)+' 分';await sleep(25);}}
+
+/* ---------- win / lose ---------- */
+function winRound(){
+  const base=[3,4,6][run.stage],left=R.serves,interest=Math.min(5,Math.floor(run.money/5)),cat=has('cat')?3:0;
+  const total=base+left+interest+cat;run.money+=total;
+  const r=rec();const reached=roundIdx()+1;if(reached>r.best){r.best=reached;saveRec(r);}
+  const last=run.city===3&&run.stage===2;
+  let h='<div class="intro"><p class="k">'+CITIES[run.city]+'・'+judgeName()+'</p><h2>評審滿意了！</h2><p class="tgt">'+fmt(R.score)+'</p><p class="k">目標 '+fmt(target())+'，單道最高 '+fmt(R.best)+'</p></div>';
+  h+='<div class="intro rtable" style="text-align:left"><div class="kv"><span>過關獎勵</span><span>$'+base+'</span></div><div class="kv"><span>剩下 '+left+' 次上菜</span><span>$'+left+'</span></div><div class="kv"><span>利息（每 $5 給 $1，最多 $5）</span><span>$'+interest+'</span></div>'+(cat?'<div class="kv"><span>招財貓</span><span>$3</span></div>':'')+'<div class="kv"><b>合計</b><b>$'+total+'</b></div></div>';
+  $('#win-body').innerHTML=h;
+  if(last){finishRun(true);return;}
+  run.stage++;if(run.stage>2){run.stage=0;run.city++;}
+  run.phase='market';run.offer=null;save();
+  $('#b-tomarket').textContent='前往市場';show('win');buzz([20,40,20]);
+}
+$('#b-tomarket').addEventListener('click',goMarket);
+function loseRun(){finishRun(false);}
+function finishRun(won){
+  run.phase='over';
+  const r=rec();if(won){r.wins=(r.wins||0)+1;r.best=12;}saveRec(r);
+  try{GCStore.removeItem(KEY);}catch(e){}
+  const reached=roundIdx()+(won?1:0);
+  $('#over-body').innerHTML='<div class="intro"><p class="k">'+(won?'四座城市都征服了':'旅程結束')+'</p><h2>'+(won?'傳奇主廚':'評審不滿意')+'</h2><p class="tgt">'+(won?'12 / 12':reached+' / 12')+'</p><p class="k">'+(won?'十二位評審全部過關':'在'+CITIES[run.city]+'的'+judgeName()+'這關停下來了，得到 '+fmt(R.score)+' / '+fmt(target())+' 分')+'</p></div>'+
+    '<div class="intro rtable" style="text-align:left"><div class="kv"><span>單道最高</span><span>'+fmt(run.bestDish||0)+' 分</span></div><div class="kv"><span>牌組</span><span>'+run.deck.length+' 張</span></div><div class="kv"><span>廚具</span><span>'+(run.tools.map(t=>TOOLS[t].n).join('、')||'無')+'</span></div><div class="kv"><span>最常升級</span><span>'+(Object.keys(run.levels).sort((a,b)=>run.levels[b]-run.levels[a]).slice(0,1).map(k=>RMAP[k].n+' Lv'+(run.levels[k]+1))[0]||'沒有升級')+'</span></div></div>'+
+    '<button class="btn main" id="b-again" type="button" style="width:100%">再來一局</button><button class="btn" id="b-home" type="button" style="width:100%;margin-top:8px">回到首頁</button>';
+  show('over');
+  $('#b-again').addEventListener('click',()=>{newRun();goIntro();});
+  $('#b-home').addEventListener('click',()=>{titleInit();show('title');});
+}
+
+/* ---------- market ---------- */
+const SHOPCARDS=Object.keys(CARDS).filter(k=>CARDS[k].p);
+function rollOffer(){
+  const cards=[];for(let i=0;i<4;i++){const id=Math.random()<.15?pick(['pork','shrimp','cabbage','rice','soy']):pick(SHOPCARDS);cards.push({id,price:CARDS[id].p||2,sold:false});}
+  const avail=Object.keys(TOOLS).filter(t=>!run.tools.includes(t));shuffle(avail);
+  const tools=avail.slice(0,2).map(t=>({t,sold:false}));
+  const recipe=pick(RECIPES).id;
+  return{cards,tools,recipe,recipeSold:false,removed:false,rerolls:0};
+}
+function goMarket(){if(!run.offer)run.offer=rollOffer();run.phase='market';save();renderMarket();show('market');}
+function renderMarket(){
+  const o=run.offer;$('#m-money').textContent='$'+run.money;
+  let h='<p class="sect">食材（加進牌組）</p><div class="offers" id="of-cards"></div>';
+  h+='<p class="sect">廚具（'+run.tools.length+' / '+MAXTOOLS+'）</p>';
+  o.tools.forEach((x,i)=>{const T=TOOLS[x.t];h+='<div class="item"><div class="tx"><b>'+T.n+'</b><span>'+T.d+'</span></div><button class="btn" type="button" data-tool="'+i+'"'+(x.sold||run.money<T.p||run.tools.length>=MAXTOOLS?' disabled':'')+'>'+(x.sold?'已買':'$'+T.p)+'</button></div>';});
+  const RC=RMAP[o.recipe],L=lvl(o.recipe);
+  h+='<p class="sect">食譜升級</p><div class="item"><div class="tx"><b>'+RC.n+' Lv'+(L+1)+' → Lv'+(L+2)+'</b><span>'+RC.d+'。基礎 '+(RC.base+L*RC.lb)+' → '+(RC.base+(L+1)*RC.lb)+'，倍率 '+(RC.mult+L*RC.lm)+' → '+(RC.mult+(L+1)*RC.lm)+'</span></div><button class="btn" type="button" id="buy-rec"'+(o.recipeSold||run.money<4?' disabled':'')+'>'+(o.recipeSold?'已升級':'$4')+'</button></div>';
+  h+='<p class="sect">服務</p><div class="item"><div class="tx"><b>丟掉一張牌</b><span>牌組越精簡，越容易抽到想要的組合。每次逛市場一次。</span></div><button class="btn" type="button" id="buy-rm"'+(o.removed||run.money<3||run.deck.length<=10?' disabled':'')+'>'+(o.removed?'已使用':'$3')+'</button></div>';
+  h+='<div class="item"><div class="tx"><b>重新進貨</b><span>換一批食材和廚具</span></div><button class="btn" type="button" id="buy-rr"'+(run.money<2?' disabled':'')+'>$2</button></div>';
+  if(run.tools.length){h+='<p class="sect">賣掉廚具（半價）</p>';run.tools.forEach((t,i)=>{h+='<div class="item"><div class="tx"><b>'+TOOLS[t].n+'</b><span>'+TOOLS[t].d+'</span></div><button class="btn" type="button" data-sell="'+i+'">賣 $'+Math.floor(TOOLS[t].p/2)+'</button></div>';});}
+  h+='<div class="item" style="margin-top:14px"><div class="tx"><b>牌組 '+run.deck.length+' 張</b><span>下一位：'+(run.city<4?CITIES[run.city]+'・'+judgeName()+'，目標 '+fmt(target()):'')+'</span></div><button class="btn" type="button" id="see-deck">查看</button></div>';
+  $('#market-body').innerHTML=h;
+  const oc=$('#of-cards');o.cards.forEach((x,i)=>{const w=document.createElement('div');w.className='offer';const el=cardEl({id:x.id},{div:true});if(x.sold)el.classList.add('dead');w.appendChild(el);
+    const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=x.sold?'已買':'$'+x.price;b.disabled=x.sold||run.money<x.price;
+    b.addEventListener('click',()=>{if(x.sold||run.money<x.price)return;run.money-=x.price;x.sold=true;run.deck.push(mkCard(x.id));save();buzz(10);renderMarket();});
+    w.appendChild(b);if(CARDS[x.id].d){w.addEventListener('click',e=>{if(e.target.tagName!=='BUTTON')modal('<h3>'+CARDS[x.id].n+'</h3><p>'+CAT[CARDS[x.id].cat].n+'，美味 '+CARDS[x.id].f+'。'+CARDS[x.id].d+'</p><button class="btn" type="button" id="m-ok">關閉</button>',m=>m.querySelector('#m-ok').addEventListener('click',closeModal));});}
+    oc.appendChild(w);});
+}
+$('#market-body').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||b.disabled)return;const o=run.offer;
+  if(b.dataset.tool!=null){const x=o.tools[+b.dataset.tool],T=TOOLS[x.t];if(run.money<T.p||run.tools.length>=MAXTOOLS)return;run.money-=T.p;x.sold=true;run.tools.push(x.t);}
+  else if(b.id==='buy-rec'){if(run.money<4)return;run.money-=4;run.levels[o.recipe]=lvl(o.recipe)+1;o.recipeSold=true;}
+  else if(b.id==='buy-rm'){showDeck(true,c=>{if(run.money<3)return;run.money-=3;run.deck=run.deck.filter(d=>d.u!==c.u);o.removed=true;save();renderMarket();});return;}
+  else if(b.id==='buy-rr'){if(run.money<2)return;run.money-=2;const keep={recipe:o.recipe,recipeSold:o.recipeSold,removed:o.removed};run.offer=Object.assign(rollOffer(),keep);}
+  else if(b.dataset.sell!=null){const i=+b.dataset.sell,t=run.tools[i];run.money+=Math.floor(TOOLS[t].p/2);run.tools.splice(i,1);}
+  else if(b.id==='see-deck'){showDeck(false);return;}
+  else return;
+  save();buzz(10);const y=$('#market .scroll').scrollTop;renderMarket();$('#market .scroll').scrollTop=y;
+});
+$('#b-next').addEventListener('click',()=>{run.offer=null;goIntro();});
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#modal').hidden)closeModal();});
+titleInit();
+})();
+</script>
+</body>
+</html>
