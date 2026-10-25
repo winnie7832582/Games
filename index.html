@@ -57,6 +57,19 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .cont .tx{flex:1;min-width:0}
 .cont small{display:block;color:var(--soft)}
 .cont b{font-size:1.05rem}
+.find{margin:0 0 12px}
+.find input{width:100%;border:2px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--surface);font-size:1rem}
+.find input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.cats{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 2px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cats button{flex:none;border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:.92rem;white-space:nowrap}
+.cats button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cats button small{opacity:.6;margin-left:4px}
+.cats button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.game .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.game .tags i{font-style:normal;font-size:.72rem;color:var(--soft);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+.none{color:var(--soft);text-align:center;margin:24px 0}
+[hidden]{display:none !important}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .game{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--surface);border-radius:18px;overflow:hidden;border:2px solid var(--line);transition:transform .08s}
 .game:active{transform:scale(.97)}
@@ -86,6 +99,7 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .prof small{display:block;color:var(--soft)}
 .mini{border:0;background:transparent;color:var(--soft);padding:6px 8px;cursor:pointer;border-radius:8px;white-space:nowrap;flex:none}
 .field{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.field[hidden]{display:none}
 .field input,.field textarea{border:2px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--bg);width:100%}
 .field textarea{min-height:90px;font-size:.8rem;word-break:break-all}
 .colors{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
@@ -105,7 +119,9 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
   <header><h1 id="ttl"></h1><button class="chip" type="button" id="chip" aria-label="切換玩家"><span class="av" id="chip-av"></span><span id="chip-n"></span></button></header>
   <div class="tip" id="tip" hidden><button class="x" type="button" id="tip-x" aria-label="關閉提示">×</button><b id="tip-h"></b><span id="tip-t"></span><div id="tip-a"></div></div>
   <a class="cont" id="cont" hidden><span class="ic" id="cont-ic"></span><span class="tx"><small>繼續玩</small><b id="cont-n"></b></span><span aria-hidden="true">›</span></a>
+  <div class="find"><input id="q" type="search" placeholder="搜尋遊戲名稱或類型" aria-label="搜尋遊戲" autocomplete="off" enterkeyhint="search"><div class="cats" id="cats" role="group" aria-label="遊戲類型"></div></div>
   <div class="grid" id="grid"></div>
+  <p class="none" id="none" hidden>找不到符合的遊戲，換個關鍵字試試。</p>
   <div class="foot"><button class="btn" type="button" id="b-backup">備份與轉移</button><button class="btn" type="button" id="b-about">關於與更新</button></div>
   <footer class="credit" id="credit"></footer>
 </div>
@@ -143,9 +159,21 @@ function render(){
   $('#chip-av').textContent=p.name.slice(0,1);$('#chip-av').style.background=p.color;$('#chip-n').textContent=p.name;
   const m=meta(p.id);const g=C.games.find(x=>x.id===m.lastGame);
   const cont=$('#cont');if(g){cont.hidden=false;cont.href=g.file;$('#cont-ic').textContent=g.icon;$('#cont-ic').style.background=g.color+'33';$('#cont-n').textContent=g.name;}else cont.hidden=true;
-  $('#grid').innerHTML=C.games.map(x=>{const played=m.games&&m.games[x.id];return '<a class="game" href="'+esc(x.file)+'"><span class="top" style="background:'+x.color+'26"><span aria-hidden="true">'+x.icon+'</span>'+(played?'<span class="dot">玩過</span>':'')+'</span><span class="bd"><b>'+esc(x.name)+'</b><span>'+esc(x.desc)+'</span></span></a>';}).join('');
+  renderCats();renderGrid();
   installTip();
 }
+
+/* ---------- categories & search ---------- */
+let CAT='全部',Q='';
+const CATS=['全部'].concat(C.categories||Array.from(new Set(C.games.flatMap(g=>g.tags||[]))));
+function matches(g){const q=Q.trim().toLowerCase();const inCat=CAT==='全部'||(g.tags||[]).includes(CAT);if(!inCat)return false;if(!q)return true;
+  return [g.name,g.desc].concat(g.tags||[],g.kw||[]).join(' ').toLowerCase().includes(q);}
+function renderCats(){$('#cats').innerHTML=CATS.map(c=>{const n=c==='全部'?C.games.length:C.games.filter(g=>(g.tags||[]).includes(c)).length;return '<button type="button" data-cat="'+esc(c)+'" aria-pressed="'+(c===CAT)+'">'+esc(c)+'<small>'+n+'</small></button>';}).join('');}
+function renderGrid(){const p=current();if(!p)return;const m=meta(p.id);const list=C.games.filter(matches);
+  $('#grid').innerHTML=list.map(x=>{const played=m.games&&m.games[x.id];return '<a class="game" href="'+esc(x.file)+'"><span class="top" style="background:'+x.color+'26"><span aria-hidden="true">'+x.icon+'</span>'+(played?'<span class="dot">玩過</span>':'')+'</span><span class="bd"><b>'+esc(x.name)+'</b><span>'+esc(x.desc)+'</span><span class="tags">'+(x.tags||[]).map(t=>'<i>'+esc(t)+'</i>').join('')+'</span></span></a>';}).join('');
+  $('#none').hidden=list.length>0;}
+$('#cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;CAT=b.dataset.cat;renderCats();renderGrid();});
+$('#q').addEventListener('input',e=>{Q=e.target.value;if(Q.trim()&&CAT!=='全部'){CAT='全部';renderCats();}renderGrid();});
 
 /* ---------- sheets ---------- */
 function sheet(h,bind,lock){$('#sbox').innerHTML=h;$('#sheet').hidden=false;$('#sheet').dataset.lock=lock?'1':'';$('#sbox').querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheet));if(bind)bind($('#sbox'));const f=$('#sbox').querySelector('input,button');if(f)f.focus();}
@@ -218,31 +246,38 @@ function applyImport(obj){
 }
 function backupSheet(fromFirst){
   const ps=profiles(),cur=current();
-  sheet('<h2>備份與轉移</h2><p class="soft">進度只存在這台裝置。換手機、換電腦，或想留一份備份時，先在這裡匯出，再到新裝置匯入。</p>'+
-    (cur?'<h3>匯出</h3><button class="btn main" type="button" id="bk-file">匯出「'+esc(cur.name)+'」的存檔檔案</button>'+(ps.length>1?'<button class="btn" type="button" id="bk-all">匯出全部玩家</button>':'')+'<button class="btn" type="button" id="bk-code">複製「'+esc(cur.name)+'」的轉移碼</button>':'')+
-    '<h3>匯入</h3><button class="btn" type="button" id="bk-open">選擇存檔檔案</button><input type="file" id="bk-in" accept=".json,application/json" hidden>'+
-    '<div class="field"><label for="bk-txt">轉移碼（複製後會顯示在這裡；匯入時貼在這裡）</label><textarea id="bk-txt" placeholder="GC1:..." autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></textarea></div><div class="row2"><button class="btn" type="button" id="bk-sel">全選複製</button><button class="btn" type="button" id="bk-paste">用轉移碼匯入</button></div><p class="soft" style="margin-top:8px">轉移碼不包含「拉一杯花」作品集的照片，照片請用存檔檔案轉移。</p>'+
+  sheet('<div class="shead"><h2>備份與轉移</h2>'+(fromFirst?'':'<button class="btn sm" type="button" data-close>關閉</button>')+'</div><p class="soft">進度只存在這台裝置。換手機、換電腦，或想留一份備份時，先在舊裝置匯出，再到新裝置匯入。</p>'+
+    (cur?'<h3>匯出「'+esc(cur.name)+'」的進度</h3><button class="btn main" type="button" id="bk-file">匯出存檔檔案</button>'+(ps.length>1?'<button class="btn" type="button" id="bk-all">匯出全部玩家的存檔檔案</button>':'')+'<button class="btn" type="button" id="bk-code">複製轉移碼</button>'+
+      '<div class="field" id="bk-show" hidden><label for="bk-out">沒辦法自動複製，請長按下面的轉移碼，選「全選」再「拷貝」</label><textarea id="bk-out" readonly></textarea></div>'+
+      '<p class="soft" style="margin-top:8px">轉移碼可以用訊息傳，但不包含「拉一杯花」作品集的照片；要連照片一起搬，請用存檔檔案。</p>':'')+
+    '<h3>匯入其他裝置或玩家的進度</h3><button class="btn" type="button" id="bk-open">選擇存檔檔案</button><input type="file" id="bk-in" accept=".json,application/json" hidden>'+
+    '<div class="field"><label for="bk-txt">或貼上轉移碼</label><textarea id="bk-txt" placeholder="GC1:..." autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></textarea></div>'+
+    '<div class="row2"><button class="btn" type="button" id="bk-pastebtn">貼上</button><button class="btn main" type="button" id="bk-import">匯入</button></div>'+
     '<p class="soft" style="margin-top:12px">iPhone 小提醒：從 Safari 和從「主畫面圖示」打開，會是兩份不同的存檔。建議先加入主畫面，之後都從圖示打開。</p>'+
-    (fromFirst?'<button class="btn" type="button" id="bk-back">返回建立玩家</button>':'<button class="btn" type="button" data-close>關閉</button>'),b=>{
+    (fromFirst?'<button class="btn" type="button" id="bk-back">返回建立玩家</button>':''),b=>{
     const f=b.querySelector('#bk-file');if(f)f.addEventListener('click',()=>exportFile([cur]));
     const a=b.querySelector('#bk-all');if(a)a.addEventListener('click',()=>exportFile(profiles()));
     const c=b.querySelector('#bk-code');if(c)c.addEventListener('click',()=>{
-      const p=toCode(packForCode([cur]));const ta=b.querySelector('#bk-txt');
-      const done=code=>{ta.value=code;ta.readOnly=false;const n=code.length;
-        const msg=n>9000?'轉移碼有 '+n+' 個字，用 LINE 傳可能會被截斷，建議改用存檔檔案':'轉移碼已複製（'+n+' 個字），貼到新裝置的匯入欄位';return msg;};
-      let ok=false;
-      try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
-          navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(code=>new Blob([code],{type:'text/plain'}))})]).then(()=>p.then(code=>toast(done(code)))).catch(()=>p.then(code=>{done(code);manualCopy(ta);}));ok=true;}}catch(e){}
-      if(!ok)p.then(code=>{done(code);(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(code):Promise.reject()).then(()=>toast(done(code))).catch(()=>manualCopy(ta));});
+      const p=toCode(packForCode([cur]));
+      const okMsg=code=>{const n=code.length;return n>9000?'已複製，不過轉移碼有 '+n+' 個字，用 LINE 傳可能會被截斷，建議改用存檔檔案':'轉移碼已複製，可以用訊息傳到另一台裝置';};
+      const fail=()=>p.then(code=>{const box=b.querySelector('#bk-show'),out=b.querySelector('#bk-out');out.value=code;box.hidden=false;out.focus();out.select();toast('請長按轉移碼，選「拷貝」');});
+      let started=false;
+      try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){started=true;
+        navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(code=>new Blob([code],{type:'text/plain'}))})]).then(()=>p.then(code=>{b.querySelector('#bk-show').hidden=true;toast(okMsg(code));})).catch(fail);}}catch(e){started=false;}
+      if(!started)p.then(code=>(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(code):Promise.reject()).then(()=>toast(okMsg(code)))).catch(fail);
     });
-    const sa=b.querySelector('#bk-sel');if(sa)sa.addEventListener('click',()=>{const ta=b.querySelector('#bk-txt');if(!ta.value){toast('還沒有轉移碼');return;}manualCopy(ta);});
     const inp=b.querySelector('#bk-in');b.querySelector('#bk-open').addEventListener('click',()=>inp.click());
     inp.addEventListener('change',()=>{const file=inp.files&&inp.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{applyImport(JSON.parse(r.result));}catch(e){toast('讀不懂這個檔案，請確認是遊戲合集的存檔');}};r.readAsText(file);});
-    b.querySelector('#bk-paste').addEventListener('click',async()=>{const v=b.querySelector('#bk-txt').value;if(!v.trim()){toast('請先貼上轉移碼');return;}
-      try{applyImport(await fromCode(v));}catch(e){toast(e.message==='nogzip'?'這個瀏覽器版本太舊，請改用存檔檔案':e.message==='format'?'找不到轉移碼，請確認有完整貼上（開頭是 GC1: 或 GC0:）':'轉移碼不完整，可能複製時漏了一段或被聊天軟體截斷，請改用存檔檔案');}});
+    const ta=b.querySelector('#bk-txt');
+    b.querySelector('#bk-pastebtn').addEventListener('click',async()=>{
+      try{if(!navigator.clipboard||!navigator.clipboard.readText)throw 0;const t=await navigator.clipboard.readText();if(!t||!t.trim()){toast('剪貼簿是空的，請先複製轉移碼');return;}ta.value=t.trim();toast('已貼上，按「匯入」');}
+      catch(e){ta.focus();toast('請長按輸入框，選「貼上」');}});
+    b.querySelector('#bk-import').addEventListener('click',async()=>{const v=ta.value;if(!v.trim()){toast('請先貼上轉移碼');return;}
+      try{applyImport(await fromCode(v));}catch(e){toast(e.message==='nogzip'?'這個瀏覽器版本太舊，請改用存檔檔案':e.message==='format'?'找不到轉移碼，請確認有完整貼上（開頭是 GC1:）':'轉移碼不完整，可能複製時漏了一段或被聊天軟體截斷，請改用存檔檔案');}});
     const bb=b.querySelector('#bk-back');if(bb)bb.addEventListener('click',()=>profileForm(true));
   },fromFirst);
 }
+
 $('#b-backup').addEventListener('click',()=>backupSheet(false));
 
 /* ---------- about / update ---------- */
