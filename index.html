@@ -191,7 +191,7 @@ function unb64u(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.lengt
 async function toCode(obj){const raw=new TextEncoder().encode(JSON.stringify(obj));
   if(window.CompressionStream){const cs=new Blob([raw]).stream().pipeThrough(new CompressionStream('gzip'));const buf=new Uint8Array(await new Response(cs).arrayBuffer());return 'GC1:'+b64u(buf);}
   return 'GC0:'+b64u(raw);}
-async function fromCode(code){code=String(code).replace(/\s+/g,'');const m=code.match(/GC([01]):([A-Za-z0-9_-]+)/);if(!m)throw new Error('format');const bytes=unb64u(m[2]);
+async function fromCode(code){code=String(code);try{code=code.normalize('NFKC');}catch(e){}code=code.replace(/[\u2010-\u2015\u2212]/g,'-').replace(/\s+/g,'');const m=code.match(/gc([01])[:：]([A-Za-z0-9_-]+)/i);if(!m)throw new Error('format');const bytes=unb64u(m[2]);
   if(m[1]==='1'){if(!window.DecompressionStream)throw new Error('nogzip');const ds=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));return JSON.parse(await new Response(ds).text());}
   return JSON.parse(new TextDecoder().decode(bytes));}
 function packForCode(list){const o=pack(list);o.profiles.forEach(pd=>{Object.keys(pd.data).forEach(k=>{if(k==='latteart-v1'){try{const v=JSON.parse(pd.data[k]);if(v&&v.gallery){v.gallery=[];pd.data[k]=JSON.stringify(v);}}catch(e){}}});});return o;}
