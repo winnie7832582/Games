@@ -79,6 +79,9 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .ql .done .tx{color:var(--soft);text-decoration:line-through}
 .ql .pr{color:var(--soft);font-size:.82rem;white-space:nowrap}
 .prog .btn.mini2{width:100%;margin-top:8px;padding:9px 12px;font-size:.95rem}
+.kvr{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.93rem}
+.kvr b.no{color:var(--soft);font-weight:500}
+.kvr b.ok{color:var(--accent)}
 .achg{margin:16px 0 6px;font-weight:700;color:var(--soft);font-size:.9rem}
 .achi{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
 .achi:last-child{border-bottom:0}
@@ -215,9 +218,13 @@ function renderProg(){
   const done=g.quests.filter(q=>q.done).length;
   $('#q-c').textContent=done+' / '+g.quests.length;
   $('#q-st').textContent=g.streak>1?'連續玩 '+g.streak+' 天':'';
-  $('#ql').innerHTML=g.quests.map(q=>'<li class="'+(q.done?'done':'')+'"><a href="'+esc(gameFile(q.def.game))+'"><span class="ck" aria-hidden="true">'+(q.done?'✓':'')+'</span><span class="tx">'+esc(q.def.text)+'</span><span class="pr">'+(q.done?'完成':(q.def.type==='sum'?q.pr+' / '+q.def.target:'去挑戰'))+'</span></a></li>').join('');
+  $('#ql').innerHTML=g.quests.map(q=>'<li class="'+(q.done?'done':'')+'"><a href="'+esc(gameFile(q.def.game))+'"><span class="ck" aria-hidden="true">'+(q.done?'✓':'')+'</span><span class="tx">'+esc(q.def.text)+'</span><span class="pr">'+(q.done?'完成':(q.pr>0?(q.def.type==='sum'?q.pr:'今天最高 '+q.pr)+' / '+q.def.target:'去挑戰'))+'</span></a></li>').join('');
   const n=Object.keys(g.ach).length;
   $('#b-ach').textContent='成就 '+n+' / '+GC.ACH.length;
+}
+function reportList(){
+  const last=(window.GC&&current())?GC.get().last:{};
+  return '<div>'+C.games.map(g=>{const t=last[g.id];const d=t?new Date(t):null;const txt=d?(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'還沒收到';return '<div class="kvr"><span>'+esc(g.name)+'</span><b class="'+(d?'ok':'no')+'">'+txt+'</b></div>';}).join('')+'</div>';
 }
 function achSheet(){
   const g=GC.get();const groups=C.games.map(x=>x.id).concat(['']);
@@ -231,6 +238,8 @@ function achSheet(){
 }
 $('#b-ach').addEventListener('click',achSheet);
 window.addEventListener('pageshow',e=>{if(e.persisted)render();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderProg();});
+window.addEventListener('focus',()=>renderProg());
 
 /* ---------- categories & search ---------- */
 let CAT='全部',Q='';
@@ -355,6 +364,7 @@ $('#b-about').addEventListener('click',async()=>{
   let usage='';try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage='這台裝置已用 '+(e.usage/1048576).toFixed(1)+' MB';}}catch(e){}
   let persisted='';try{if(navigator.storage&&navigator.storage.persisted)persisted=(await navigator.storage.persisted())?'，資料已設為長期保存':'';}catch(e){}
   sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
+    '<h3>成績回報檢查</h3><p class="soft">玩完一局後，這裡會出現最後回報時間。顯示「還沒收到」代表那款遊戲沒有把成績傳給成就系統，通常是遊戲檔還沒更新到最新版。</p>'+reportList()+
     '<h3>更新紀錄</h3>'+C.changelog.map(l=>'<div class="log"><b>v'+esc(l.v)+'</b><small>'+esc(l.date)+'</small><ul>'+l.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul></div>').join('')+
     '<h3 class="danger">危險區</h3><p class="soft">以下操作無法復原。</p><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button>',b=>{
     b.querySelector('#ab-up').addEventListener('click',async()=>{if(!REG){toast('這個瀏覽器不支援自動更新，重新整理頁面即可');return;}toast('檢查中…');try{await REG.update();setTimeout(()=>{if(REG.waiting)showUpdate();else toast('已經是最新版本');},1500);}catch(e){toast('現在沒有網路，稍後再試');}});
@@ -373,7 +383,7 @@ if('serviceWorker' in navigator&&location.protocol!=='file:'){
     setInterval(()=>reg.update().catch(()=>{}),30*60*1000);
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{});});
   }).catch(()=>{});
-  let refreshing=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload();});
+  let refreshing=false;const hadCtl=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing||!hadCtl)return;refreshing=true;location.reload();});
 }
 (function whatsNew(){const seen=localStorage.getItem('gc:seenVersion');localStorage.setItem('gc:seenVersion',C.version);
   if(seen&&seen!==C.version){const l=C.changelog.find(x=>x.v===C.version);setTimeout(()=>{if($('#sheet').hidden)sheet('<h2>已更新到 v'+esc(C.version)+'</h2>'+(l?'<ul style="line-height:1.8">'+l.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':'')+'<button class="btn main" type="button" data-close>好</button>');},400);}})();

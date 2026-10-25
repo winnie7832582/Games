@@ -92,12 +92,12 @@
   /* ================= 每日挑戰清單 ================= */
   /* type: 'max' 單次達到、'sum' 今天累計。每天依日期從裡面抽 3 個不同遊戲的，全世界同一天抽到一樣的 */
   var QUESTS = [
-    { id: 'q-sf', game: 'souffle', metric: 'score', type: 'max', target: 70, text: '舒芙蕾做到 70 分以上' },
+    { id: 'q-sf', game: 'souffle', metric: 'score', type: 'max', target: 70, text: '「舒芙蕾」遊戲做到 70 分以上' },
     { id: 'q-sw', game: 'sanwei-kitchen', metric: 'score', type: 'max', target: 70, text: '三味廚房任一道菜 70 分以上' },
     { id: 'q-bt', game: 'bubble-tea', metric: 'money', type: 'max', target: 300, text: '搖搖茶舖單次營業額 $300' },
     { id: 'q-bt2', game: 'bubble-tea', metric: 'perfect', type: 'max', target: 6, text: '搖搖茶舖做出 6 杯完美飲料' },
     { id: 'q-cf', game: 'cafe', metric: 'cup', type: 'max', target: 75, text: '一杯好咖啡做出 75 分以上的一杯' },
-    { id: 'q-la', game: 'latte-art', metric: 'score', type: 'max', target: 70, text: '拉一杯花任一課 70 分以上' },
+    { id: 'q-la', game: 'latte-art', metric: 'score', type: 'max', target: 70, text: '拉一杯花拿到 70 分以上' },
     { id: 'q-nm', game: 'night-market', metric: 'dayProfit', type: 'max', target: 500, text: '夜市人生單晚淨利 $500' },
     { id: 'q-nm2', game: 'night-market', metric: 'served', type: 'sum', target: 25, text: '夜市人生今天服務 25 位客人' },
     { id: 'q-cc', game: 'chef-cards', metric: 'judge', type: 'sum', target: 2, text: '主廚牌局今天通過 2 位評審' },
@@ -220,6 +220,7 @@
       var p = load(), lines = [];
       touchDay(p); ensureQuests(p);
       var s = gs(p, game), k;
+      s.last = Date.now();
       if (mode === 'report') s.plays = (s.plays || 0) + 1;
       for (k in metrics) {
         var v = metrics[k]; if (typeof v !== 'number' || isNaN(v)) continue;
@@ -246,7 +247,8 @@
       var p = load(); touchDay(p); ensureQuests(p); save(p);
       var lv = levelOf(p.xp), cur = xpAt(lv), nxt = xpAt(lv + 1);
       var qs = p.q.map(function (q) { var d = questDef(q.id); return d ? { def: d, pr: Math.min(q.pr, d.target), done: q.done } : null; }).filter(Boolean);
-      return { level: lv, title: titleOf(lv), xp: p.xp, xpIn: p.xp - cur, xpNeed: nxt - cur, streak: p.streak || 0, quests: qs, ach: p.ach, qall: p.qall || 0 };
+      var last = {}; for (var g in p.s) last[g] = p.s[g].last || 0;
+      return { level: lv, title: titleOf(lv), xp: p.xp, xpIn: p.xp - cur, xpNeed: nxt - cur, streak: p.streak || 0, quests: qs, ach: p.ach, qall: p.qall || 0, last: last };
     }
   };
 
