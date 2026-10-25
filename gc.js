@@ -32,7 +32,11 @@
     '#gc-bar a:focus-visible{outline:2px solid #3B6EF5}' +
     '#gc-bar .who{margin-left:auto;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}' +
     '@media (prefers-color-scheme:dark){#gc-bar{background:rgba(22,26,34,.92);color:#E8EDF4;border-bottom-color:rgba(255,255,255,.08)}}';
+  css += 'html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}input,textarea{-webkit-user-select:text;user-select:text}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  /* 長按不會跳出文字選取或放大鏡 */
+  document.addEventListener('selectstart', function (e) { var t = e.target && e.target.tagName; if (t !== 'INPUT' && t !== 'TEXTAREA') e.preventDefault(); });
+  document.addEventListener('contextmenu', function (e) { var t = e.target && e.target.tagName; if (t !== 'INPUT' && t !== 'TEXTAREA' && t !== 'A') e.preventDefault(); });
   function addBar() {
     if (document.getElementById('gc-bar')) return;
     var b = document.createElement('div'); b.id = 'gc-bar';
