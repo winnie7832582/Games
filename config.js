@@ -8,8 +8,9 @@ self.GC_CONFIG = {
   title: '小遊戲合集',
   author: 'hua',
   year: 2026,
-  version: '1.4.1',
+  version: '1.5.0',
   changelog: [
+    { v: '1.5.0', date: '2026-10-26', notes: ['首頁改版：遊戲改成清單，一眼看到更多款', '分類精簡成 4 個，一排放得下', '等級和今日挑戰縮成一行，點開才看到細節', '更新紀錄依系列分組，舊的自動收合', '安裝提示縮成一行'] },
     { v: '1.4.1', date: '2026-10-25', notes: ['每日挑戰：沒完成的任務會顯示今天目前的最高成績', '回到首頁會自動更新挑戰進度', '巷口咖啡館：營業完一天就算經營一天，不用等到晚上行程', '毛孩小屋：陪玩超過 8 秒就算陪玩一次', '「關於與更新」新增成績回報檢查，可以看哪款遊戲沒有回報'] },
     { v: '1.4.0', date: '2026-10-25', notes: ['新增玩家等級與稱號：玩遊戲、完成成就和挑戰都能累積經驗值', '新增每日挑戰：每天三個不同遊戲的小任務，全勤有額外獎勵', '新增 57 個成就，九款遊戲各有，還有連續遊玩的綜合成就', '遊戲裡解鎖成就或完成挑戰時，上方會跳出通知', '首頁加上等級、今日挑戰和成就清單'] },
     { v: '1.3.1', date: '2026-10-25', notes: ['一杯好咖啡：拉花結果的目標虛線改成正向，跟目標圖一致', '愛心和鬱金香的教學改成由上往下劃'] },
@@ -25,17 +26,17 @@ self.GC_CONFIG = {
     { v: '1.1.0', date: '2026-10-25', notes: ['新增遊戲：三味廚房'] },
     { v: '1.0.0', date: '2026-10-25', notes: ['第一版上線：八款遊戲', '支援多個玩家設定檔', '可以匯出、匯入進度，換裝置接著玩'] }
   ],
-  /* 首頁的分類順序；每款遊戲用 tags 標上一個或多個分類，kw 是額外的搜尋關鍵字 */
-  categories: ['料理', '咖啡', '經營', '養成', '策略', '卡牌', '寵物', '戀愛', '即時操作'],
+  /* 首頁的分類按鈕（建議不要超過 5 個，才放得下一排）。每款遊戲用 tags 標上分類，kw 是額外的搜尋關鍵字 */
+  categories: ['手作', '經營', '策略', '養成'],
   games: [
-    { id: 'sanwei-kitchen', file: 'games/sanwei-kitchen.html', name: '三味廚房',   desc: '舒芙蕾、蛋包飯、蚵仔煎，三道菜即時料理', icon: '🍳', color: '#E07A2F', tags: ['料理','即時操作'], kw: ['蛋包飯','蚵仔煎','舒芙蕾','做菜'] },
-    { id: 'souffle',      file: 'games/souffle.html',      name: '舒芙蕾',     desc: '六個步驟做出一個高挺的舒芙蕾', icon: '🍮', color: '#F2B632', tags: ['料理','即時操作'], kw: ['甜點','烘焙','蛋糕','做菜'] },
-    { id: 'bubble-tea',   file: 'games/bubble-tea.html',   name: '搖搖茶舖',   desc: '兩分鐘內手忙腳亂做手搖飲',     icon: '🧋', color: '#E5483A', tags: ['經營','即時操作'], kw: ['珍奶','珍珠奶茶','飲料','手搖','限時'] },
-    { id: 'cafe',         file: 'games/cafe.html',         name: '一杯好咖啡', desc: '每天四位客人，點單都不一樣', icon: '☕', color: '#8B5E3C', tags: ['咖啡','料理'], kw: ['手沖','拿鐵','咖啡豆','濃縮','客人'] },
-    { id: 'latte-art',    file: 'games/latte-art.html',    name: '拉一杯花',   desc: '從圓形練到愛心、鬱金香、葉子', icon: '🤍', color: '#2F6FDB', tags: ['咖啡','即時操作'], kw: ['拿鐵','拉花','愛心','鬱金香','練習'] },
-    { id: 'night-market', file: 'games/night-market.html', name: '夜市人生',   desc: '三十天經營夜市小攤',           icon: '🏮', color: '#D93A2F', tags: ['經營','策略'], kw: ['夜市','雞排','小吃','攤販','三十天'] },
-    { id: 'chef-cards',   file: 'games/chef-cards.html',   name: '主廚牌局',   desc: '料理卡牌冒險，征服十二位評審', icon: '🃏', color: '#2E8B57', tags: ['卡牌','策略'], kw: ['卡片','牌組','評審','冒險'] },
-    { id: 'pet-house',    file: 'games/pet-house.html',    name: '毛孩小屋',   desc: '貓、狗、兔子或守宮，用真實時間照顧',       icon: '🐾', color: '#2A9D8F', tags: ['養成','寵物'], kw: ['貓','狗','兔子','守宮','照顧'] },
-    { id: 'corner-cafe',  file: 'games/corner-cafe.html',  name: '巷口咖啡館', desc: '經營咖啡館，也許還會談戀愛',   icon: '💌', color: '#D35D7A', tags: ['戀愛','養成','經營'], kw: ['約會','告白','劇情','結局','咖啡館'] }
+    { id: 'sanwei-kitchen', file: 'games/sanwei-kitchen.html', name: '三味廚房',   desc: '舒芙蕾、蛋包飯、蚵仔煎，三道菜即時料理', icon: '🍳', color: '#E07A2F', tags: ['手作'], kw: ['料理', '即時操作', '蛋包飯', '蚵仔煎', '舒芙蕾', '做菜'] },
+    { id: 'souffle',      file: 'games/souffle.html',      name: '舒芙蕾',     desc: '六個步驟做出一個高挺的舒芙蕾', icon: '🍮', color: '#F2B632', tags: ['手作'], kw: ['料理', '甜點', '烘焙', '蛋糕', '做菜', '即時操作'] },
+    { id: 'bubble-tea',   file: 'games/bubble-tea.html',   name: '搖搖茶舖',   desc: '兩分鐘內手忙腳亂做手搖飲',     icon: '🧋', color: '#E5483A', tags: ['手作', '經營'], kw: ['飲料', '珍奶', '珍珠奶茶', '手搖', '限時', '即時操作'] },
+    { id: 'cafe',         file: 'games/cafe.html',         name: '一杯好咖啡', desc: '每天四位客人，點單都不一樣', icon: '☕', color: '#8B5E3C', tags: ['手作'], kw: ['咖啡', '料理', '手沖', '拿鐵', '咖啡豆', '濃縮', '客人'] },
+    { id: 'latte-art',    file: 'games/latte-art.html',    name: '拉一杯花',   desc: '從圓形練到愛心、鬱金香、葉子', icon: '🤍', color: '#2F6FDB', tags: ['手作'], kw: ['咖啡', '拉花', '拿鐵', '愛心', '鬱金香', '練習', '即時操作'] },
+    { id: 'night-market', file: 'games/night-market.html', name: '夜市人生',   desc: '三十天經營夜市小攤',           icon: '🏮', color: '#D93A2F', tags: ['經營', '策略'], kw: ['夜市', '雞排', '小吃', '攤販', '三十天'] },
+    { id: 'chef-cards',   file: 'games/chef-cards.html',   name: '主廚牌局',   desc: '料理卡牌冒險，征服十二位評審', icon: '🃏', color: '#2E8B57', tags: ['策略'], kw: ['卡牌', '卡片', '牌組', '評審', '冒險', '料理'] },
+    { id: 'pet-house',    file: 'games/pet-house.html',    name: '毛孩小屋',   desc: '貓、狗、兔子或守宮，用真實時間照顧',       icon: '🐾', color: '#2A9D8F', tags: ['養成'], kw: ['寵物', '貓', '狗', '兔子', '守宮', '照顧'] },
+    { id: 'corner-cafe',  file: 'games/corner-cafe.html',  name: '巷口咖啡館', desc: '經營咖啡館，也許還會談戀愛',   icon: '💌', color: '#D35D7A', tags: ['養成', '經營'], kw: ['戀愛', '咖啡', '約會', '告白', '劇情', '結局', '咖啡館'] }
   ]
 };

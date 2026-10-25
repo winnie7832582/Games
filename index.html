@@ -48,17 +48,17 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .banner[hidden]{display:none}
 .banner p{margin:0;flex:1;line-height:1.5}
 .banner .btn{background:var(--on-accent);color:var(--accent);border-color:var(--on-accent);padding:8px 12px}
-.tip{background:var(--surface);border:2px dashed var(--line);border-radius:14px;padding:12px 14px;margin:0 0 14px;line-height:1.7;position:relative}
-.tip[hidden]{display:none}
-.tip b{display:block;margin-bottom:2px}
-.tip .x{position:absolute;right:6px;top:4px;border:0;background:transparent;color:var(--soft);font-size:1.2rem;cursor:pointer;padding:6px 10px}
-.cont{display:flex;align-items:center;gap:12px;background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:10px 12px;margin:0 0 16px;text-decoration:none;color:inherit}
+
+
+
+
+
 .cont[hidden]{display:none}
-.cont .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:1.7rem;flex:none}
+
 .cont .tx{flex:1;min-width:0}
-.cont small{display:block;color:var(--soft)}
-.cont b{font-size:1.05rem}
-.prog{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px 14px;margin:0 0 14px}
+
+
+
 .prog .lv{display:flex;align-items:center;gap:10px}
 .prog .lvn{background:var(--accent);color:var(--on-accent);font-weight:700;border-radius:10px;padding:3px 9px;font-size:.9rem;white-space:nowrap}
 .prog .lvt{font-weight:700;white-space:nowrap}
@@ -79,6 +79,51 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .ql .done .tx{color:var(--soft);text-decoration:line-through}
 .ql .pr{color:var(--soft);font-size:.82rem;white-space:nowrap}
 .prog .btn.mini2{width:100%;margin-top:8px;padding:9px 12px;font-size:.95rem}
+
+.tipbar{display:flex;align-items:center;background:var(--surface);border:2px solid var(--line);border-radius:12px;margin:0 0 10px}
+.tipbar[hidden]{display:none}
+.tipbar .go{flex:1;text-align:left;border:0;background:transparent;padding:9px 12px;cursor:pointer;font-size:.92rem;color:var(--ink)}
+.tipbar .x{border:0;background:transparent;color:var(--soft);font-size:1.2rem;cursor:pointer;padding:6px 12px}
+.tipbar button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:10px}
+.cont{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:8px 12px;margin:0 0 10px;text-decoration:none;color:inherit}
+.cont .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:1.2rem;flex:none}
+.cont .tx{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cont small{color:var(--soft);margin-right:8px}
+.cont b{font-size:1rem}
+.prog{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:10px 12px;margin:0 0 10px}
+.qsum{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;padding:8px 0 2px;cursor:pointer;text-align:left;color:inherit;font-size:.9rem}
+.qsum .qc{color:var(--accent);font-weight:700;white-space:nowrap}
+.qsum .qn{flex:1;min-width:0;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qsum .chev{color:var(--soft);transition:transform .15s}
+.qsum[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.qsum:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.prog .st{color:var(--soft);font-size:.82rem;margin:6px 0 2px}
+.prog .st:empty{display:none}
+.cats{display:flex;gap:6px;padding:10px 0 0}
+.cats button{flex:1;min-width:0;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 2px;cursor:pointer;font-size:.9rem;white-space:nowrap;color:inherit}
+.cats button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cats button small{opacity:.6;margin-left:3px;font-size:.78rem}
+.cats button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:640px){.grid{grid-template-columns:1fr 1fr}}
+.game{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;background:var(--surface);border-radius:16px;border:2px solid var(--line);padding:10px 12px;transition:transform .08s}
+.game:active{transform:scale(.98)}
+.game .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;font-size:1.7rem;flex:none}
+.game .bd{flex:1;min-width:0}
+.game .bd b{display:block;font-size:1.05rem}
+.game .bd .ds{color:var(--soft);font-size:.84rem;line-height:1.45;margin-top:1px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.game .dot{flex:none;color:var(--accent);font-size:.78rem;border:1.5px solid var(--accent);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.game .go{flex:none;color:var(--soft);font-size:1.3rem}
+.mrow{display:flex;justify-content:space-between;align-items:center;width:100%;border:2px solid var(--line);background:transparent;border-radius:12px;padding:13px 14px;margin-top:8px;cursor:pointer;font-weight:700;font-size:1rem;color:inherit}
+.mrow:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.sbox details{border-top:1px solid var(--line)}
+.sbox details:first-of-type{border-top:0}
+.sbox summary{cursor:pointer;padding:12px 2px;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px}
+.sbox summary::-webkit-details-marker{display:none}
+.sbox summary::after{content:'▾';margin-left:auto;color:var(--soft)}
+.sbox details[open] summary::after{content:'▴'}
+.sbox summary small{color:var(--soft);font-weight:500}
+.sbox summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
 .kvr{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.93rem}
 .kvr b.no{color:var(--soft);font-weight:500}
 .kvr b.ok{color:var(--accent)}
@@ -96,24 +141,24 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .find{margin:0 0 12px}
 .find input{width:100%;border:2px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--surface);font-size:1rem}
 .find input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
-.cats{display:flex;gap:8px;overflow-x:auto;padding:10px 2px 2px;scrollbar-width:none}
-.cats::-webkit-scrollbar{display:none}
-.cats button{flex:none;border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:.92rem;white-space:nowrap}
-.cats button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.cats button small{opacity:.6;margin-left:4px}
-.cats button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.game .tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
-.game .tags i{font-style:normal;font-size:.72rem;color:var(--soft);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+
+
+
+
+
+
+
+
 .none{color:var(--soft);text-align:center;margin:24px 0}
 [hidden]{display:none !important}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
-.game{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--surface);border-radius:18px;overflow:hidden;border:2px solid var(--line);transition:transform .08s}
-.game:active{transform:scale(.97)}
-.game .top{aspect-ratio:1.5;display:grid;place-items:center;font-size:2.6rem;position:relative}
-.game .dot{position:absolute;right:8px;top:8px;background:rgba(255,255,255,.92);color:#1F2A37;font-size:.72rem;border-radius:999px;padding:2px 8px}
-.game .bd{padding:10px 12px 12px}
-.game b{display:block;font-size:1.05rem}
-.game span{display:block;color:var(--soft);font-size:.84rem;line-height:1.5;margin-top:2px}
+
+
+
+
+
+
+
+
 .foot{display:flex;gap:10px;margin-top:18px}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .credit{margin:22px 0 4px;text-align:center;color:var(--soft);font-size:.82rem;line-height:1.7}
@@ -154,13 +199,16 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 <div class="wrap">
   <div class="banner" id="upd" hidden role="status"><p id="upd-t">有新版本可以更新</p><button class="btn" type="button" id="upd-b">更新</button></div>
   <header><h1 id="ttl"></h1><button class="chip" type="button" id="chip" aria-label="切換玩家"><span class="av" id="chip-av"></span><span id="chip-n"></span></button></header>
-  <div class="tip" id="tip" hidden><button class="x" type="button" id="tip-x" aria-label="關閉提示">×</button><b id="tip-h"></b><span id="tip-t"></span><div id="tip-a"></div></div>
+  <div class="tipbar" id="tip" hidden><button class="go" type="button" id="tip-go"></button><button class="x" type="button" id="tip-x" aria-label="關閉提示">×</button></div>
   <a class="cont" id="cont" hidden><span class="ic" id="cont-ic"></span><span class="tx"><small>繼續玩</small><b id="cont-n"></b></span><span aria-hidden="true">›</span></a>
   <section class="prog" id="prog" aria-label="玩家等級與每日挑戰">
     <div class="lv"><span class="lvn" id="lv-n"></span><span class="lvt" id="lv-t"></span><span class="xpb" role="progressbar" aria-label="經驗值" id="xp-bar"><i id="xp-i"></i></span><span class="xps" id="xp-s"></span></div>
-    <div class="qh"><b>今日挑戰</b><span class="qc" id="q-c"></span><span class="st" id="q-st"></span></div>
-    <ul class="ql" id="ql"></ul>
-    <button class="btn mini2" type="button" id="b-ach"></button>
+    <button class="qsum" type="button" id="q-sum" aria-expanded="false" aria-controls="q-body"><span class="qc" id="q-c"></span><span class="qn" id="q-next"></span><span class="chev" aria-hidden="true">▾</span></button>
+    <div id="q-body" hidden>
+      <div class="st" id="q-st"></div>
+      <ul class="ql" id="ql"></ul>
+      <button class="btn mini2" type="button" id="b-ach"></button>
+    </div>
   </section>
   <div class="find"><input id="q" type="search" placeholder="搜尋遊戲名稱或類型" aria-label="搜尋遊戲" autocomplete="off" enterkeyhint="search"><div class="cats" id="cats" role="group" aria-label="遊戲類型"></div></div>
   <div class="grid" id="grid"></div>
@@ -209,6 +257,8 @@ function render(){
 /* ---------- level, daily quests, achievements ---------- */
 function gameName(id){const g=C.games.find(x=>x.id===id);return g?g.name:'';}
 function gameFile(id){const g=C.games.find(x=>x.id===id);return g?g.file:'#';}
+function setProgOpen(o){$('#q-body').hidden=!o;$('#q-sum').setAttribute('aria-expanded',String(o));}
+$('#q-sum').addEventListener('click',()=>{const o=$('#q-body').hidden;setProgOpen(o);try{localStorage.setItem('gc:progOpen',o?'1':'0');}catch(e){}});
 function renderProg(){
   if(!window.GC||!current())return;
   const g=GC.get();
@@ -216,11 +266,12 @@ function renderProg(){
   const pct=Math.max(0,Math.min(100,g.xpIn/g.xpNeed*100));$('#xp-i').style.width=pct+'%';
   $('#xp-bar').setAttribute('aria-valuenow',Math.round(pct));$('#xp-s').textContent=g.xpIn+' / '+g.xpNeed+' XP';
   const done=g.quests.filter(q=>q.done).length;
-  $('#q-c').textContent=done+' / '+g.quests.length;
+  $('#q-c').textContent='今日挑戰 '+done+' / '+g.quests.length;
+  const nx=g.quests.find(q=>!q.done);$('#q-next').textContent=nx?nx.def.text:'今天全部完成！';
   $('#q-st').textContent=g.streak>1?'連續玩 '+g.streak+' 天':'';
   $('#ql').innerHTML=g.quests.map(q=>'<li class="'+(q.done?'done':'')+'"><a href="'+esc(gameFile(q.def.game))+'"><span class="ck" aria-hidden="true">'+(q.done?'✓':'')+'</span><span class="tx">'+esc(q.def.text)+'</span><span class="pr">'+(q.done?'完成':(q.pr>0?(q.def.type==='sum'?q.pr:'今天最高 '+q.pr)+' / '+q.def.target:'去挑戰'))+'</span></a></li>').join('');
-  const n=Object.keys(g.ach).length;
-  $('#b-ach').textContent='成就 '+n+' / '+GC.ACH.length;
+  $('#b-ach').textContent='成就 '+Object.keys(g.ach).length+' / '+GC.ACH.length;
+  let o=false;try{o=localStorage.getItem('gc:progOpen')==='1';}catch(e){}setProgOpen(o);
 }
 function reportList(){
   const last=(window.GC&&current())?GC.get().last:{};
@@ -248,7 +299,7 @@ function matches(g){const q=Q.trim().toLowerCase();const inCat=CAT==='全部'||(
   return [g.name,g.desc].concat(g.tags||[],g.kw||[]).join(' ').toLowerCase().includes(q);}
 function renderCats(){$('#cats').innerHTML=CATS.map(c=>{const n=c==='全部'?C.games.length:C.games.filter(g=>(g.tags||[]).includes(c)).length;return '<button type="button" data-cat="'+esc(c)+'" aria-pressed="'+(c===CAT)+'">'+esc(c)+'<small>'+n+'</small></button>';}).join('');}
 function renderGrid(){const p=current();if(!p)return;const m=meta(p.id);const list=C.games.filter(matches);
-  $('#grid').innerHTML=list.map(x=>{const played=m.games&&m.games[x.id];return '<a class="game" href="'+esc(x.file)+'"><span class="top" style="background:'+x.color+'26"><span aria-hidden="true">'+x.icon+'</span>'+(played?'<span class="dot">玩過</span>':'')+'</span><span class="bd"><b>'+esc(x.name)+'</b><span>'+esc(x.desc)+'</span><span class="tags">'+(x.tags||[]).map(t=>'<i>'+esc(t)+'</i>').join('')+'</span></span></a>';}).join('');
+  $('#grid').innerHTML=list.map(x=>{const played=m.games&&m.games[x.id];return '<a class="game" href="'+esc(x.file)+'"><span class="ic" style="background:'+x.color+'26" aria-hidden="true">'+x.icon+'</span><span class="bd"><b>'+esc(x.name)+'</b><span class="ds">'+esc(x.desc)+'</span></span>'+(played?'<span class="dot">玩過</span>':'<span class="go" aria-hidden="true">›</span>')+'</a>';}).join('');
   $('#none').hidden=list.length>0;}
 $('#cats').addEventListener('click',e=>{const b=e.target.closest('[data-cat]');if(!b)return;CAT=b.dataset.cat;renderCats();renderGrid();});
 $('#q').addEventListener('input',e=>{Q=e.target.value;if(Q.trim()&&CAT!=='全部'){CAT='全部';renderCats();}renderGrid();});
@@ -360,17 +411,32 @@ $('#b-backup').addEventListener('click',()=>backupSheet(false));
 
 /* ---------- about / update ---------- */
 let REG=null;
-$('#b-about').addEventListener('click',async()=>{
+function verParts(v){return String(v).split('.').map(n=>parseInt(n,10)||0);}
+function verCmp(a,b){const x=verParts(a),y=verParts(b);for(let i=0;i<3;i++){const d=(x[i]||0)-(y[i]||0);if(d)return d;}return 0;}
+function logEntry(l){return '<div class="log"><b>v'+esc(l.v)+'</b><small>'+esc(l.date)+'</small><ul>'+l.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul></div>';}
+function logSheet(){
+  const groups=[];C.changelog.forEach(l=>{const k=l.v.split('.').slice(0,2).join('.');let g=groups.find(x=>x.k===k);if(!g){g={k:k,items:[]};groups.push(g);}g.items.push(l);});
+  sheet('<div class="shead"><button class="btn sm" type="button" data-back>‹ 返回</button><h2>更新紀錄</h2><button class="btn sm" type="button" data-close>關閉</button></div>'+
+    groups.map((g,i)=>'<details'+(i===0?' open':'')+'><summary>v'+esc(g.k)+' 系列<small>'+g.items.length+' 次更新</small></summary>'+g.items.map(logEntry).join('')+'</details>').join(''),
+    b=>b.querySelector('[data-back]').addEventListener('click',openAbout));
+}
+function reportSheet(){
+  sheet('<div class="shead"><button class="btn sm" type="button" data-back>‹ 返回</button><h2>成績回報檢查</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">玩完一局後，這裡會出現最後回報時間。顯示「還沒收到」代表那款遊戲沒有把成績傳給成就系統，通常是遊戲檔還沒更新到最新版。</p>'+reportList(),
+    b=>b.querySelector('[data-back]').addEventListener('click',openAbout));
+}
+async function openAbout(){
   let usage='';try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage='這台裝置已用 '+(e.usage/1048576).toFixed(1)+' MB';}}catch(e){}
   let persisted='';try{if(navigator.storage&&navigator.storage.persisted)persisted=(await navigator.storage.persisted())?'，資料已設為長期保存':'';}catch(e){}
   sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
-    '<h3>成績回報檢查</h3><p class="soft">玩完一局後，這裡會出現最後回報時間。顯示「還沒收到」代表那款遊戲沒有把成績傳給成就系統，通常是遊戲檔還沒更新到最新版。</p>'+reportList()+
-    '<h3>更新紀錄</h3>'+C.changelog.map(l=>'<div class="log"><b>v'+esc(l.v)+'</b><small>'+esc(l.date)+'</small><ul>'+l.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul></div>').join('')+
+    '<button class="mrow" type="button" id="ab-log"><span>更新紀錄</span><span aria-hidden="true">›</span></button><button class="mrow" type="button" id="ab-rep"><span>成績回報檢查</span><span aria-hidden="true">›</span></button>'+
     '<h3 class="danger">危險區</h3><p class="soft">以下操作無法復原。</p><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button>',b=>{
+    b.querySelector('#ab-log').addEventListener('click',logSheet);
+    b.querySelector('#ab-rep').addEventListener('click',reportSheet);
     b.querySelector('#ab-up').addEventListener('click',async()=>{if(!REG){toast('這個瀏覽器不支援自動更新，重新整理頁面即可');return;}toast('檢查中…');try{await REG.update();setTimeout(()=>{if(REG.waiting)showUpdate();else toast('已經是最新版本');},1500);}catch(e){toast('現在沒有網路，稍後再試');}});
     b.querySelector('#ab-clear').addEventListener('click',()=>sheet('<h2>清除所有資料？</h2><p class="soft">所有玩家、所有遊戲的進度都會從這台裝置刪除。建議先匯出備份。</p><div class="row2"><button class="btn" type="button" data-close>取消</button><button class="btn warn" type="button" id="cl">全部清除</button></div>',b2=>b2.querySelector('#cl').addEventListener('click',()=>{
       Object.keys(localStorage).filter(k=>k.indexOf('gc:')===0).forEach(k=>localStorage.removeItem(k));closeSheet();render();})));});
-});
+}
+$('#b-about').addEventListener('click',openAbout);
 async function showUpdate(){
   let v='';try{const t=await (await fetch('config.js',{cache:'no-store'})).text();const m=t.match(/version:\s*'([^']+)'/);if(m)v=m[1];}catch(e){}
   $('#upd-t').textContent=v?'有新版本 v'+v+' 可以更新':'有新版本可以更新';$('#upd').hidden=false;
@@ -386,20 +452,24 @@ if('serviceWorker' in navigator&&location.protocol!=='file:'){
   let refreshing=false;const hadCtl=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing||!hadCtl)return;refreshing=true;location.reload();});
 }
 (function whatsNew(){const seen=localStorage.getItem('gc:seenVersion');localStorage.setItem('gc:seenVersion',C.version);
-  if(seen&&seen!==C.version){const l=C.changelog.find(x=>x.v===C.version);setTimeout(()=>{if($('#sheet').hidden)sheet('<h2>已更新到 v'+esc(C.version)+'</h2>'+(l?'<ul style="line-height:1.8">'+l.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul>':'')+'<button class="btn main" type="button" data-close>好</button>');},400);}})();
+  if(seen&&seen!==C.version){
+    const items=C.changelog.filter(l=>verCmp(l.v,seen)>0&&verCmp(l.v,C.version)<=0);const shown=items.slice(0,2),more=items.length-shown.length;
+    setTimeout(()=>{if($('#sheet').hidden)sheet('<h2>已更新到 v'+esc(C.version)+'</h2>'+shown.map(logEntry).join('')+(more>0?'<p class="soft">還有 '+more+' 次更早的更新，可到「關於與更新」→「更新紀錄」查看。</p>':'')+'<button class="btn main" type="button" data-close>好</button>');},400);}})();
 
 /* ---------- install tip ---------- */
 let deferred=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;installTip();});
+function isIOS(){return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}
 function installTip(){
   const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
   const tip=$('#tip');if(standalone||localStorage.getItem('gc:hideTip')){tip.hidden=true;return;}
-  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  if(ios){$('#tip-h').textContent='加到主畫面，玩起來像 App';$('#tip-t').textContent='用 Safari 打開這個網址，點下方的分享按鈕，選「加入主畫面」。之後從桌面圖示打開，沒有網路也能玩。';$('#tip-a').innerHTML='';}
-  else if(deferred){$('#tip-h').textContent='安裝到這台電腦';$('#tip-t').textContent='安裝後會有桌面圖示，可以離線玩。';$('#tip-a').innerHTML='<button class="btn main" type="button" id="tip-i" style="margin-top:8px">安裝</button>';$('#tip-i').addEventListener('click',async()=>{deferred.prompt();await deferred.userChoice;deferred=null;installTip();});}
-  else{$('#tip-h').textContent='可以安裝成 App';$('#tip-t').textContent='用 Edge 或 Chrome 打開時，點網址列右側的「安裝」圖示，就能放到桌面。';$('#tip-a').innerHTML='';}
+  $('#tip-go').textContent=isIOS()?'加到主畫面，像 App 一樣玩　›':deferred?'安裝到這台電腦，離線也能玩　›':'可以安裝成 App　›';
   tip.hidden=false;
 }
+$('#tip-go').addEventListener('click',async()=>{
+  if(deferred){deferred.prompt();await deferred.userChoice;deferred=null;installTip();return;}
+  sheet('<div class="shead"><h2>安裝成 App</h2><button class="btn sm" type="button" data-close>關閉</button></div>'+(isIOS()?'<p>用 Safari 打開這個網址，點下方的分享按鈕，選「加入主畫面」。</p><p class="soft">之後從桌面圖示打開，沒有網路也能玩，存檔也比較穩定。</p>':'<p>用 Edge 或 Chrome 打開，點網址列右側的「安裝」圖示，就能放到桌面。</p><p class="soft">安裝後會有桌面圖示，可以離線玩。</p>'));
+});
 $('#tip-x').addEventListener('click',()=>{localStorage.setItem('gc:hideTip','1');$('#tip').hidden=true;});
 
 render();
