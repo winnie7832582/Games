@@ -1,0 +1,23 @@
+/* ============================================================
+   遊戲合集設定檔：更版時只需要改這個檔案
+   1. 把 version 改成新的號碼（例如 1.0.0 → 1.1.0）
+   2. 在 changelog 最上面加一筆更新說明
+   3. 新增遊戲時，把 html 放進 games 資料夾，再在 games 清單加一筆
+   ============================================================ */
+self.GC_CONFIG = {
+  title: '小遊戲合集',
+  version: '1.0.0',
+  changelog: [
+    { v: '1.0.0', date: '2026-10-25', notes: ['第一版上線：八款遊戲', '支援多個玩家設定檔', '可以匯出、匯入進度，換裝置接著玩'] }
+  ],
+  games: [
+    { id: 'souffle',      file: 'games/souffle.html',      name: '舒芙蕾',     desc: '六個步驟做出一個高挺的舒芙蕾', icon: '🍮', color: '#F2B632' },
+    { id: 'bubble-tea',   file: 'games/bubble-tea.html',   name: '搖搖茶舖',   desc: '兩分鐘內手忙腳亂做手搖飲',     icon: '🧋', color: '#E5483A' },
+    { id: 'cafe',         file: 'games/cafe.html',         name: '一杯好咖啡', desc: '手沖與拿鐵，四位客人四杯咖啡', icon: '☕', color: '#8B5E3C' },
+    { id: 'latte-art',    file: 'games/latte-art.html',    name: '拉一杯花',   desc: '從圓形練到愛心、鬱金香、葉子', icon: '🤍', color: '#2F6FDB' },
+    { id: 'night-market', file: 'games/night-market.html', name: '夜市人生',   desc: '三十天經營夜市小攤',           icon: '🏮', color: '#D93A2F' },
+    { id: 'chef-cards',   file: 'games/chef-cards.html',   name: '主廚牌局',   desc: '料理卡牌冒險，征服十二位評審', icon: '🃏', color: '#2E8B57' },
+    { id: 'pet-house',    file: 'games/pet-house.html',    name: '毛孩小屋',   desc: '用真實時間照顧你的毛孩',       icon: '🐾', color: '#2A9D8F' },
+    { id: 'corner-cafe',  file: 'games/corner-cafe.html',  name: '巷口咖啡館', desc: '經營咖啡館，也許還會談戀愛',   icon: '💌', color: '#D35D7A' }
+  ]
+};
