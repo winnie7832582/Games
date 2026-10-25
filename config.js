@@ -6,8 +6,12 @@
    ============================================================ */
 self.GC_CONFIG = {
   title: '小遊戲合集',
-  version: '1.1.5',
+  author: 'hua',
+  year: 2026,
+  version: '1.2.1',
   changelog: [
+    { v: '1.2.1', date: '2026-10-25', notes: ['「關於與更新」的關閉按鈕移到最上方，和危險區分開'] },
+    { v: '1.2.0', date: '2026-10-25', notes: ['毛孩小屋：新增守宮，夜行性、吃昆蟲、需要幫忙蛻皮', '一杯好咖啡：每次開店的客人、豆子、口味、奶種和拉花都會不一樣', '搖搖茶舖：開店前可以選擇失誤次數（1 到 10 次）', '轉移碼改善：複製更穩定，匯入失敗時會說明原因', '首頁底部加上作者與版權資訊'] },
     { v: '1.1.5', date: '2026-10-25', notes: ['巷口咖啡館：修正劇情選完選項後卡住的問題'] },
     { v: '1.1.4', date: '2026-10-25', notes: ['拉一杯花：評分改看愛心的尖角和凹口，一團亂的形狀不會再拿高分', '「快速一劃」要夠快、從圓心劃過才算數，劃失敗會即時提示'] },
     { v: '1.1.3', date: '2026-10-25', notes: ['所有遊戲：在手機上長按不會再跳出文字選取', '拉一杯花：杯子太空時不會倒出看不見的奶泡，提示也會正確顯示'] },
@@ -20,11 +24,11 @@ self.GC_CONFIG = {
     { id: 'sanwei-kitchen', file: 'games/sanwei-kitchen.html', name: '三味廚房',   desc: '舒芙蕾、蛋包飯、蚵仔煎，三道菜即時料理', icon: '🍳', color: '#E07A2F' },
     { id: 'souffle',      file: 'games/souffle.html',      name: '舒芙蕾',     desc: '六個步驟做出一個高挺的舒芙蕾', icon: '🍮', color: '#F2B632' },
     { id: 'bubble-tea',   file: 'games/bubble-tea.html',   name: '搖搖茶舖',   desc: '兩分鐘內手忙腳亂做手搖飲',     icon: '🧋', color: '#E5483A' },
-    { id: 'cafe',         file: 'games/cafe.html',         name: '一杯好咖啡', desc: '手沖與拿鐵，四位客人四杯咖啡', icon: '☕', color: '#8B5E3C' },
+    { id: 'cafe',         file: 'games/cafe.html',         name: '一杯好咖啡', desc: '每天四位客人，點單都不一樣', icon: '☕', color: '#8B5E3C' },
     { id: 'latte-art',    file: 'games/latte-art.html',    name: '拉一杯花',   desc: '從圓形練到愛心、鬱金香、葉子', icon: '🤍', color: '#2F6FDB' },
     { id: 'night-market', file: 'games/night-market.html', name: '夜市人生',   desc: '三十天經營夜市小攤',           icon: '🏮', color: '#D93A2F' },
     { id: 'chef-cards',   file: 'games/chef-cards.html',   name: '主廚牌局',   desc: '料理卡牌冒險，征服十二位評審', icon: '🃏', color: '#2E8B57' },
-    { id: 'pet-house',    file: 'games/pet-house.html',    name: '毛孩小屋',   desc: '用真實時間照顧你的毛孩',       icon: '🐾', color: '#2A9D8F' },
+    { id: 'pet-house',    file: 'games/pet-house.html',    name: '毛孩小屋',   desc: '貓、狗、兔子或守宮，用真實時間照顧',       icon: '🐾', color: '#2A9D8F' },
     { id: 'corner-cafe',  file: 'games/corner-cafe.html',  name: '巷口咖啡館', desc: '經營咖啡館，也許還會談戀愛',   icon: '💌', color: '#D35D7A' }
   ]
 };
