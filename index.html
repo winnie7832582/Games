@@ -66,6 +66,7 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .game b{display:block;font-size:1.05rem}
 .game span{display:block;color:var(--soft);font-size:.84rem;line-height:1.5;margin-top:2px}
 .foot{display:flex;gap:10px;margin-top:18px}
+.credit{margin:22px 0 4px;text-align:center;color:var(--soft);font-size:.82rem;line-height:1.7}
 .foot .btn{flex:1}
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,15,25,.5)}
 .sheet[hidden]{display:none}
@@ -75,6 +76,10 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .sbox h3{font-size:1rem;margin:16px 0 8px}
 .sbox .btn{width:100%;margin-top:8px}
 .row2{display:flex;gap:8px}.row2 .btn{flex:1}
+.shead{display:flex;align-items:center;gap:10px;position:sticky;top:-18px;margin:-18px -16px 8px;padding:16px 16px 10px;background:var(--surface);z-index:1;border-bottom:1px solid var(--line)}
+.shead h2{flex:1;margin:0}
+.sbox .btn.sm{width:auto;margin:0;padding:8px 14px}
+.danger{color:var(--warn);margin-top:28px;padding-top:14px;border-top:2px dashed var(--line)}
 .prof{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:transparent;border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:0 0 8px;cursor:pointer}
 .prof[aria-current="true"]{border-color:var(--accent)}
 .prof .tx{flex:1;min-width:0}
@@ -102,6 +107,7 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
   <a class="cont" id="cont" hidden><span class="ic" id="cont-ic"></span><span class="tx"><small>繼續玩</small><b id="cont-n"></b></span><span aria-hidden="true">›</span></a>
   <div class="grid" id="grid"></div>
   <div class="foot"><button class="btn" type="button" id="b-backup">備份與轉移</button><button class="btn" type="button" id="b-about">關於與更新</button></div>
+  <footer class="credit" id="credit"></footer>
 </div>
 <div class="sheet" id="sheet" hidden><div class="sbox" id="sbox" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -113,7 +119,8 @@ const PK='gc:profiles',CUR='gc:current';
 const COLORS=['#3B6EF5','#E5483A','#2E8B57','#F2A23B','#8250B0','#2A9D8F','#D35D7A','#5E6B7A'];
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 let tt=0;function toast(m){const t=$('#toast');t.textContent=m;t.className='toast show';clearTimeout(tt);tt=setTimeout(()=>t.className='toast',2400);}
-document.title=C.title;$('#ttl').innerHTML=esc(C.title)+'<span class="ver">v'+esc(C.version)+'</span>';
+document.title=C.title;
+$('#credit').textContent='© '+(C.year||new Date().getFullYear())+' '+(C.author||'hua')+'　版權所有　v'+C.version;$('#ttl').innerHTML=esc(C.title)+'<span class="ver">v'+esc(C.version)+'</span>';
 
 /* ---------- profiles ---------- */
 function profiles(){try{return JSON.parse(localStorage.getItem(PK)||'[]');}catch(e){return [];}}
@@ -184,9 +191,11 @@ function unb64u(str){str=str.replace(/-/g,'+').replace(/_/g,'/');while(str.lengt
 async function toCode(obj){const raw=new TextEncoder().encode(JSON.stringify(obj));
   if(window.CompressionStream){const cs=new Blob([raw]).stream().pipeThrough(new CompressionStream('gzip'));const buf=new Uint8Array(await new Response(cs).arrayBuffer());return 'GC1:'+b64u(buf);}
   return 'GC0:'+b64u(raw);}
-async function fromCode(code){code=code.trim().replace(/\s+/g,'');const m=code.match(/^GC([01]):(.+)$/);if(!m)throw new Error('format');const bytes=unb64u(m[2]);
+async function fromCode(code){code=String(code).replace(/\s+/g,'');const m=code.match(/GC([01]):([A-Za-z0-9_-]+)/);if(!m)throw new Error('format');const bytes=unb64u(m[2]);
   if(m[1]==='1'){if(!window.DecompressionStream)throw new Error('nogzip');const ds=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));return JSON.parse(await new Response(ds).text());}
   return JSON.parse(new TextDecoder().decode(bytes));}
+function packForCode(list){const o=pack(list);o.profiles.forEach(pd=>{Object.keys(pd.data).forEach(k=>{if(k==='latteart-v1'){try{const v=JSON.parse(pd.data[k]);if(v&&v.gallery){v.gallery=[];pd.data[k]=JSON.stringify(v);}}catch(e){}}});});return o;}
+function manualCopy(ta){ta.focus();ta.select();try{ta.setSelectionRange(0,ta.value.length);}catch(e){}let ok=false;try{ok=document.execCommand('copy');}catch(e){}toast(ok?'轉移碼已複製':'已全選，請長按選「拷貝」');}
 function stamp(){const d=new Date();return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');}
 async function exportFile(list){
   const obj=pack(list);const name=(list.length===1?list[0].name:'全部玩家')+'-存檔-'+stamp()+'.json';
@@ -195,7 +204,7 @@ async function exportFile(list){
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('存檔已下載：'+name);
 }
 function validate(obj){return obj&&obj.app==='gc-save'&&Array.isArray(obj.profiles)&&obj.profiles.every(p=>p&&typeof p.name==='string'&&p.data&&typeof p.data==='object');}
-function writeProfile(id,pd){keysOf(id).forEach(k=>localStorage.removeItem(k));Object.keys(pd.data).forEach(k=>localStorage.setItem(prefix(id)+k,String(pd.data[k])));}
+function writeProfile(id,pd){try{const old=localStorage.getItem(prefix(id)+'latteart-v1'),nw=pd.data['latteart-v1'];if(old&&nw){const o=JSON.parse(old),n=JSON.parse(nw);if(n&&Array.isArray(n.gallery)&&!n.gallery.length&&o.gallery&&o.gallery.length){n.gallery=o.gallery;pd.data['latteart-v1']=JSON.stringify(n);}}}catch(e){}keysOf(id).forEach(k=>localStorage.removeItem(k));Object.keys(pd.data).forEach(k=>localStorage.setItem(prefix(id)+k,String(pd.data[k])));}
 function applyImport(obj){
   if(!validate(obj)){toast('這不是遊戲合集的存檔');return;}
   const cur=current();
@@ -212,17 +221,25 @@ function backupSheet(fromFirst){
   sheet('<h2>備份與轉移</h2><p class="soft">進度只存在這台裝置。換手機、換電腦，或想留一份備份時，先在這裡匯出，再到新裝置匯入。</p>'+
     (cur?'<h3>匯出</h3><button class="btn main" type="button" id="bk-file">匯出「'+esc(cur.name)+'」的存檔檔案</button>'+(ps.length>1?'<button class="btn" type="button" id="bk-all">匯出全部玩家</button>':'')+'<button class="btn" type="button" id="bk-code">複製「'+esc(cur.name)+'」的轉移碼</button>':'')+
     '<h3>匯入</h3><button class="btn" type="button" id="bk-open">選擇存檔檔案</button><input type="file" id="bk-in" accept=".json,application/json" hidden>'+
-    '<div class="field"><label for="bk-txt">或貼上轉移碼</label><textarea id="bk-txt" placeholder="GC1:..."></textarea></div><button class="btn" type="button" id="bk-paste">用轉移碼匯入</button>'+
+    '<div class="field"><label for="bk-txt">轉移碼（複製後會顯示在這裡；匯入時貼在這裡）</label><textarea id="bk-txt" placeholder="GC1:..." autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false"></textarea></div><div class="row2"><button class="btn" type="button" id="bk-sel">全選複製</button><button class="btn" type="button" id="bk-paste">用轉移碼匯入</button></div><p class="soft" style="margin-top:8px">轉移碼不包含「拉一杯花」作品集的照片，照片請用存檔檔案轉移。</p>'+
     '<p class="soft" style="margin-top:12px">iPhone 小提醒：從 Safari 和從「主畫面圖示」打開，會是兩份不同的存檔。建議先加入主畫面，之後都從圖示打開。</p>'+
     (fromFirst?'<button class="btn" type="button" id="bk-back">返回建立玩家</button>':'<button class="btn" type="button" data-close>關閉</button>'),b=>{
     const f=b.querySelector('#bk-file');if(f)f.addEventListener('click',()=>exportFile([cur]));
     const a=b.querySelector('#bk-all');if(a)a.addEventListener('click',()=>exportFile(profiles()));
-    const c=b.querySelector('#bk-code');if(c)c.addEventListener('click',async()=>{const code=await toCode(pack([cur]));
-      b.querySelector('#bk-txt').value=code;
-      try{await navigator.clipboard.writeText(code);toast(code.length>20000?'已複製，不過轉移碼很長，建議改用存檔檔案':'轉移碼已複製，貼到新裝置的匯入欄位');}catch(e){b.querySelector('#bk-txt').select();toast('請手動複製下方的轉移碼');}});
+    const c=b.querySelector('#bk-code');if(c)c.addEventListener('click',()=>{
+      const p=toCode(packForCode([cur]));const ta=b.querySelector('#bk-txt');
+      const done=code=>{ta.value=code;ta.readOnly=false;const n=code.length;
+        const msg=n>9000?'轉移碼有 '+n+' 個字，用 LINE 傳可能會被截斷，建議改用存檔檔案':'轉移碼已複製（'+n+' 個字），貼到新裝置的匯入欄位';return msg;};
+      let ok=false;
+      try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+          navigator.clipboard.write([new ClipboardItem({'text/plain':p.then(code=>new Blob([code],{type:'text/plain'}))})]).then(()=>p.then(code=>toast(done(code)))).catch(()=>p.then(code=>{done(code);manualCopy(ta);}));ok=true;}}catch(e){}
+      if(!ok)p.then(code=>{done(code);(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(code):Promise.reject()).then(()=>toast(done(code))).catch(()=>manualCopy(ta));});
+    });
+    const sa=b.querySelector('#bk-sel');if(sa)sa.addEventListener('click',()=>{const ta=b.querySelector('#bk-txt');if(!ta.value){toast('還沒有轉移碼');return;}manualCopy(ta);});
     const inp=b.querySelector('#bk-in');b.querySelector('#bk-open').addEventListener('click',()=>inp.click());
     inp.addEventListener('change',()=>{const file=inp.files&&inp.files[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{applyImport(JSON.parse(r.result));}catch(e){toast('讀不懂這個檔案，請確認是遊戲合集的存檔');}};r.readAsText(file);});
-    b.querySelector('#bk-paste').addEventListener('click',async()=>{const v=b.querySelector('#bk-txt').value;if(!v.trim()){toast('請先貼上轉移碼');return;}try{applyImport(await fromCode(v));}catch(e){toast(e.message==='nogzip'?'這個瀏覽器太舊，請改用存檔檔案':'轉移碼不完整或有誤');}});
+    b.querySelector('#bk-paste').addEventListener('click',async()=>{const v=b.querySelector('#bk-txt').value;if(!v.trim()){toast('請先貼上轉移碼');return;}
+      try{applyImport(await fromCode(v));}catch(e){toast(e.message==='nogzip'?'這個瀏覽器版本太舊，請改用存檔檔案':e.message==='format'?'找不到轉移碼，請確認有完整貼上（開頭是 GC1: 或 GC0:）':'轉移碼不完整，可能複製時漏了一段或被聊天軟體截斷，請改用存檔檔案');}});
     const bb=b.querySelector('#bk-back');if(bb)bb.addEventListener('click',()=>profileForm(true));
   },fromFirst);
 }
@@ -233,9 +250,9 @@ let REG=null;
 $('#b-about').addEventListener('click',async()=>{
   let usage='';try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage='這台裝置已用 '+(e.usage/1048576).toFixed(1)+' MB';}}catch(e){}
   let persisted='';try{if(navigator.storage&&navigator.storage.persisted)persisted=(await navigator.storage.persisted())?'，資料已設為長期保存':'';}catch(e){}
-  sheet('<h2>'+esc(C.title)+'</h2><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
+  sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
     '<h3>更新紀錄</h3>'+C.changelog.map(l=>'<div class="log"><b>v'+esc(l.v)+'</b><small>'+esc(l.date)+'</small><ul>'+l.notes.map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul></div>').join('')+
-    '<h3>危險區</h3><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button><button class="btn" type="button" data-close>關閉</button>',b=>{
+    '<h3 class="danger">危險區</h3><p class="soft">以下操作無法復原。</p><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button>',b=>{
     b.querySelector('#ab-up').addEventListener('click',async()=>{if(!REG){toast('這個瀏覽器不支援自動更新，重新整理頁面即可');return;}toast('檢查中…');try{await REG.update();setTimeout(()=>{if(REG.waiting)showUpdate();else toast('已經是最新版本');},1500);}catch(e){toast('現在沒有網路，稍後再試');}});
     b.querySelector('#ab-clear').addEventListener('click',()=>sheet('<h2>清除所有資料？</h2><p class="soft">所有玩家、所有遊戲的進度都會從這台裝置刪除。建議先匯出備份。</p><div class="row2"><button class="btn" type="button" data-close>取消</button><button class="btn warn" type="button" id="cl">全部清除</button></div>',b2=>b2.querySelector('#cl').addEventListener('click',()=>{
       Object.keys(localStorage).filter(k=>k.indexOf('gc:')===0).forEach(k=>localStorage.removeItem(k));closeSheet();render();})));});
