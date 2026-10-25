@@ -234,6 +234,7 @@ class Pour{
     this.revT=this.revT.filter(t=>this.t-t<.5);
     const wiggle=this.revT.length>=2,fast=sp>32&&!wiggle;
     this.mode=pouring?(wiggle?'wiggle':fast?'cut':'push'):'';
+    if(this.run&&!(fast&&pouring)){this.run.idle=(this.run.idle||0)+dt;if(this.run.idle>.15){const R=this.run;if(!this.cut&&R.len>14)this.miss={why:R.n<220?'small':'off',t:this.t};this.run=null;}}
     if(pouring){
       this.fill+=6*dt;if(!fast)this.pourT+=dt;
       let q=190*(.75+.25*this.tq);if(fast)q*=.2;else if(wiggle)q*=.9;
@@ -243,7 +244,9 @@ class Pour{
       while(this.emit>=1&&this.parts.length<3200){this.emit--;const a=Math.random()*Math.PI*2,r=Math.random()*(fast?.3:.8);
         this.parts.push({x:this.px+Math.cos(a)*r,y:this.py+Math.sin(a)*r,a:sink,r:(fast?.9:1.45)+(1-this.tq)*Math.random()*1.2,l:this.layer,thin:fast});}
       if(fast&&this.parts.length>60){const nx=this.ux/sp,ny=this.uy/sp,ds=sp*dt,Rb=Math.sqrt(this.parts.length*.97/Math.PI),w=Math.max(3,.5*Rb);
-        this.cutLen+=ds;if(this.cutLen>10)this.cut=true;
+        if(!this.run){let n=0,sx=0,sy=0;for(const p of this.parts){if(p.thin||p.a<.6)continue;n++;sx+=p.x;sy+=p.y;}this.run={len:0,near:false,cx:n?sx/n:this.px,cy:n?sy/n:this.py,R:Math.sqrt(n*.97/Math.PI),n};}
+        const R=this.run;R.len+=ds;R.idle=0;if(Math.hypot(this.px-R.cx,this.py-R.cy)<Math.max(4,.6*R.R))R.near=true;
+        if(R.len>16&&R.near&&R.n>=220)this.cut=true;
         for(const p of this.parts){const rx=p.x-this.px,ry=p.y-this.py,pr=-rx*ny+ry*nx;if(Math.abs(pr)>2.6*w)continue;const G=Math.exp(-pr*pr/(w*w));
           p.x+=nx*ds*.5*G;p.y+=ny*ds*.5*G;const a=rx*nx+ry*ny;if(a>0){const pin=Math.min(.5,.05*ds*G*a/Rb);p.x+=ny*pr*pin;p.y-=nx*pr*pin;}}}
     }
@@ -291,7 +294,7 @@ function txt(c,s,x,y,size,color,weight){const m=c.getTransform();c.save();c.setT
 /* ---------- scoring ---------- */
 function grid(parts){
   const N=44,size=70,cell=size/N,x0=CX-size/2,y0=CY-size/2,den=new Float32Array(N*N);
-  for(const p of parts){const i=Math.floor((p.x-x0)/cell),j=Math.floor((p.y-y0)/cell);
+  for(const p of parts){if(p.thin)continue;const i=Math.floor((p.x-x0)/cell),j=Math.floor((p.y-y0)/cell);
     for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=N||jj>=N)continue;den[jj*N+ii]+=(di||dj?.35:1)*p.a;}}
   const cov=new Uint8Array(N*N);let n=0,sx=0,sy=0;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const k=j*N+i;if(den[k]>=1){cov[k]=1;n++;sx+=x0+(i+.5)*cell;sy+=y0+(j+.5)*cell;}}
   return{N,cell,x0,y0,cov,n,cx:n?sx/n:CX,cy:n?sy/n:CY};
@@ -314,6 +317,13 @@ function symmetry(G,F){
     if(ii>=0&&jj>=0&&ii<G.N&&jj<G.N&&G.cov[jj*G.N+ii])match++;}
   return match/G.n;
 }
+function zones(G,pat,F){const k=pat==='tulip'?[1.18,.74]:pat==='tulip5'?[1.28,.62]:[1,1];const s=15*F.sc;const A={lobe:[0,0],tip:[0,0],notch:[0,0],side:[0,0]};
+  for(let j=0;j<G.N;j++)for(let i=0;i<G.N;i++){const x=G.x0+(i+.5)*G.cell,y=G.y0+(j+.5)*G.cell;let u=(x-CX-F.ox)/s,v=-(y-CY-F.oy)/s;
+    if(F.rot===1){const t=u;u=v;v=-t;}else if(F.rot===2){u=-u;v=-v;}else if(F.rot===3){const t=u;u=-v;v=t;}
+    u*=k[0];v*=k[1];const au=Math.abs(u);let z=null;
+    if(au<.2&&v>.45&&v<1.15)z='notch';else if(au>.3&&au<.85&&v>.3&&v<.95)z='lobe';else if(au<.22&&v<-.55&&v>-1.05)z='tip';else if(au>.55&&au<1.15&&v<-.3&&v>-1)z='side';
+    if(z){A[z][1]++;if(G.cov[j*G.N+i])A[z][0]++;}}
+  const r={};Object.keys(A).forEach(z=>r[z]=A[z][1]?A[z][0]/A[z][1]:0);return r;}
 function score(pour,level){
   const G=grid(pour.parts);
   const cupCells=Math.PI*32.5*32.5/(G.cell*G.cell);const cover=G.n/cupCells;
@@ -326,11 +336,11 @@ function score(pour,level){
   const F=fitShape(G,level.pat);out.fit=F;const T=F.iou;let shape;
   if(level.pat==='circ'){shape=clamp((T-.45)/.4,0,1)*100;}
   else{const C=fitShape(G,'ref').iou;
-    if(level.pat==='heart'){shape=clamp((T-.45)/.33,0,1)*60+clamp((T-C+.05)/.12,0,1)*40;if(!pour.cut)shape*=.75;}
+    if(level.pat==='heart'){const Z=zones(G,'heart',F);out.tip=Z.tip;out.notch=Z.notch;const hn=clamp(Z.tip*.75+(1-Z.notch)*2-Z.side*.3,0,1);shape=clamp((T-.5)/.25,0,1)*35+hn*65;if(!pour.cut)shape*=.75;}
     else if(level.pat==='leaf'){shape=clamp((T-.4)/.32,0,1)*60+clamp((T-C+.03)/.1,0,1)*40;shape*=.4+.6*Math.min(pour.wiggles,level.wiggles)/level.wiggles;if(!pour.cut)shape*=.85;}
-    else{shape=clamp((T-.42)/.3,0,1)*60+clamp((T-C+.03)/.1,0,1)*40;shape*=.55+.45*Math.min(pour.pours,level.layers)/level.layers;if(!pour.cut)shape*=.85;}}
+    else{const Z=zones(G,level.pat,F);out.tip=Z.tip;out.notch=Z.notch;const hn=clamp(Z.tip*.7+(1-Z.notch)*1.2-Z.side*.4,0,1);shape=clamp((T-.45)/.3,0,1)*40+hn*60;shape*=.55+.45*Math.min(pour.pours,level.layers)/level.layers;if(!pour.cut)shape*=.85;}}
   out.shape=Math.round(shape);out.sym=Math.round(symmetry(G,F)*100);
-  out.total=Math.round(clamp(out.shape*.45+out.sym*.2+center*.15+out.contrast*.2,0,100));
+  out.total=Math.round(clamp(out.shape*.55+out.sym*.2+center*.1+out.contrast*.15,0,100));
   return out;
 }
 function starsOf(s){return s>=85?3:s>=70?2:s>=50?1:0;}
@@ -410,6 +420,7 @@ function setCoach(){
     else if(level.layers)s=pour.cut?'按完成看看成果':(pour.pours<level.layers?'已推出 '+pour.pours+' / '+level.layers+' 團'+(pour.active?'':'，往下一點再推'):'最後從最上方快速往下一劃');
     else if(level.pat==='leaf')s=pour.cut?'按完成看看成果':(pour.wiggles<level.wiggles?'左右擺動 '+pour.wiggles+' / '+level.wiggles+' 下，邊擺邊往下退':'夠了，快速往上一劃穿回去');
   }else s=pour.mode==='wiggle'?'擺動中':pour.mode==='cut'?'拉線中':pour.active?'注入中':'';
+  if(pour.miss&&pour.t-pour.miss.t<2.5&&!pour.cut)s=pour.miss.why==='small'?'圓還太小就劃了，再推大一點，或按重來':'要從圓的正中間劃過去';
   if(pour.fill>=92&&!pour.done)s='杯子快滿了';
   if(el.textContent!==s)el.textContent=s;
 }
@@ -457,7 +468,9 @@ function note(r){
   if(r.sym<65)items.push([(100-r.sym)/80,'左右不太對稱，拉的時候手指要走直線。']);
   if(level&&r.shape!=null&&r.shape<70){let t='';
     if(level.pat==='circ')t='圓形不夠圓，推的時候手指不要移動。';
-    else if(!pour.cut)t='少了最後快速一劃，形狀收不起來。';
+    else if(!pour.cut)t='少了最後快速一劃，形狀收不起來。要先推出夠大的圓，再從圓的正中間劃過。';
+    else if((level.pat==='heart'||level.layers)&&r.tip!=null&&r.tip<.5)t='下方的尖角沒有拉出來。劃的時候要快、要直，從圓的上方一路劃過圓心到下方。';
+    else if((level.pat==='heart'||level.layers)&&r.notch!=null&&r.notch>.9)t='上方中間沒有凹進去，看起來比較像一團圓。劃線要從圓的外面開始。';
     else if(level.layers&&pour.pours<level.layers)t='這次只推出 '+pour.pours+' 團，要推 '+level.layers+' 團。每團都要放手再推。';
     else if(level.pat==='leaf'&&pour.wiggles<level.wiggles)t='只擺動了 '+pour.wiggles+' 下，多擺幾下，葉片才會一層一層出現。';
     else t='輪廓還不太像'+level.name+'，看看藍色虛線，對照一下哪裡多了、哪裡少了。';
