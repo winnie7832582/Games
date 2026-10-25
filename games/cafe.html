@@ -113,7 +113,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
   <section class="screen on" id="title" aria-labelledby="t-h">
     <canvas class="hero" id="hero" aria-hidden="true"></canvas>
     <h1 id="t-h">一杯好咖啡</h1>
-    <p class="lede">四位客人，兩杯手沖、兩杯拿鐵。磨豆、控溫、萃取、打奶泡，最後還要拉出一朵花。</p>
+    <p class="lede">每次開店都有四位不同的客人，豆子、口味、奶種和拉花都不一樣。磨豆、控溫、萃取、打奶泡，照客人的喜好做出那一杯。</p>
     <button class="btn primary" id="start" type="button">開始沖煮</button>
     <p class="best" id="best"></p>
   </section>
@@ -192,11 +192,16 @@ function fmtClock(s){s=Math.max(0,Math.floor(s));return Math.floor(s/60)+':'+Str
 const GRIND=['極細','細','中細','中','中粗','粗','極粗'];
 const BEANS=[
   {name:'衣索比亞 耶加雪菲',roast:'淺焙',notes:'花香、檸檬、紅茶感',grind:3,tlo:92,thi:94,dry:'#A27650',wet:'#5A3820'},
+  {name:'肯亞 AA',roast:'淺焙',notes:'黑醋栗、葡萄柚、明亮酸感',grind:3,tlo:93,thi:95,dry:'#9C6E48',wet:'#56351E'},
+  {name:'巴拿馬 藝伎',roast:'極淺焙',notes:'茉莉、蜜桃、佛手柑',grind:2,tlo:93,thi:95,dry:'#B08458',wet:'#603D22'},
+  {name:'台灣 阿里山',roast:'中淺焙',notes:'蜂蜜、烏龍茶韻、柑橘',grind:3,tlo:90,thi:92,dry:'#94673F',wet:'#4F301B'},
   {name:'哥倫比亞 慧蘭',roast:'中焙',notes:'焦糖、紅蘋果、堅果',grind:4,tlo:89,thi:91,dry:'#7E5133',wet:'#43271A'},
+  {name:'瓜地馬拉 安提瓜',roast:'中焙',notes:'可可、香料、柔和果酸',grind:4,tlo:88,thi:90,dry:'#77492D',wet:'#402516'},
+  {name:'巴西 喜拉朵',roast:'中深焙',notes:'花生、牛奶巧克力、低酸',grind:5,tlo:86,thi:88,dry:'#5E3A24',wet:'#331D12'},
   {name:'蘇門答臘 曼特寧',roast:'深焙',notes:'黑巧克力、草本、厚實',grind:5,tlo:85,thi:87,dry:'#4E3020',wet:'#2A1810'}
 ];
 const R={};
-function newRound(i){const o=ORDERS[i];Object.assign(R,{i,order:o,bean:o.bean||LATTE_BEAN,stages:o.type==='pour'?[grind,temp,bloom,pour]:[shot,steam,art],shotW:0,shotTime:0,milkTemp:0,foam:0,bubbles:0,tq:.7,crema:'#A0612F',parts:[],fillEnd:0,surfEnd:32.5,artRes:null,grind:4,temp:0,water:0,absorbed:0,level:0,clock:0,clockOn:false,bloomWater:0,bloomTime:0,even:{good:0,edge:0,still:0,total:0},endClock:0});}
+function newRound(i){const o=ORDERS[i];const ratioT=o.pref&&o.pref.ratio||15;Object.assign(R,{i,order:o,ratioT,waterT:ratioT*15,shotT:o.shot?o.shot.t:36,mLo:o.tmp?o.tmp.lo:60,mHi:o.tmp?o.tmp.hi:65,fLo:o.milk?o.milk.fLo:25,fHi:o.milk?o.milk.fHi:40,milkTq:o.milk?o.milk.tq:1,bean:o.bean||LATTE_BEAN,stages:o.type==='pour'?[grind,temp,bloom,pour]:[shot,steam,art],shotW:0,shotTime:0,milkTemp:0,foam:0,bubbles:0,tq:.7,crema:'#A0612F',parts:[],fillEnd:0,surfEnd:32.5,artRes:null,grind:4,temp:0,water:0,absorbed:0,level:0,clock:0,clockOn:false,bloomWater:0,bloomTime:0,even:{good:0,edge:0,still:0,total:0},endClock:0});}
 function flow(dt,pour){
   if(pour>0){R.water+=pour*dt;const a=Math.min(30-R.absorbed,pour*dt);R.absorbed+=a;R.level+=pour*dt-a;R.clockOn=true;}
   const kd=.25+.06*(R.grind-1);R.level-=R.level*kd*dt;
@@ -351,8 +356,8 @@ const bloom={
 /* ---------- stage: pour ---------- */
 const pour={
   key:'pour',name:'注水',
-  hint(){return '總水量到 225 公克；在粉層上慢慢畫圈';},
-  intro:'手指按在濾杯上就會注水，移開就停。在虛線圈裡慢慢畫圈，別倒到濾紙邊，也別一直停在同一點。倒到 225 公克按完成，等水滴完就能喝了。',
+  hint(){return '總水量到 '+R.waterT+' 公克；在粉層上慢慢畫圈';},
+  intro:'手指按在濾杯上就會注水，移開就停。在虛線圈裡慢慢畫圈，別倒到濾紙邊，也別一直停在同一點。倒到客人要的水量就按完成，等水滴完就能喝了。',
   init(){this.st={active:false,px:DX,py:DY,lx:DX,ly:DY,speed:0,acc:0,pouring:false,done:false,drain:false,warnAt:-9,t:0,kind:''};},
   controls(){return[{label:'完成注水',primary:true,onTap:()=>this.stop()}];},
   down(x,y){const st=this.st;if(st.drain)return;st.active=true;st.px=st.lx=x;st.py=st.ly=y;},
@@ -379,7 +384,7 @@ const pour={
     drawDripper(c,{swell:bloom.swell()*.4,bubbles:0,edgeRing:!st.drain});
     if(st.pouring)drawStream(c,st.px,st.py,1);
     lcd(c,4,2,20,8,fmtClock(R.clock),4.2);
-    txt(c,'目標 225g',96,6,3.3,P.soft,'right',700);
+    txt(c,'目標 '+R.waterT+'g',96,6,3.3,P.soft,'right',700);
     const e=R.even,ev=e.total>0?e.good/e.total:0;
     txt(c,'均勻',72,12.5,3,P.soft,'right',700);bar(c,73.5,11.2,22,2.6,ev,ev>.75?P.good:ev>.5?P.warn:P.cherry);
     lcd(c,30,87,40,9,R.water.toFixed(1)+' g',4.6);
@@ -392,16 +397,16 @@ const pour={
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const shot={
   key:'shot',name:'萃取濃縮',
-  hint(){return '目標 36 公克，到了就按停止';},
-  intro:'濃縮咖啡正在流進杯子，看著秤上的重量，到 36 公克左右就按停止。太少會偏酸，太多會偏苦。',
+  hint(){return '目標 '+R.shotT+' 公克，到了就按停止';},
+  intro:'濃縮咖啡正在流進杯子，看著秤上的重量，到客人要的重量就按停止。太少會偏酸，太多會偏苦。',
   init(){this.st={t:0,w:0,done:false};},
   controls(){return[{label:'停止萃取',primary:true,onTap:()=>this.stop()}];},
   update(dt){const st=this.st;if(st.done||!running)return;st.t+=dt;
     if(st.t>1.6)st.w+=lerp(1.2,4.2,smooth(1.6,3.6,st.t))*dt;
     if(st.w>=56){toast('萃取太久了','bad');this.stop();}},
   stop(){const st=this.st;if(!running||st.done)return;st.done=true;R.shotW=Math.round(st.w*10)/10;R.shotTime=st.t*2.5;
-    R.crema=st.w<32?'#C08A55':st.w>40?'#6E3D1F':'#A0612F';
-    const ok=Math.abs(st.w-36)<=2;toast(ok?'剛好 '+R.shotW.toFixed(1)+' 公克':R.shotW.toFixed(1)+' 公克，'+(st.w<36?'少了一點':'多了一點'),ok?'good':'');buzz(15);finishStage();},
+    R.crema=st.w<R.shotT-4?'#C08A55':st.w>R.shotT+4?'#6E3D1F':'#A0612F';
+    const ok=Math.abs(st.w-R.shotT)<=2;toast(ok?'剛好 '+R.shotW.toFixed(1)+' 公克':R.shotW.toFixed(1)+' 公克，'+(st.w<R.shotT?'少了一點':'多了一點'),ok?'good':'');buzz(15);finishStage();},
   draw(c){
     const st=this.st,flowing=st.t>1.6&&!st.done,cupTop=56;
     rr(c,12,-4,76,18,3);fs(c,'#B9BEC2',OUT,.7);
@@ -420,7 +425,7 @@ const shot={
     rr(c,27,78.5,46,8,2);fs(c,'#2F2D2A',OUT,.6);
     lcd(c,37,79.8,26,5.4,st.w.toFixed(1)+' g',3.6);
     lcd(c,4,88,20,8,fmtClock(st.t*2.5),4.2);
-    txt(c,'目標 36g',96,92,3.3,P.soft,'right',700);
+    txt(c,'目標 '+R.shotT+'g',96,92,3.3,P.soft,'right',700);
   }
 };
 
@@ -428,8 +433,8 @@ const shot={
 const BUBS=seeded(120,41);
 const steam={
   key:'steam',name:'打奶泡',
-  hint(){return '奶泡打到約三成，再壓深加熱到 60–65°C';},
-  intro:'上下拖動手指移動拉花杯。噴嘴剛好在奶面下方會發出嘶嘶聲，把空氣打進去變成奶泡。奶泡到三成左右就把杯子往上抬，讓噴嘴埋深只加熱，溫度到 60–65°C 按關蒸汽。噴嘴露出奶面會噴出大泡泡。',
+  hint(){return '奶泡打到 '+R.fLo+'–'+R.fHi+'%，再壓深加熱到 '+R.mLo+'–'+R.mHi+'°C';},
+  intro:'上下拖動手指移動拉花杯。噴嘴剛好在奶面下方會發出嘶嘶聲，把空氣打進去變成奶泡。奶泡到三成左右就把杯子往上抬，讓噴嘴埋深只加熱，溫度到客人要的範圍按關蒸汽。噴嘴露出奶面會噴出大泡泡。',
   init(){this.st={off:-28,t:0,temp:6,foam:0,bubbles:0,zone:'roll',done:false,active:false,ly:0,spray:[],warnAt:-9,idle:0};},
   controls(){return[{label:'關蒸汽',primary:true,onTap:()=>this.stop()}];},
   down(x,y){this.st.active=true;this.st.ly=y;},
@@ -452,8 +457,8 @@ const steam={
   },
   stop(){const st=this.st;if(!running||st.done)return;st.done=true;
     R.milkTemp=Math.round(st.temp);R.foam=Math.round(st.foam);R.bubbles=st.bubbles;
-    R.tq=clamp(1-Math.max(0,Math.abs(st.foam-32)-8)/30-st.bubbles/40,.15,1);
-    const ok=st.temp>=60&&st.temp<=65&&st.foam>=25&&st.foam<=40;toast(ok?'奶泡很漂亮':'奶溫 '+R.milkTemp+'°C，奶泡 '+R.foam+'%',ok?'good':'');buzz(15);finishStage();},
+    const fm=(R.fLo+R.fHi)/2,fh=(R.fHi-R.fLo)/2;R.tq=clamp((1-Math.max(0,Math.abs(st.foam-fm)-fh)/30-st.bubbles/40)*R.milkTq,.15,1);
+    const ok=st.temp>=R.mLo&&st.temp<=R.mHi&&st.foam>=R.fLo&&st.foam<=R.fHi;toast(ok?'奶泡很漂亮':'奶溫 '+R.milkTemp+'°C，奶泡 '+R.foam+'%',ok?'good':'');buzz(15);finishStage();},
   draw(c){
     const st=this.st,g=this.geo(),L=28,Rx=60;
     rr(c,-4,-4,15,44,3);fs(c,'#B9BEC2',OUT,.7);
@@ -476,7 +481,7 @@ const steam={
     lcd(c,72,37,20,7,Math.round(st.temp)+'°C',3.8);
     txt(c,'奶泡',82,52,3,P.soft,'center',700);
     const by=v=>88-v/60*30;rr(c,79,58,6,30,2);fs(c,P.track);
-    c.fillStyle=rgba(P.good,.45);c.fillRect(79,by(40),6,by(25)-by(40));
+    c.fillStyle=rgba(P.good,.45);c.fillRect(79,by(R.fHi),6,by(R.fLo)-by(R.fHi));
     c.save();rr(c,79,58,6,30,2);c.clip();c.fillStyle='#FFFFFF';c.fillRect(79,by(Math.min(60,st.foam)),6,88-by(Math.min(60,st.foam)));c.restore();
     rr(c,79,58,6,30,2);fs(c,null,P.ink,.4);
     txt(c,Math.round(st.foam)+'%',82,92.5,3,P.ink,'center',700);
@@ -488,7 +493,7 @@ function drawDial(c,gx,gy,gr,val,lo,hi,step,major){
   const a0=Math.PI*.75,span=Math.PI*1.5,ang=v=>a0+(clamp(v,lo,hi)-lo)/(hi-lo)*span;
   for(let v=lo;v<=hi;v+=step){const a=ang(v),mj=v%major===0,l=mj?gr*.18:gr*.09;c.beginPath();c.moveTo(gx+Math.cos(a)*(gr-1),gy+Math.sin(a)*(gr-1));c.lineTo(gx+Math.cos(a)*(gr-1-l),gy+Math.sin(a)*(gr-1-l));c.lineWidth=mj?.6:.35;c.strokeStyle=OUT;c.stroke();
     if(mj)txt(c,String(v),gx+Math.cos(a)*(gr*.6),gy+Math.sin(a)*(gr*.6),gr*.19,OUT,'center',700);}
-  const a1=ang(60),a2=ang(65);c.beginPath();c.arc(gx,gy,gr-.6,a1,a2);c.lineWidth=1.2;c.strokeStyle=rgba('#2E8B57',.8);c.stroke();
+  const a1=ang(R.mLo||60),a2=ang(R.mHi||65);c.beginPath();c.arc(gx,gy,gr-.6,a1,a2);c.lineWidth=1.2;c.strokeStyle=rgba('#2E8B57',.8);c.stroke();
   const na=ang(val);c.beginPath();c.moveTo(gx-Math.cos(na)*2,gy-Math.sin(na)*2);c.lineTo(gx+Math.cos(na)*(gr-2.5),gy+Math.sin(na)*(gr-2.5));c.lineWidth=.8;c.strokeStyle='#B3263A';c.stroke();ell(c,gx,gy,1.3,1.3,OUT);
 }
 
@@ -616,12 +621,23 @@ function drawTarget(c,x,y,r,type){
 }
 
 const LATTE_BEAN={name:'拿鐵',roast:'義式配方',dry:'#6E4426',wet:'#3A2214'};
-const ORDERS=[
-  {type:'pour',bean:BEANS[0]},
-  {type:'latte',art:'heart',artName:'愛心'},
-  {type:'pour',bean:BEANS[2]},
-  {type:'latte',art:'tulip',artName:'鬱金香'}
-];
+let ORDERS=[];
+const CUSTOMERS=[['上班族小林','等一下要開會，拜託給我一杯好喝的。'],['大學生阿哲','期末考週，需要一點咖啡續命。'],['設計師 Mia','我在找靈感，想喝點特別的。'],['退休的王伯伯','每天早上都要來一杯，這是我的習慣。'],['剛下夜班的護理師','忙了一整晚，想好好喝杯咖啡。'],['觀光客 Kenji','聽說這間店很有名，特地來的。'],['美食部落客','今天要寫一篇咖啡店推薦。'],['隔壁花店老闆娘','幫我做一杯，等等還要包花束。'],['寫小說的陳小姐','我會在窗邊坐一下午。'],['帶狗散步的阿凱','先外帶一杯，狗狗在門口等。']];
+const POUR_PREFS=[null,null,{n:'喜歡濃一點',ratio:14},{n:'喜歡淡一點、好入口',ratio:16},{n:'喜歡明亮的酸感',x:-.7},{n:'喜歡厚實、甜感多一點',x:.7}];
+const SHOTS=[{t:36,n:'標準濃縮'},{t:36,n:'標準濃縮'},{t:40,n:'濃一點'},{t:32,n:'淡一點'}];
+const MILKS=[{n:'牛奶',fLo:25,fHi:40,tq:1},{n:'牛奶',fLo:25,fHi:40,tq:1},{n:'燕麥奶',fLo:20,fHi:32,tq:.85}];
+const TEMPS=[{n:'正常溫度',lo:60,hi:65},{n:'正常溫度',lo:60,hi:65},{n:'熱一點',lo:65,hi:70},{n:'溫一點',lo:55,hi:60}];
+function rpick(a){return a[Math.floor(Math.random()*a.length)];}
+function makeOrders(){
+  const types=['pour','latte',Math.random()<.5?'pour':'latte',Math.random()<.5?'pour':'latte'];
+  for(let i=types.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[types[i],types[j]]=[types[j],types[i]];}
+  const beans=BEANS.slice();for(let i=beans.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[beans[i],beans[j]]=[beans[j],beans[i]];}
+  const cust=CUSTOMERS.slice();for(let i=cust.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cust[i],cust[j]]=[cust[j],cust[i]];}
+  ORDERS=types.map((t,i)=>{const who={n:cust[i][0],line:cust[i][1]};
+    if(t==='pour')return{type:'pour',bean:beans[i],pref:rpick(POUR_PREFS),who};
+    const art=Math.random()<.55?'heart':'tulip';
+    return{type:'latte',art,artName:art==='heart'?'愛心':'鬱金香',shot:rpick(SHOTS),milk:rpick(MILKS),tmp:rpick(TEMPS),who};});
+}
 const seen=new Set();
 
 /* ---------- evaluation ---------- */
@@ -632,9 +648,11 @@ function evaluate(){
   const tmid=(b.tlo+b.thi)/2;const tOff=R.temp<b.tlo?R.temp-b.tlo:R.temp>b.thi?R.temp-b.thi:0;const tD=tOff/2+(R.temp-tmid)*.05;
   const timeD=(R.endClock-140)/25;
   let bloomPen=0;if(R.bloomWater<22)bloomPen+=.6;if(R.bloomWater>45)bloomPen+=.25;if(R.bloomTime<25)bloomPen+=.5;
+  const pf=R.order.pref||{},xT=pf.x||0,rT=R.ratioT||15;
   let X=.85*f+.6*tD+.45*timeD-bloomPen-ef*1.3-es*.4;X=clamp(X,-3,3);
   const ratio=(R.water)/15;let S=(15-ratio)/.8-ef*.6;S=clamp(S,-3,3);
-  let score=100-Math.abs(X)*20-Math.abs(S)*15-(1-ev)*18-(R.bloomTime>60?5:0);
+  const Xe=X-xT,Se=S-(15-rT)/.8;
+  let score=100-Math.abs(Xe)*20-Math.abs(Se)*15-(1-ev)*18-(R.bloomTime>60?5:0);
   score=Math.round(clamp(score,0,100));
   const taste=[];
   taste.push(X<-.8?'偏酸、單薄':X>.8?'苦澀、乾口':'酸甜平衡');
@@ -648,24 +666,26 @@ function evaluate(){
   if(R.bloomTime>60)iss.push([.3,'悶蒸等了 '+Math.round(R.bloomTime)+' 秒，有點久。']);
   if(ef>.12)iss.push([ef*1.3,'常倒到濾紙邊，有些水沒經過咖啡粉。']);
   if(es>.2)iss.push([es*.6,'常停在同一點，粉層被沖出洞。']);
-  if(Math.abs(S)>.6)iss.push([Math.abs(S)*.6,'總水量 '+Math.round(R.water)+' 公克，粉水比 1:'+ratio.toFixed(1)+(S>0?'，偏濃。':'，偏淡。')]);
+  if(Math.abs(Se)>.6)iss.push([Math.abs(Se)*.6,'總水量 '+Math.round(R.water)+' 公克，粉水比 1:'+ratio.toFixed(1)+(Se>0?'，比客人要的濃。':'，比客人要的淡。')]);
+  if(xT&&Math.abs(Xe)>.8)iss.push([1,'客人'+pf.n+(xT<0?'，可以磨粗一點、水溫低一點，或縮短時間。':'，可以磨細一點、水溫高一點，或拉長時間。')]);
+  if(pf.n&&Math.abs(Xe)<=.8&&Math.abs(Se)<=.6)iss.push([.05,'客人說「'+pf.n+'」，你剛好做到了。']);
   if(Math.abs(timeD)>.8)iss.push([Math.abs(timeD)*.45,'總時間 '+fmtClock(R.endClock)+(timeD>0?'，偏長。':'，偏短。')]);
   iss.sort((a,b)=>b[0]-a[0]);
-  return{score,X,S,taste:taste.join('，'),issues:iss.slice(0,3).map(x=>x[1]),ev};
+  return{score,X,S,xT,sT:(15-rT)/.8,taste:taste.join('，'),issues:iss.slice(0,3).map(x=>x[1]),ev};
 }
 function evaluateLatte(){
-  const w=R.shotW,dW=Math.abs(w-36),shotS=dW<=2?100:clamp(100-(dW-2)*10,0,100);
-  const T=R.milkTemp,tOff=T<60?60-T:T>65?T-65:0,fOff=R.foam<25?25-R.foam:R.foam>40?R.foam-40:0;
+  const w=R.shotW,dW=Math.abs(w-R.shotT),shotS=dW<=2?100:clamp(100-(dW-2)*10,0,100);
+  const T=R.milkTemp,tOff=T<R.mLo?R.mLo-T:T>R.mHi?T-R.mHi:0,fOff=R.foam<R.fLo?R.fLo-R.foam:R.foam>R.fHi?R.foam-R.fHi:0;
   const milkS=clamp(100-tOff*6-fOff*2.5-R.bubbles*1.2,0,100);
   const a=R.artRes||{score:0},artS=a.score;
   const fillPen=R.fillEnd<85?(85-R.fillEnd)*.8:0;
   const score=Math.round(clamp(shotS*.2+milkS*.3+artS*.5-fillPen,0,100));
-  const taste=[w<32?'偏酸、單薄':w>40?'偏苦':'咖啡香濃',T>68?'奶太燙':T<55?'溫溫的':R.bubbles>12?'口感粗':'奶泡綿密'].join('，');
+  const taste=[w<R.shotT-4?'偏酸、單薄':w>R.shotT+4?'偏苦':'咖啡香濃',T>R.mHi+3?'奶太燙':T<R.mLo-3?'溫溫的':R.bubbles>12?'口感粗':'奶泡綿密'].join('，');
   const iss=[];
   iss.push([9,artS>=80?'拉花很成功，'+R.order.artName+'的形狀很清楚。':artS>=50?'看得出是'+R.order.artName+'，形狀還不夠俐落。':'拉花看不太出'+R.order.artName+'的形狀。']);
-  if(dW>2)iss.push([dW*.3,'濃縮萃取了 '+w.toFixed(1)+' 公克，'+(w<36?'太少，味道偏酸。':'太多，味道偏苦。')]);
-  if(tOff>0)iss.push([tOff*.4,'奶溫 '+T+'°C，'+(T>65?'太燙，甜味跑掉了。':'不夠熱。')]);
-  if(fOff>0)iss.push([fOff*.2,'奶泡 '+R.foam+'%，'+(R.foam<25?'太少，拉不出白色的花。':'太多，奶泡太硬。')]);
+  if(dW>2)iss.push([dW*.3,'濃縮萃取了 '+w.toFixed(1)+' 公克，'+(w<R.shotT?'比客人要的少，味道偏淡偏酸。':'比客人要的多，味道偏濃偏苦。')]);
+  if(tOff>0)iss.push([tOff*.4,'奶溫 '+T+'°C，'+(T>R.mHi?'比客人要的燙，甜味跑掉了。':'比客人要的涼。')]);
+  if(fOff>0)iss.push([fOff*.2,'奶泡 '+R.foam+'%，'+(R.foam<R.fLo?'太少，拉不出白色的花。':'太多，奶泡太硬。')]);
   if(R.bubbles>8)iss.push([R.bubbles*.1,'噴嘴常露出奶面，奶泡裡有大泡泡。']);
   if(R.order.art==='tulip'&&art.st&&art.st.pours<3)iss.push([1,'鬱金香要推出三團奶泡，這次只有 '+art.st.pours+' 團。']);
   if(R.artRes&&R.artRes.fit&&!art.st.cut)iss.push([1,'最後少了快速一劃，形狀收不起來。']);
@@ -724,13 +744,14 @@ function drawChart(res){
   const c=fitCanvas($('#chart'),120,100);
   const x0=16,x1=114,y0=8,y1=84;
   const ex=v=>x0+(v-16)/8*(x1-x0),ty=v=>y1-(v-1.0)/.6*(y1-y0);
-  c.fillStyle=rgba(P.good,.14);c.fillRect(ex(18),ty(1.45),ex(22)-ex(18),ty(1.15)-ty(1.45));
-  c.setLineDash([1.2,1]);c.lineWidth=.4;c.strokeStyle=P.good;c.strokeRect(ex(18),ty(1.45),ex(22)-ex(18),ty(1.15)-ty(1.45));c.setLineDash([]);
+  const bx=(res.xT||0)*1.15,by=(res.sT||0)*.09,E0=18+bx,E1=22+bx,T0=1.15+by,T1=1.45+by;
+  c.fillStyle=rgba(P.good,.14);c.fillRect(ex(E0),ty(T1),ex(E1)-ex(E0),ty(T0)-ty(T1));
+  c.setLineDash([1.2,1]);c.lineWidth=.4;c.strokeStyle=P.good;c.strokeRect(ex(E0),ty(T1),ex(E1)-ex(E0),ty(T0)-ty(T1));c.setLineDash([]);
   c.lineWidth=.5;c.strokeStyle=P.soft;c.beginPath();c.moveTo(x0,y0);c.lineTo(x0,y1);c.lineTo(x1,y1);c.stroke();
   [16,18,20,22,24].forEach(v=>{txt(c,v+'%',ex(v),y1+4,3.2,P.soft);});
   [1.0,1.2,1.4,1.6].forEach(v=>{txt(c,v.toFixed(1),x0-2,ty(v),3.2,P.soft,'right');});
   txt(c,'萃取率',(x0+x1)/2,y1+10,3.4,P.ink,'center',700);
-  txt(c,'理想區',ex(20),ty(1.45)-3,3,P.good,'center',700);
+  txt(c,(res.xT||res.sT)?'客人的理想區':'理想區',ex(20+bx),ty(T1)-3,3,P.good,'center',700);
   txt(c,'偏酸',x0+3,y0+3,3,P.soft,'left');txt(c,'偏苦',x1-1,y0+3,3,P.soft,'right');
   txt(c,'濃',x0+3,y0+9,3,P.soft,'left');txt(c,'淡',x0+3,y1-3,3,P.soft,'left');
   const EY=clamp(20+res.X*1.15,16.2,23.8),TDS=clamp(1.30+res.S*.09,1.02,1.58);
@@ -766,10 +787,11 @@ function goStage(i){
   const o=R.order,b=R.bean,key=cur.key==='art'?'art-'+o.art:cur.key,fresh=!seen.has(key);seen.add(key);
   const intro=typeof cur.intro==='function'?cur.intro():cur.intro;let html='';
   if(i===0){
-    if(o.type==='pour')html='<p class="k">第 '+(R.i+1)+' 位客人點了手沖</p><h3>'+esc(b.name)+'</h3><p class="notes">'+b.roast+'，'+esc(b.notes)+'</p>'+
-      '<p class="guide">建議研磨：'+GRIND[b.grind-1]+'<br>建議水溫：'+b.tlo+'–'+b.thi+'°C<br>粉量 15 公克，總水量 225 公克</p>';
-    else html='<p class="k">第 '+(R.i+1)+' 位客人點了</p><h3>拿鐵，'+o.artName+'拉花</h3><p class="notes">義式配方，牛奶、焦糖、可可</p>'+
-      '<p class="guide">濃縮 36 公克<br>奶泡約三成，奶溫 60–65°C<br>拉花：'+o.artName+'</p>';
+    const who=o.who?'<p class="k">'+esc(o.who.n)+'：「'+esc(o.who.line)+'」</p>':'';
+    if(o.type==='pour')html=who+'<h3>手沖 '+esc(b.name)+'</h3><p class="notes">'+b.roast+'，'+esc(b.notes)+'</p>'+
+      '<p class="guide">建議研磨：'+GRIND[b.grind-1]+'<br>建議水溫：'+b.tlo+'–'+b.thi+'°C<br>粉量 15 公克，總水量 '+R.waterT+' 公克'+(o.pref?'<br><b>客人說：'+esc(o.pref.n)+'</b>':'')+'</p>';
+    else html=who+'<h3>'+(o.milk.n==='燕麥奶'?'燕麥拿鐵':'拿鐵')+'，'+o.artName+'拉花</h3><p class="notes">義式配方，焦糖、可可'+(o.milk.n==='燕麥奶'?'。燕麥奶的奶泡比較不穩，要打少一點':'')+'</p>'+
+      '<p class="guide">濃縮 '+R.shotT+' 公克（'+o.shot.n+'）<br>'+o.milk.n+'，奶泡 '+R.fLo+'–'+R.fHi+'%<br>奶溫 '+R.mLo+'–'+R.mHi+'°C（'+o.tmp.n+'）<br>拉花：'+o.artName+'</p>';
     if(fresh)html+='<p class="t">'+intro+'</p>';
   }else if(fresh)html='<p class="k">'+(o.type==='pour'?'手沖':'拿鐵')+'，第 '+(i+1)+' 步</p><h3>'+cur.name+'</h3><p class="t">'+intro+'</p>';
   if(html){$('#card').innerHTML=html+'<button class="btn primary" id="go" type="button">開始</button>';$('#intro').hidden=false;
@@ -786,7 +808,7 @@ function showCup(){
   RESULTS.push({name:latte?'拿鐵，'+R.order.artName+'拉花':R.bean.name,roast:latte?'拿鐵':R.bean.roast,...res});
   $('#c-k').textContent='第 '+(R.i+1)+' 杯，'+(latte?'拿鐵':R.bean.roast+'手沖');$('#c-name').textContent=latte?R.order.artName+'拉花拿鐵':R.bean.name;
   $('#c-score').textContent=res.score;$('#c-taste').textContent=res.taste;
-  $('#c-quote').textContent='客人說：「'+QUOTES.find(q=>res.score>=q[0])[1]+'」';
+  $('#c-quote').textContent=(R.order.who?R.order.who.n:'客人')+'說：「'+QUOTES.find(q=>res.score>=q[0])[1]+'」';
   $('#c-issues').innerHTML=(res.issues.length?res.issues:['每個細節都到位，這杯很完整。']).map(s=>'<li>'+esc(s)+'</li>').join('');
   $('#next').textContent=R.i<ORDERS.length-1?'下一杯':'看總成績';
   show('cup');$('#cup .scroll').scrollTop=0;requestAnimationFrame(()=>{if(latte)drawArtResult();else drawChart(res);});
@@ -806,7 +828,7 @@ function showFinal(){
   else $('#f-best').textContent=best?'最佳平均 '+best.score+' 分':'';
   show('final');showBest();$('#final .scroll').scrollTop=0;
 }
-function startGame(){RESULTS.length=0;seen.clear();newRound(0);show('game');goStage(0);}
+function startGame(){RESULTS.length=0;seen.clear();makeOrders();newRound(0);show('game');goStage(0);}
 $('#start').addEventListener('click',startGame);$('#again').addEventListener('click',startGame);
 
 let last=performance.now();

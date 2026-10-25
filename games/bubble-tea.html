@@ -43,6 +43,10 @@ button{font:inherit;color:inherit}
 .sign{display:flex;flex-direction:column;align-items:center;flex:none;background:var(--red);color:#FFFFFF;font-weight:900;font-size:clamp(2.6rem,13vw,3.6rem);line-height:1.12;padding:20px 20px;border:4px solid var(--ink);border-radius:10px;box-shadow:8px 8px 0 var(--shadow);margin:0 0 26px}
 .how{max-width:21em;margin:0 0 22px;line-height:1.8;color:var(--ink);text-wrap:pretty}
 .best{margin:14px 0 0;color:var(--ink-soft);min-height:1.5em}
+.lives{display:flex;align-items:center;gap:10px;margin:0 0 18px;font-weight:900}
+.lives button{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);background:var(--surface);font-size:1.2rem;font-weight:900;cursor:pointer;color:var(--ink)}
+.lives button:disabled{opacity:.35}
+.lives output{min-width:5.6em;text-align:center;color:var(--red);font-size:1.15rem;letter-spacing:1px}
 
 .btn{border:3px solid var(--ink);background:var(--surface);border-radius:14px;box-shadow:0 4px 0 var(--shadow);
   cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
@@ -120,7 +124,8 @@ button{font:inherit;color:inherit}
 
   <section class="screen on" id="title" aria-labelledby="sign">
     <h1 class="sign" id="sign" aria-label="搖搖茶舖"><span aria-hidden="true">搖</span><span aria-hidden="true">搖</span><span aria-hidden="true">茶</span><span aria-hidden="true">舖</span></h1>
-    <p class="how">客人點什麼就做什麼。茶要倒到八分滿，糖和冰照次數加，珍珠要先煮、放太久會變硬。封膜後點客人出餐。營業兩分鐘，三位客人生氣就提早打烊。</p>
+    <p class="how">客人點什麼就做什麼。茶要倒到八分滿，糖和冰照次數加，珍珠要先煮、放太久會變硬。封膜後點客人出餐。營業兩分鐘，客人生氣的次數用完就提早打烊。</p>
+    <div class="lives" role="group" aria-label="失誤次數"><span>可以失誤</span><button type="button" id="lv-m" aria-label="減少">−</button><output id="lv-v" aria-live="polite"></output><button type="button" id="lv-p" aria-label="增加">＋</button><span>次</span></div>
     <button class="btn big" id="open" type="button">開店</button>
     <p class="best" id="best"></p>
   </section>
@@ -197,7 +202,7 @@ new MutationObserver(readPalette).observe(document.documentElement,{attributes:t
 let G=null,screen='title';
 function newCup(){return{base:null,mixed:false,fill:0,sugar:0,ice:0,tops:new Set(),hard:false,sealed:false};}
 function newGame(){
-  G={t:0,money:0,hearts:3,served:0,perfect:0,angry:0,custN:0,slots:[null,null,null],nextSpawn:.8,
+  G={t:0,money:0,hearts:LIVES,maxHearts:LIVES,served:0,perfect:0,angry:0,custN:0,slots:[null,null,null],nextSpawn:.8,
     cup:newCup(),pot:{state:'empty',t:0,stock:0,fresh:0},pouring:null,over:false,
     mistakes:{base:0,fill:0,sugar:0,ice:0,top:0,late:0,hard:0}};
 }
@@ -337,7 +342,7 @@ $('#b-seal').addEventListener('click',seal);
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function updateHud(){
   $('#time').textContent=fmt(DUR-G.t);$('#money').textContent='$'+G.money;
-  $('#hearts').textContent='♥'.repeat(Math.max(0,G.hearts))+'♡'.repeat(3-Math.max(0,G.hearts));
+  const hh=Math.max(0,G.hearts),mh=G.maxHearts;$('#hearts').textContent=mh>5?'♥ '+hh+' / '+mh:'♥'.repeat(hh)+'♡'.repeat(mh-hh);
   $('#hearts').setAttribute('aria-label','剩下 '+Math.max(0,G.hearts)+' 次失誤機會');
   const p=G.pot;const cb=$('#b-cook');
   cb.textContent=p.state==='cooking'?'煮中…':p.state==='hard'?'重煮珍珠':'煮珍珠';
@@ -476,12 +481,17 @@ function render(){
 
 /* ---------- flow ---------- */
 function show(n){screen=n;['title','game','result'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
+let LIVES=3;try{const v=parseInt(GCStore.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
+function renderLives(){$('#lv-v').textContent=LIVES<=5?'♥'.repeat(LIVES):'♥ × '+LIVES;$('#lv-v').setAttribute('aria-label',LIVES+' 次');$('#lv-m').disabled=LIVES<=1;$('#lv-p').disabled=LIVES>=10;}
+$('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+$('#lv-p').addEventListener('click',()=>{LIVES=Math.min(10,LIVES+1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+renderLives();
 function start(){newGame();buildQueue();updateHud();show('game');toast('開店了！');}
 $('#open').addEventListener('click',start);$('#again').addEventListener('click',start);
 
 function loadBest(){try{const v=GCStore.getItem('teashop-best');return v?JSON.parse(v):null;}catch(e){return null;}}
 function saveBest(o){try{GCStore.setItem('teashop-best',JSON.stringify(o));}catch(e){}}
-function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.money==='number'?'最佳營業額 $'+b.money+'，'+b.title:'';}
+function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.money==='number'?'最佳營業額 $'+b.money+'，'+b.title+(b.lives?'（'+b.lives+' 次失誤機會）':''):'';}
 showBest();
 
 const TITLES=[[1000,'排隊名店','門口排到轉角，今天的手速是專業級。'],[700,'巷口人氣店','熟客越來越多，再快一點就要排隊了。'],[400,'穩定營業中','節奏抓到了，下次試著同時顧好珍珠鍋。'],[150,'新手老闆','慢慢來，先記熟每位客人的單再動手。'],[0,'今天先休息','每家名店都有手忙腳亂的第一天。']];
@@ -489,14 +499,14 @@ function endGame(early){
   if(!G||G.over)return;G.over=true;G.pouring=null;
   const t=TITLES.find(x=>G.money>=x[0]);
   $('#r-title').textContent=t[1];
-  $('#r-sub').textContent=(early?'三位客人生氣，提早打烊了。':'兩分鐘營業結束。')+t[2];
+  $('#r-sub').textContent=(early?'失誤次數用完，提早打烊了。':'兩分鐘營業結束。')+t[2];
   $('#r-rev').textContent='$'+G.money;$('#r-served').textContent=G.served;$('#r-perfect').textContent=G.perfect;$('#r-angry').textContent=G.angry;
   const m=G.mistakes,tips=[];
   const worst=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
   const TIP={base:'最常做錯茶種，動手前先看清楚單上的第一行。',fill:'茶倒得不準，盯著八分滿的虛線放手。',sugar:'甜度常出錯，無糖不按、半糖一下、全糖兩下。',ice:'冰塊常出錯，去冰不加、少冰一匙、正常冰兩匙。',top:'配料常放錯，看清楚是珍珠、椰果還是不加。',late:'客人常等太久，試著先煮好珍珠，空檔時就備料。',hard:'珍珠常放到變硬，鍋邊的圈圈快變紅前就要用完或重煮。'};
   $('#r-tip').textContent=worst&&worst[1]>0?TIP[worst[0]]:'一杯都沒出錯，可以挑戰更高的營業額。';
   const best=loadBest();
-  if(G.money>0&&(!best||G.money>best.money)){saveBest({money:G.money,title:t[1]});$('#r-best').textContent=best?'新紀錄！比上次多 $'+(G.money-best.money):'第一筆紀錄已存下';}
+  if(G.money>0&&(!best||G.money>best.money)){saveBest({money:G.money,title:t[1],lives:G.maxHearts});$('#r-best').textContent=best?'新紀錄！比上次多 $'+(G.money-best.money):'第一筆紀錄已存下';}
   else $('#r-best').textContent=best?'最佳營業額 $'+best.money:'';
   setTimeout(()=>{show('result');showBest();},early?300:600);
   if(!early)toast('打烊了');
