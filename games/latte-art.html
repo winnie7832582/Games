@@ -42,6 +42,7 @@ button{font:inherit;color:inherit}
 .btn:disabled{opacity:.4;cursor:default;transform:none}
 .btn:focus-visible,.lv:focus-visible,.thumb:focus-visible,.back:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .back{border:0;background:transparent;font-weight:700;padding:8px 4px;cursor:pointer;color:var(--soft)}
+#p-guide[aria-pressed="true"]{color:var(--accent)}
 .top{display:flex;align-items:center;gap:10px;padding:8px 14px}
 .top h2{margin:0;font-size:1.15rem;font-weight:700;flex:1;min-width:0}
 
@@ -113,6 +114,8 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 .viewer img{width:100%;border-radius:50%}
 .viewer p{margin:8px 0 12px;color:var(--soft)}
 .viewer .row{display:flex;gap:10px}.viewer .row .btn{flex:1}
+html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+input,textarea{-webkit-user-select:text;user-select:text}
 @media (prefers-reduced-motion:reduce){.btn,.toast{transition:none}}
 </style>
 <script src="../gc.js"></script>
@@ -138,7 +141,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
   </section>
 
   <section class="screen" id="play" aria-label="拉花">
-    <div class="top"><button class="back" id="p-back" type="button">‹ 返回</button><h2 id="p-name"></h2><button class="back" id="p-tip" type="button">技巧</button></div>
+    <div class="top"><button class="back" id="p-back" type="button">‹ 返回</button><h2 id="p-name"></h2><button class="back" id="p-guide" type="button" aria-pressed="true">輔助線</button><button class="back" id="p-tip" type="button">技巧</button></div>
     <p class="coach" id="coach" aria-live="polite"></p>
     <div class="board" id="board">
       <canvas id="cv" aria-label="咖啡杯，按住杯面拉花"></canvas>
@@ -147,7 +150,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
     </div>
     <div class="ctl">
       <button class="btn sm" id="b-reset" type="button" aria-label="重新倒一杯">重來</button>
-      <button class="btn hold" id="b-high" type="button">按住高處注入</button>
+      <button class="btn hold" id="b-high" type="button" aria-label="按住高處注入">高處注入</button>
       <button class="btn main" id="b-done" type="button">完成</button>
     </div>
   </section>
@@ -202,10 +205,10 @@ const ART={
 };
 const LEVELS=[
   {id:'dot',name:'圓形',pat:'circ',sub:'第一課，學會讓奶泡浮起來',tip:'先按住「高處注入」，把杯子倒到一半，這時奶會沉下去。接著手指按在杯子正中間不動，白色的圓會慢慢長大，大小適中就放手。'},
-  {id:'heart',name:'愛心',pat:'heart',sub:'推出圓，再一劃穿過',tip:'一樣先注入到一半。在中間推出一個圓，圓夠大的時候，從圓的一邊外面開始，快速一劃穿過另一邊。'},
-  {id:'tulip',name:'三層鬱金香',pat:'tulip',layers:3,sub:'在一條線上推三團',tip:'在一直線上推三團奶泡：先在遠處推一團，放手；往你這邊靠近一點再推一團，再一團。每推一團都會把前一團擠成彎月。最後從近處快速一劃穿過三團。'},
-  {id:'leaf',name:'葉子',pat:'leaf',wiggles:8,sub:'左右擺動，一邊往後退',tip:'先在遠處推一小團，接著手指在原地左右小幅度快速擺動，一邊慢慢往你這邊退，畫出一層層的葉片。退到杯緣附近，再快速一劃穿回去。'},
-  {id:'tulip5',name:'五層鬱金香',pat:'tulip5',layers:5,sub:'進階：五團要越推越小',tip:'跟三層鬱金香一樣，但要推出五團。每團都要小一點、靠得近一點，不然杯子會太早滿。'}
+  {id:'heart',name:'愛心',pat:'heart',sub:'推出圓，再一劃穿過',tip:'一樣先注入到一半。在中間推出一個圓，圓夠大的時候，從圓的上方外面開始，快速往下一劃穿過它，下方就會拉出愛心的尖角。'},
+  {id:'tulip',name:'三層鬱金香',pat:'tulip',layers:3,sub:'在一條線上推三團',tip:'在一直線上推三團奶泡：先在上方推一團，放手；往下一點再推一團，再一團。每推一團都會把前一團往上擠成彎月。最後從最上方快速往下一劃，穿過三團。'},
+  {id:'leaf',name:'葉子',pat:'leaf',wiggles:8,sub:'左右擺動，一邊往後退',tip:'先在上方推一小團，接著手指左右小幅度快速擺動，一邊慢慢往下退，畫出一層層的葉片。退到杯緣附近，再快速往上一劃穿回去。'},
+  {id:'tulip5',name:'五層鬱金香',pat:'tulip5',layers:5,sub:'進階：五團要越推越小',tip:'跟三層鬱金香一樣由上往下推，但要推出五團。每團都要小一點、靠得近一點，不然杯子會太早滿。'}
 ];
 
 /* ---------- pour engine ---------- */
@@ -213,6 +216,7 @@ class Pour{
   constructor(tq){this.tq=tq==null?1:tq;this.parts=[];this.emit=0;this.layer=0;this.fill=0;this.t=0;this.pours=0;this.pourT=0;this.cut=false;this.cutLen=0;this.wiggles=0;this.revT=[];this.dir=null;
     this.px=CX;this.py=CY;this.tx=CX;this.ty=CY;this.ux=0;this.uy=0;this.active=false;this.pouring=false;this.high=false;this.fresh=false;this.done=false;this.mode='';}
   surfR(){return lerp(21,32.5,clamp(this.fill/100,0,1));}
+  vis(){let n=0;for(const p of this.parts)if(p.a>.6)n++;return n;}
   down(x,y){if(this.done)return;this.active=true;this.fresh=true;this.px=this.tx=x;this.py=this.ty=y;this.ux=this.uy=0;this.layer++;this.pourT=0;this.cutLen=0;this.dir=null;}
   move(x,y){this.tx=x;this.ty=y;}
   up(){if(this.active&&this.pourT>.35)this.pours++;this.active=false;}
@@ -223,18 +227,18 @@ class Pour{
     this.ux+=(vx-this.ux)*Math.min(1,dt*14);this.uy+=(vy-this.uy)*Math.min(1,dt*14);
     if(this.done){this.pouring=false;return;}
     const rs=this.surfR(),inCup=Math.hypot(this.px-CX,this.py-CY)<rs;
-    const pouring=this.active&&inCup;this.pouring=pouring;
-    if(this.high&&!pouring)this.fill+=16*dt;
+    this.tooEarly=this.active&&inCup&&this.fill<20;const pouring=this.active&&inCup&&!this.tooEarly;this.pouring=pouring;
+    if(this.high&&!pouring){if(this.fill<52)this.fill+=22*dt;else if(!this.halfDone){this.halfDone=true;if(this.onHalf)this.onHalf();}}
     const sp=Math.hypot(this.ux,this.uy);
     if(sp>12){const nx=this.ux/sp,ny=this.uy/sp;if(this.dir){const d=nx*this.dir[0]+ny*this.dir[1];if(d<-.25){this.revT.push(this.t);this.dir=[nx,ny];if(pouring){this.layer++;this.wiggles++;}}else if(d>.6)this.dir=[nx,ny];}else this.dir=[nx,ny];}
     this.revT=this.revT.filter(t=>this.t-t<.5);
     const wiggle=this.revT.length>=2,fast=sp>32&&!wiggle;
     this.mode=pouring?(wiggle?'wiggle':fast?'cut':'push'):'';
     if(pouring){
-      this.fill+=9*dt;if(!fast)this.pourT+=dt;
+      this.fill+=6*dt;if(!fast)this.pourT+=dt;
       let q=190*(.75+.25*this.tq);if(fast)q*=.2;else if(wiggle)q*=.9;
       for(const p of this.parts){const dx=p.x-this.px,dy=p.y-this.py,d2=dx*dx+dy*dy+1e-6;const s=Math.sqrt(d2+q*dt/Math.PI)/Math.sqrt(d2);p.x=this.px+dx*s;p.y=this.py+dy*s;}
-      const sink=smooth(26,44,this.fill);
+      const sink=smooth(18,34,this.fill);
       this.emit+=(fast?22:150)*dt;
       while(this.emit>=1&&this.parts.length<3200){this.emit--;const a=Math.random()*Math.PI*2,r=Math.random()*(fast?.3:.8);
         this.parts.push({x:this.px+Math.cos(a)*r,y:this.py+Math.sin(a)*r,a:sink,r:(fast?.9:1.45)+(1-this.tq)*Math.random()*1.2,l:this.layer,thin:fast});}
@@ -360,8 +364,8 @@ let pour=null,level=null,levelIdx=-1,running=false,lastRes=null,saved=false;
 const cv=$('#cv'),board=$('#board');let BT={s:1,ox:0,oy:0},DPR=1;
 function resize(){}
 function startPlay(i){
-  levelIdx=i==null?-1:i;level=i==null?null:LEVELS[i];pour=new Pour(1);running=false;saved=false;
-  $('#p-name').textContent=level?(i+1)+'. '+level.name:'自由創作';$('#p-tip').hidden=!level;
+  levelIdx=i==null?-1:i;level=i==null?null:LEVELS[i];newPour();running=false;saved=false;
+  $('#p-name').textContent=level?(i+1)+'. '+level.name:'自由創作';$('#p-tip').hidden=!level;$('#p-guide').hidden=!level;$('#p-guide').setAttribute('aria-pressed',String(D.guide!==false));
   $('#b-high').classList.remove('held');
   show('play');
   if(level&&!D.seen?.[level.id]){openTip(true);}else{running=true;}
@@ -376,11 +380,15 @@ function openTip(first){
 $('#tc-go').addEventListener('click',()=>{$('#tipcard').hidden=true;if(level){D.seen=D.seen||{};D.seen[level.id]=1;save();}running=true;});
 $('#p-tip').addEventListener('click',()=>openTip(false));
 $('#p-back').addEventListener('click',()=>{running=false;if(level){renderLevels();show('levels');}else show('title');});
-$('#b-reset').addEventListener('click',()=>{if(!pour)return;pour=new Pour(1);toast('換一杯新的');});
+$('#b-reset').addEventListener('click',()=>{if(!pour)return;newPour();hEndSafe();toast('換一杯新的');});
+function newPour(){pour=new Pour(1);pour.onHalf=()=>{hEndSafe();toast('倒到一半了，放開按鈕開始拉花');buzz(20);};}
+function hEndSafe(){const b=$('#b-high');if(b.classList.contains('held')){b.classList.remove('held');}if(pour)pour.high=false;}
+$('#p-guide').addEventListener('click',()=>{D.guide=D.guide===false;save();$('#p-guide').setAttribute('aria-pressed',String(D.guide!==false));});
 function toScene(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-BT.ox)/BT.s,y:(e.clientY-r.top-BT.oy)/BT.s};}
-cv.addEventListener('pointerdown',e=>{e.preventDefault();if(!running||!pour||pour.done)return;try{cv.setPointerCapture(e.pointerId);}catch(_){}const p=toScene(e);pour.down(p.x,p.y);});
-cv.addEventListener('pointermove',e=>{if(!pour||!pour.active)return;const p=toScene(e);pour.move(p.x,p.y);});
-['pointerup','pointercancel','lostpointercapture'].forEach(n=>cv.addEventListener(n,()=>{if(pour)pour.up();}));
+const OFF=10;let finger=null;
+cv.addEventListener('pointerdown',e=>{e.preventDefault();if(!running||!pour||pour.done)return;try{cv.setPointerCapture(e.pointerId);}catch(_){}const p=toScene(e);finger=p;pour.down(p.x,p.y-OFF);});
+cv.addEventListener('pointermove',e=>{if(!pour||!pour.active)return;const p=toScene(e);finger=p;pour.move(p.x,p.y-OFF);});
+['pointerup','pointercancel','lostpointercapture'].forEach(n=>cv.addEventListener(n,()=>{finger=null;if(pour)pour.up();}));
 const hb=$('#b-high');
 const hEnd=()=>{if(hb.classList.contains('held')){hb.classList.remove('held');if(pour)pour.high=false;}};
 hb.addEventListener('pointerdown',e=>{e.preventDefault();if(!running||!pour||pour.done)return;hb.classList.add('held');try{hb.setPointerCapture(e.pointerId);}catch(_){}pour.high=true;});
@@ -389,23 +397,25 @@ hb.addEventListener('keydown',e=>{if((e.key===' '||e.key==='Enter')&&!e.repeat&&
 hb.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();hEnd();}});
 hb.addEventListener('contextmenu',e=>e.preventDefault());
 $('#b-done').addEventListener('click',()=>finish(false));
+document.addEventListener('selectstart',e=>{if(!/INPUT|TEXTAREA/.test(e.target.tagName||''))e.preventDefault();});
+document.addEventListener('contextmenu',e=>{if(e.target.closest&&e.target.closest('.board,.ctl'))e.preventDefault();});
 let tt=0;function toast(m){const t=$('#toast');t.textContent=m;t.className='toast show';clearTimeout(tt);tt=setTimeout(()=>t.className='toast',1300);}
 function setCoach(){
   const el=$('#coach');if(!pour){el.textContent='';return;}
   let s='';
-  if(pour.parts.length===0){s=pour.fill<40?(pour.high?'倒到一半左右就放開':'先按住下面的「高處注入」'):(pour.high?'可以放開了':'手指按在杯面上，壓低注入');}
+  if(pour.vis()===0){s=pour.tooEarly?'杯子還太空，先按住「高處注入」':pour.fill<40?(pour.high?'按著不放，倒到一半會自動停':'先按住下面的「高處注入」'):(pour.high?'可以放開了':'手指按在杯面上，奶泡會落在指尖上方的白圈');}
   else if(level){
     if(level.pat==='circ')s=pour.active?'不要動，讓圓長大':'圓的大小夠了就按完成';
-    else if(level.pat==='heart')s=pour.cut?'按完成看看成果':(pour.active?(pour.parts.length>380?'圓夠大了，快速一劃！':'按住不動，推出一個圓'):'從圓的外側按下去，快速劃過');
-    else if(level.layers)s=pour.cut?'按完成看看成果':(pour.pours<level.layers?'已推出 '+pour.pours+' / '+level.layers+' 團'+(pour.active?'':'，往近一點再推'):'最後從近處快速一劃穿過');
-    else if(level.pat==='leaf')s=pour.cut?'按完成看看成果':(pour.wiggles<level.wiggles?'左右擺動 '+pour.wiggles+' / '+level.wiggles+' 下，邊擺邊往後退':'夠了，快速一劃穿回去');
+    else if(level.pat==='heart')s=pour.cut?'按完成看看成果':(pour.active?(pour.vis()>380?'圓夠大了，快速一劃！':'按住不動，推出一個圓'):'從圓的上方按下去，快速往下劃');
+    else if(level.layers)s=pour.cut?'按完成看看成果':(pour.pours<level.layers?'已推出 '+pour.pours+' / '+level.layers+' 團'+(pour.active?'':'，往下一點再推'):'最後從最上方快速往下一劃');
+    else if(level.pat==='leaf')s=pour.cut?'按完成看看成果':(pour.wiggles<level.wiggles?'左右擺動 '+pour.wiggles+' / '+level.wiggles+' 下，邊擺邊往下退':'夠了，快速往上一劃穿回去');
   }else s=pour.mode==='wiggle'?'擺動中':pour.mode==='cut'?'拉線中':pour.active?'注入中':'';
   if(pour.fill>=92&&!pour.done)s='杯子快滿了';
   if(el.textContent!==s)el.textContent=s;
 }
 function finish(auto){
   if(!pour||pour.done||!running)return;
-  if(!auto&&pour.parts.length<20){toast('先在杯面上拉花');return;}
+  if(!auto&&pour.vis()<20){toast('先在杯面上拉花');return;}
   pour.up();pour.done=true;pour.high=false;hEnd();running=false;
   lastRes=score(pour,level);
   setTimeout(showResult,auto?500:150);
@@ -485,8 +495,8 @@ function demoStep(dt){
   if(!demo){demo=new Pour(1);demoT=0;}
   demoT+=dt;const t=demoT;
   demo.high=t>.3&&t<2.9;
-  if(t>3.2&&t<6.2){if(!demo.active)demo.down(CX,CY+3);demo.move(CX,CY+3);}
-  else if(t>=6.2&&t<6.75){const u=(t-6.2)/.55;if(!demo.active)demo.down(CX,CY+17);demo.move(CX,CY+17-u*36);}
+  if(t>3.2&&t<6.2){if(!demo.active)demo.down(CX,CY-2);demo.move(CX,CY-2);}
+  else if(t>=6.2&&t<6.75){const u=(t-6.2)/.55;if(!demo.active)demo.down(CX,CY-20);demo.move(CX,CY-20+u*38);}
   else if(demo.active)demo.up();
   demo.step(dt);
   if(t>9.5){demo=null;}
@@ -498,11 +508,28 @@ function renderPlay(){
   const{c,T}=fit(cv,100,100);BT=T;
   drawCup(c,pour,{});
   if(pour.high&&!pour.pouring&&!pour.done){const now=performance.now()/1000;for(let k=0;k<3;k++){const ph=(now*2+k/3)%1;c.globalAlpha=1-ph;ell(c,CX,CY+6,1+ph*5,1+ph*5,null,'rgba(255,255,255,.8)',.4);}c.globalAlpha=1;ell(c,CX,CY+6,1,1,'#F4EEE2');}
-  if(pour.pouring){const k=pour.mode==='cut'?.5:1;ell(c,pour.px,pour.py,1.4*k,1.4*k,'#FFFFFF');}
+  if(level&&D.guide!==false&&!pour.done)drawGhost(c,level.pat,pour.surfR());
+  if(level&&!pour.done&&!pour.active&&cutReady())drawCutArrow(c);
+  if(pour.active&&finger){const now=performance.now()/1000;
+    c.save();c.setLineDash([.9,.9]);c.beginPath();c.moveTo(finger.x,finger.y-2);c.lineTo(pour.px,pour.py+2);c.lineWidth=.5;c.strokeStyle='rgba(255,255,255,.75)';c.stroke();c.restore();
+    const r=pour.pouring?(pour.mode==='cut'?1.6:2.4+Math.sin(now*10)*.3):2.4;
+    ell(c,pour.px,pour.py,r,r,null,pour.pouring?'#FFFFFF':'rgba(255,255,255,.6)',.6);
+    if(pour.pouring)ell(c,pour.px,pour.py,pour.mode==='cut'?.7:1.2,pour.mode==='cut'?.7:1.2,'#FFFFFF');}
   if(level)drawTarget(c,90,9,7,level.pat);
   const fx=4,fy=4,fw=20;c.fillStyle='rgba(0,0,0,.08)';c.fillRect(fx,fy+4,fw,2.4);c.fillStyle=pour.fill>=90?'#C2453B':GLAZE;c.fillRect(fx,fy+4,fw*clamp(pour.fill/100,0,1),2.4);
   txt(c,'杯量 '+Math.round(pour.fill)+'%',fx+fw/2,fy+1.4,2.8,getComputedStyle(document.documentElement).getPropertyValue('--soft').trim()||'#66707A');
 }
+
+function cutReady(){if(!level||pour.cut)return false;if(level.pat==='heart')return pour.vis()>380;if(level.layers)return pour.pours>=level.layers;if(level.pat==='leaf')return pour.wiggles>=level.wiggles;return false;}
+const GHOST={};
+function ghostPts(pat){if(GHOST[pat])return GHOST[pat];const F={sc:1,rot:0,ox:0,oy:0};const pts=[],st=1.25;
+  for(let y=CY-30;y<=CY+30;y+=st)for(let x=CX-30;x<=CX+30;x+=st){if(maskAt(pat,F,x,y)&&(!maskAt(pat,F,x+st,y)||!maskAt(pat,F,x-st,y)||!maskAt(pat,F,x,y+st)||!maskAt(pat,F,x,y-st)))pts.push([x,y]);}
+  return GHOST[pat]=pts;}
+function drawGhost(c,pat,rs){c.fillStyle='rgba(255,255,255,.42)';ghostPts(pat).forEach(([x,y])=>{if(Math.hypot(x-CX,y-CY)<rs-1)c.fillRect(x-.3,y-.3,.6,.6);});}
+function drawCutArrow(c){const now=performance.now()/1000,a=.45+.4*Math.sin(now*4),up=level&&level.pat==='leaf';const y0=up?CY+24:CY-24,y1=up?CY-20:CY+20,d=up?-1:1;
+  c.save();c.globalAlpha=a;c.setLineDash([1.6,1.2]);c.beginPath();c.moveTo(CX,y0);c.lineTo(CX,y1);c.lineWidth=.9;c.strokeStyle='#FFFFFF';c.stroke();c.setLineDash([]);
+  c.beginPath();c.moveTo(CX-2.6,y1-d*4.5);c.lineTo(CX,y1);c.lineTo(CX+2.6,y1-d*4.5);c.stroke();c.restore();
+  txt(c,up?'從這裡快速往上劃':'從這裡快速往下劃',CX,up?CY+28.5:CY-28.5,2.8,'rgba(255,255,255,.9)');}
 
 /* ---------- loop ---------- */
 let last=performance.now();
