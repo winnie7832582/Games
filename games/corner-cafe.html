@@ -427,6 +427,7 @@ async function cafeDay(){
     $('#s-bar').textContent=bar();
   }
   G.rep=clamp(G.rep+repD,0,100);G.money+=earn-300;G.energy=clamp(G.energy-20,0,100);G.phase='evening';save();
+  try{window.GC&&GC.add('corner-cafe','days',1);}catch(e){}
   showWho(null);setScene(BG.cafe('night'),'打烊後');
   await say('','打烊了。今天收入 '+fmt(earn)+'，扣掉店租和材料 $300。店的名聲 '+(repD>=0?'+':'')+repD+'。');
   goHub();
@@ -489,7 +490,6 @@ function giftShop(){
 }
 function goHubKeep(){$('#h-money').textContent=fmt(G.money);}
 async function endDay(text,bonus){
-  try{window.GC&&GC.add('corner-cafe','days',1);}catch(e){}
   show('scene');setScene(BG.street(''),'夜晚');showWho(null);
   for(const t of text.split('\n'))await say('',t);
   if(G.day>=DAYS){await finale();return;}

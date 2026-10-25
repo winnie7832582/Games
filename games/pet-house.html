@@ -688,7 +688,7 @@ function updateGameHud(){
 $('#g-end').addEventListener('click',()=>endGame());
 function endGame(){
   if(!game)return;const g=game;game=null;$('#ghud').hidden=true;
-  try{if(window.GC){var ok=g.type==='clean'?g.spots.some(function(s){return s.done;}):g.type==='toy'?g.hits>0:g.score>0;if(ok)GC.add('pet-house',g.type==='clean'?'cleaned':'played',1);}}catch(e){}
+  try{if(window.GC){var ok=g.type==='clean'?g.spots.some(function(s){return s.done;}):(g.type==='toy'?g.hits>0:g.score>0)||g.time>=8;if(ok)GC.add('pet-house',g.type==='clean'?'cleaned':'played',1);}}catch(e){}
   const toyOwned=has(TOYOF[P.species]);
   if(g.type==='clean'){const frac=g.spots.filter(s=>s.done).length/g.spots.length;P.clean=clamp(Math.max(P.clean,P.clean+(100-P.clean)*frac),0,100);if(frac>=1)P.clean=100;
     let m=P.species==='dog'?3:P.species==='gecko'?4:5;if(P.pers==='neat')m+=6;P.mood=clamp(P.mood+m*frac,0,100);P.bond+=Math.round(3*frac);
