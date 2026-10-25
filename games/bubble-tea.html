@@ -43,6 +43,17 @@ button{font:inherit;color:inherit}
 .sign{display:flex;flex-direction:column;align-items:center;flex:none;background:var(--red);color:#FFFFFF;font-weight:900;font-size:clamp(2.6rem,13vw,3.6rem);line-height:1.12;padding:20px 20px;border:4px solid var(--ink);border-radius:10px;box-shadow:8px 8px 0 var(--shadow);margin:0 0 26px}
 .how{max-width:21em;margin:0 0 22px;line-height:1.8;color:var(--ink);text-wrap:pretty}
 .best{margin:14px 0 0;color:var(--ink-soft);min-height:1.5em}
+.mod{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)}
+.mod[hidden]{display:none}
+.mod .panel{width:100%;max-width:560px;background:var(--surface);border:3px solid var(--ink);border-bottom:0;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:86vh;overflow:auto}
+.mod h2{margin:0 0 4px;font-weight:900}
+.sub2{margin:0 0 10px;color:var(--ink-soft)}
+.upr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:2px dashed var(--panel)}
+.upr .tx{flex:1;min-width:0}.upr .tx b{display:block}.upr .tx span{display:block;font-size:.88rem;color:var(--ink-soft)}
+.upr .btn{padding:8px 12px;font-size:.95rem}
+.cust.vip{border-color:#E8A31C;background:var(--panel)}
+.vipb{background:#E8A31C;color:#1D1A16;border-radius:6px;font-size:.7rem;font-weight:900;padding:1px 5px}
+.qty{background:var(--ink);color:var(--bg);border-radius:6px;font-size:.78rem;font-weight:900;padding:1px 5px}
 .lives{display:flex;align-items:center;gap:10px;margin:0 0 18px;font-weight:900}
 .lives button{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);background:var(--surface);font-size:1.2rem;font-weight:900;cursor:pointer;color:var(--ink)}
 .lives button:disabled{opacity:.35}
@@ -117,7 +128,6 @@ button{font:inherit;color:inherit}
 @media (max-height:640px){.cust{min-height:136px}.ticket{font-size:.85rem}.pad .btn{min-height:44px;padding:8px 4px}}
 @media (prefers-reduced-motion:reduce){.float{animation-duration:.01s}.toast,.btn,.cust{transition:none}}
 </style>
-<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -127,8 +137,11 @@ button{font:inherit;color:inherit}
     <p class="how">客人點什麼就做什麼。茶要倒到八分滿，糖和冰照次數加，珍珠要先煮、放太久會變硬。封膜後點客人出餐。營業兩分鐘，客人生氣的次數用完就提早打烊。</p>
     <div class="lives" role="group" aria-label="失誤次數"><span>可以失誤</span><button type="button" id="lv-m" aria-label="減少">−</button><output id="lv-v" aria-live="polite"></output><button type="button" id="lv-p" aria-label="增加">＋</button><span>次</span></div>
     <button class="btn big" id="open" type="button">開店</button>
+    <button class="btn" id="shop-open" type="button" style="margin-top:12px"></button>
     <p class="best" id="best"></p>
   </section>
+
+  <div class="mod" id="shopmod" hidden><div class="panel" role="dialog" aria-modal="true" aria-labelledby="shop-h"><h2 id="shop-h">升級店面</h2><p class="sub2" id="shop-coins"></p><div id="shop-list"></div><button class="btn big" id="shop-close" type="button" style="width:100%;margin-top:12px">關閉</button></div></div>
 
   <section class="screen" id="game" aria-label="營業中">
     <div class="hud">
@@ -161,6 +174,7 @@ button{font:inherit;color:inherit}
       <p class="sub" id="r-sub"></p>
       <p class="rev" id="r-rev">$0</p>
       <p class="newbest" id="r-best"></p>
+      <p class="newbest" id="r-coins" style="color:var(--ink)"></p>
       <div class="stats">
         <div><b id="r-served">0</b><span>杯賣出</span></div>
         <div><b id="r-perfect">0</b><span>杯完美</span></div>
@@ -189,7 +203,13 @@ const BASES={black:{name:'紅茶',color:'#B4532A',price:35},green:{name:'綠茶'
 const SUGAR=['無糖','半糖','全糖'];
 const ICE=['去冰','少冰','正常冰'];
 const TOPS={none:'不加料',pearl:'加珍珠',coco:'加椰果'};
-const DUR=120,COOK=7,STOCK=5,FRESH=40,RATE=50;
+const DUR=120,COOK=7;let STOCK=5,FRESH=40,RATE=50,PATM=1;
+const SHOPK='teashop-shop';let SHOP={coins:0,lv:{pot:0,keep:0,sign:0,rate:0}};
+try{const v=JSON.parse(localStorage.getItem(SHOPK)||'null');if(v&&v.lv)SHOP={coins:v.coins||0,lv:Object.assign({pot:0,keep:0,sign:0,rate:0},v.lv)};}catch(e){}
+function saveShop(){try{localStorage.setItem(SHOPK,JSON.stringify(SHOP));}catch(e){}}
+function applyShop(){STOCK=5+2*SHOP.lv.pot;FRESH=40+20*SHOP.lv.keep;PATM=1+.1*SHOP.lv.sign;RATE=50+15*SHOP.lv.rate;}
+const UPG=[{k:'pot',n:'大鍋子',d:'珍珠一鍋多 2 份',c:[40,100]},{k:'keep',n:'保溫鍋',d:'珍珠變硬的時間多 20 秒',c:[40,100]},{k:'sign',n:'親切招牌',d:'客人多等 10% 的時間',c:[60,140]},{k:'rate',n:'快速出茶',d:'倒茶更快，要抓準時機',c:[50,120]}];
+applyShop();
 
 let P={};
 function readPalette(){const cs=getComputedStyle(document.documentElement);const g=n=>cs.getPropertyValue(n).trim();
@@ -202,6 +222,7 @@ new MutationObserver(readPalette).observe(document.documentElement,{attributes:t
 let G=null,screen='title';
 function newCup(){return{base:null,mixed:false,fill:0,sugar:0,ice:0,tops:new Set(),hard:false,sealed:false};}
 function newGame(){
+  applyShop();
   G={t:0,money:0,hearts:LIVES,maxHearts:LIVES,served:0,perfect:0,angry:0,custN:0,slots:[null,null,null],nextSpawn:.8,
     cup:newCup(),pot:{state:'empty',t:0,stock:0,fresh:0},pouring:null,over:false,
     mistakes:{base:0,fill:0,sugar:0,ice:0,top:0,late:0,hard:0}};
@@ -225,17 +246,19 @@ function faceSVG(c,mood){
 function spawn(){
   const i=G.slots.indexOf(null);if(i<0)return false;
   const prog=G.t/DUR,order=makeOrder(prog);
-  const max=lerp(34,23,prog)+(order.top!=='none'?3:0);
+  const vip=Math.random()<lerp(.06,.14,prog),qty=(!vip&&Math.random()<lerp(.05,.2,prog))?2:1;
+  let max=(lerp(34,23,prog)+(order.top!=='none'?3:0))*PATM;if(qty===2)max+=9;if(vip)max*=.8;
+  const unit=BASES[order.base].price+(order.top!=='none'?10:0);
   G.custN++;
-  G.slots[i]={id:G.custN,order,pat:max,max,look:{skin:pick(SKIN),hair:pick(HAIR)},mood:-1,price:BASES[order.base].price+(order.top!=='none'?10:0)};
+  G.slots[i]={id:G.custN,order,pat:max,max,look:{skin:pick(SKIN),hair:pick(HAIR)},mood:-1,price:Math.round(unit*(vip?1.8:1)),qty,left:qty,vip};
   renderSlot(i);buzz(10);return true;
 }
 function renderSlot(i){
   const el=$('#queue').children[i],c=G&&G.slots[i];
   if(!c){el.className='cust empty';el.innerHTML='等待客人';el.removeAttribute('aria-label');el.disabled=true;return;}
-  const o=c.order;el.className='cust';el.disabled=false;
-  el.setAttribute('aria-label','出餐給這位客人：'+BASES[o.base].name+'，'+SUGAR[o.sugar]+'，'+ICE[o.ice]+'，'+TOPS[o.top]);
-  el.innerHTML='<div class="who"><span class="fc">'+faceSVG(c.look,0)+'</span><span class="price">$'+c.price+'</span></div>'+
+  const o=c.order;el.className='cust'+(c.vip?' vip':'');el.disabled=false;
+  el.setAttribute('aria-label','出餐給這位客人：'+(c.vip?'VIP，':'')+(c.qty>1?'要 '+c.left+' 杯，':'')+BASES[o.base].name+'，'+SUGAR[o.sugar]+'，'+ICE[o.ice]+'，'+TOPS[o.top]);
+  el.innerHTML='<div class="who"><span class="fc">'+faceSVG(c.look,0)+'</span>'+(c.vip?'<span class="vipb">VIP</span>':'')+(c.qty>1?'<span class="qty">×'+c.left+'</span>':'')+'<span class="price">$'+c.price+'</span></div>'+
     '<div class="ticket"><b>'+BASES[o.base].name+'</b><span>'+SUGAR[o.sugar]+'</span><span>'+ICE[o.ice]+'</span><span'+(o.top==='none'?' class="dim"':'')+'>'+TOPS[o.top]+'</span></div>'+
     '<div class="pat"><i></i></div>';
   c.mood=0;
@@ -312,11 +335,14 @@ function serve(i){
   if(!cup.sealed){toast('先封膜再出餐');return;}
   const m=check(cup,cu.order);G.cup=newCup();
   if(m.length){
-    m.forEach(x=>G.mistakes[x[0]]++);toast(m[0][1],'bad');floatText(i,'做錯了',P.red);leave(i);loseHeart();return;
+    m.forEach(x=>G.mistakes[x[0]]++);toast(m[0][1],'bad');floatText(i,'做錯了',P.red);leave(i);loseHeart();if(cu.vip)loseHeart();return;
   }
   const frac=cu.pat/cu.max;
+  const last=cu.left<=1;const tip=last?Math.round(frac*15)*(cu.vip?2:1):0;
   if(cup.hard){const pay=Math.round(cu.price/2);G.money+=pay;G.served++;G.mistakes.hard++;toast('珍珠硬掉了，只收一半','bad');floatText(i,'+$'+pay,P.ink);}
-  else{const tip=Math.round(frac*15);G.money+=cu.price+tip;G.served++;G.perfect++;toast(tip>=10?'完美，客人很開心':'完美','good');floatText(i,'+$'+(cu.price+tip),P.jade);buzz(20);}
+  else{G.money+=cu.price+tip;G.served++;G.perfect++;toast(cu.vip?'VIP 客人很滿意':tip>=10?'完美，客人很開心':'完美','good');floatText(i,'+$'+(cu.price+tip),P.jade);buzz(20);}
+  if(!last){cu.left--;toast('還要 '+cu.left+' 杯','good');renderSlot(i);updateHud();return;}
+  if(cu.vip)G.vipN=(G.vipN||0)+1;if(cu.qty>1)G.multiN=(G.multiN||0)+1;
   leave(i);updateHud();
 }
 
@@ -341,7 +367,7 @@ $('#b-seal').addEventListener('click',seal);
 /* ---------- hud ---------- */
 function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function updateHud(){
-  $('#time').textContent=fmt(DUR-G.t);$('#money').textContent='$'+G.money;
+  $('#time').textContent=fmt(DUR-G.t)+(G.rush?' 尖峰':'');$('#time').style.color=G.rush?'var(--red)':'';$('#money').textContent='$'+G.money;
   const hh=Math.max(0,G.hearts),mh=G.maxHearts;$('#hearts').textContent=mh>5?'♥ '+hh+' / '+mh:'♥'.repeat(hh)+'♡'.repeat(mh-hh);
   $('#hearts').setAttribute('aria-label','剩下 '+Math.max(0,G.hearts)+' 次失誤機會');
   const p=G.pot;const cb=$('#b-cook');
@@ -357,19 +383,20 @@ function update(dt){
   if(G.pouring){const c=G.cup;c.fill+=RATE*dt;
     if(c.fill>=100){c.fill=100;stopPour();document.querySelectorAll('.tea.held').forEach(b=>b.classList.remove('held'));toast('滿出來了','bad');buzz(30);}}
   if(G.cup.sealed)G.cup.sealT+=dt;
+  const inRush=(G.t>=32&&G.t<46)||(G.t>=84&&G.t<98);if(inRush!==G.rush){G.rush=inRush;toast(inRush?'尖峰時段！客人變多了':'尖峰結束',inRush?'bad':'good');buzz(inRush?[20,40,20]:10);}
   const p=G.pot;
   if(p.state==='cooking'){p.t+=dt;if(p.t>=COOK){p.state='ready';p.stock=STOCK;p.fresh=FRESH;toast('珍珠煮好了','good');buzz(15);}}
   else if(p.state==='ready'){p.fresh-=dt;if(p.fresh<=0){p.state='hard';toast('珍珠放太久，變硬了','bad');}}
   if(G.t>=G.nextSpawn){
     const prog=G.t/DUR;
-    if(G.t<DUR-6&&spawn())G.nextSpawn=G.t+lerp(8,4.2,prog)+rnd(-1,1);else G.nextSpawn=G.t+1;
+    if(G.t<DUR-6&&spawn())G.nextSpawn=G.t+(lerp(8,4.2,prog)+rnd(-1,1))*(G.rush?.5:1);else G.nextSpawn=G.t+1;
   }
   G.slots.forEach((c,i)=>{if(!c)return;c.pat-=dt;const f=clamp(c.pat/c.max,0,1);
     const el=$('#queue').children[i];const bar=el.querySelector('.pat i');
     if(bar){bar.style.width=(f*100)+'%';bar.style.background=f>.5?'var(--jade)':f>.25?'#E8A31C':'var(--red)';}
     const mood=f>.5?0:f>.25?1:2;
     if(mood!==c.mood){c.mood=mood;const fc=el.querySelector('.fc');if(fc)fc.innerHTML=faceSVG(c.look,mood);}
-    if(c.pat<=0){G.mistakes.late++;toast('客人等太久，走掉了','bad');floatText(i,'走掉了',P.red);leave(i);loseHeart();}
+    if(c.pat<=0){G.mistakes.late++;toast('客人等太久，走掉了','bad');floatText(i,'走掉了',P.red);leave(i);loseHeart();if(c.vip)loseHeart();}
   });
   updateHud();
 }
@@ -481,23 +508,35 @@ function render(){
 
 /* ---------- flow ---------- */
 function show(n){screen=n;['title','game','result'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
-let LIVES=3;try{const v=parseInt(GCStore.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
+let LIVES=3;try{const v=parseInt(localStorage.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
 function renderLives(){$('#lv-v').textContent=LIVES<=5?'♥'.repeat(LIVES):'♥ × '+LIVES;$('#lv-v').setAttribute('aria-label',LIVES+' 次');$('#lv-m').disabled=LIVES<=1;$('#lv-p').disabled=LIVES>=10;}
-$('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
-$('#lv-p').addEventListener('click',()=>{LIVES=Math.min(10,LIVES+1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+$('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{localStorage.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+$('#lv-p').addEventListener('click',()=>{LIVES=Math.min(10,LIVES+1);try{localStorage.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
 renderLives();
+
+function renderShopBtn(){$('#shop-open').textContent='升級店面（點數 '+SHOP.coins+'）';}
+function openShopMod(){
+  $('#shop-coins').textContent='店面點數 '+SHOP.coins+'。每次營業，營業額的十分之一會變成點數。';
+  $('#shop-list').innerHTML=UPG.map(u=>{const l=SHOP.lv[u.k],max=l>=u.c.length;return '<div class="upr"><div class="tx"><b>'+u.n+'　'+l+'/'+u.c.length+'</b><span>'+u.d+'</span></div>'+(max?'<span>已滿級</span>':'<button class="btn" type="button" data-up="'+u.k+'"'+(SHOP.coins<u.c[l]?' disabled':'')+'>'+u.c[l]+' 點</button>')+'</div>';}).join('');
+  $('#shopmod').hidden=false;const f=$('#shop-list button:not([disabled])')||$('#shop-close');try{f.focus();}catch(e){}
+}
+$('#shop-open').addEventListener('click',openShopMod);
+$('#shop-close').addEventListener('click',()=>{$('#shopmod').hidden=true;renderShopBtn();});
+$('#shopmod').addEventListener('click',e=>{if(e.target.id==='shopmod'){$('#shopmod').hidden=true;renderShopBtn();}const b=e.target.closest('[data-up]');if(!b||b.disabled)return;const u=UPG.find(x=>x.k===b.dataset.up),l=SHOP.lv[u.k];if(SHOP.coins<u.c[l])return;SHOP.coins-=u.c[l];SHOP.lv[u.k]++;saveShop();applyShop();buzz(15);openShopMod();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#shopmod').hidden){$('#shopmod').hidden=true;renderShopBtn();}});
+renderShopBtn();
 function start(){newGame();buildQueue();updateHud();show('game');toast('開店了！');}
 $('#open').addEventListener('click',start);$('#again').addEventListener('click',start);
 
-function loadBest(){try{const v=GCStore.getItem('teashop-best');return v?JSON.parse(v):null;}catch(e){return null;}}
-function saveBest(o){try{GCStore.setItem('teashop-best',JSON.stringify(o));}catch(e){}}
+function loadBest(){try{const v=localStorage.getItem('teashop-best');return v?JSON.parse(v):null;}catch(e){return null;}}
+function saveBest(o){try{localStorage.setItem('teashop-best',JSON.stringify(o));}catch(e){}}
 function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.money==='number'?'最佳營業額 $'+b.money+'，'+b.title+(b.lives?'（'+b.lives+' 次失誤機會）':''):'';}
 showBest();
 
 const TITLES=[[1000,'排隊名店','門口排到轉角，今天的手速是專業級。'],[700,'巷口人氣店','熟客越來越多，再快一點就要排隊了。'],[400,'穩定營業中','節奏抓到了，下次試著同時顧好珍珠鍋。'],[150,'新手老闆','慢慢來，先記熟每位客人的單再動手。'],[0,'今天先休息','每家名店都有手忙腳亂的第一天。']];
 function endGame(early){
   if(!G||G.over)return;G.over=true;G.pouring=null;
-  try{window.GC&&GC.report('bubble-tea',{money:G.money,served:G.served,perfect:G.perfect,angry:G.angry,lives:G.maxHearts,hardMoney:G.maxHearts<=1?G.money:0});}catch(e){}
+  const gainP=Math.floor(G.money/10)+(G.perfect>=10?5:0);SHOP.coins+=gainP;saveShop();
   const t=TITLES.find(x=>G.money>=x[0]);
   $('#r-title').textContent=t[1];
   $('#r-sub').textContent=(early?'失誤次數用完，提早打烊了。':'兩分鐘營業結束。')+t[2];
@@ -506,6 +545,7 @@ function endGame(early){
   const worst=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
   const TIP={base:'最常做錯茶種，動手前先看清楚單上的第一行。',fill:'茶倒得不準，盯著八分滿的虛線放手。',sugar:'甜度常出錯，無糖不按、半糖一下、全糖兩下。',ice:'冰塊常出錯，去冰不加、少冰一匙、正常冰兩匙。',top:'配料常放錯，看清楚是珍珠、椰果還是不加。',late:'客人常等太久，試著先煮好珍珠，空檔時就備料。',hard:'珍珠常放到變硬，鍋邊的圈圈快變紅前就要用完或重煮。'};
   $('#r-tip').textContent=worst&&worst[1]>0?TIP[worst[0]]:'一杯都沒出錯，可以挑戰更高的營業額。';
+  $('#r-coins').textContent='獲得店面點數 +'+gainP+'（共 '+SHOP.coins+'），可以回首頁升級店面';
   const best=loadBest();
   if(G.money>0&&(!best||G.money>best.money)){saveBest({money:G.money,title:t[1],lives:G.maxHearts});$('#r-best').textContent=best?'新紀錄！比上次多 $'+(G.money-best.money):'第一筆紀錄已存下';}
   else $('#r-best').textContent=best?'最佳營業額 $'+best.money:'';

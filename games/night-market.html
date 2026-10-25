@@ -153,7 +153,6 @@ button{font:inherit;color:inherit}
 .chart{display:block;width:100%;height:150px}
 @media (prefers-reduced-motion:reduce){.btn,.toast{transition:none}}
 </style>
-<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -248,9 +247,9 @@ const CAP=[4,6,8],STORE=[60,100,160],SIGN=[1,1.15,1.35],SLOTS=[2,3,4],STOVES=[1,
 
 /* ---------- state ---------- */
 let S=null;
-function save(){try{GCStore.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function load(){try{const v=GCStore.getItem(KEY);if(!v)return null;const o=JSON.parse(v);return o&&o.v===1?o:null;}catch(e){return null;}}
-function clearSave(){try{GCStore.removeItem(KEY);}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const v=localStorage.getItem(KEY);if(!v)return null;const o=JSON.parse(v);return o&&o.v===1?o:null;}catch(e){return null;}}
+function clearSave(){try{localStorage.removeItem(KEY);}catch(e){}}
 function rollWeather(){return wpick(WKEYS,(k)=>WW[WKEYS.indexOf(k)]);}
 function forecastOf(w){return Math.random()<.75?w:pick(WKEYS);}
 function newGame(){
@@ -299,7 +298,7 @@ function eventDef(){return S.event?MORNING.find(e=>e.id===S.event.id):null;}
 let screen='title';
 function show(n){screen=n;['title','prep','night','result','shop','end'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='night')requestAnimationFrame(resize);}
 function titleInit(){const sv=load();$('#b-cont').hidden=!(sv&&!sv.ended);
-  let b=null;try{b=JSON.parse(GCStore.getItem(BEST)||'null');}catch(e){}
+  let b=null;try{b=JSON.parse(localStorage.getItem(BEST)||'null');}catch(e){}
   $('#best').textContent=b&&typeof b.cash==='number'?'最佳紀錄 '+money(b.cash)+'，'+b.title:'';}
 $('#b-new').addEventListener('click',()=>{newGame();goPrep();});
 $('#b-cont').addEventListener('click',()=>{S=load();if(!S){newGame();}goPrep();});
@@ -431,7 +430,7 @@ function stepNight(dt){
   if(N.paused||N.ended)return;
   N.t+=dt;
   const x=N.t/NIGHT;
-  if(N.t<NIGHT){
+  if(N.t<NIGHT&&!N.soldOut){
     const shout=N.t<N.shoutUntil?1.7:1;
     const lam=N.rate*(.6+.8*Math.pow(Math.sin(Math.PI*clamp(x,0,1)),1.5))*N.nightMul*shout;
     if(Math.random()<lam*dt)spawnCustomer();
@@ -452,6 +451,8 @@ function stepNight(dt){
   N.leaving.forEach(c=>moveTo(c,c.tx,c.y,dt,20));N.leaving=N.leaving.filter(c=>c.x>-7&&c.x<107);
   N.passers.forEach(p=>{p.x+=p.v*dt;});N.passers=N.passers.filter(p=>p.x>-8&&p.x<108);
   if(Math.random()<dt*N.rate*1.4*N.nightMul&&N.passers.length<18)N.passers.push(newPasser());
+  if(N.t<NIGHT&&!N.ended&&!N.soldOut&&N.menu.every(d=>N.stock[d]<=0)){N.soldOut=N.t;toast('全部賣完了，提早收攤！');buzz([20,40,20]);}
+  if(N.soldOut&&!N.ended&&N.queue.length===0){endNight();return;}
   if(N.t>=NIGHT&&!N.ended){
     const anyCooking=N.queue.some(c=>c.cooking);
     if(N.queue.length&&!N.queue.some(c=>c.closed)){N.queue.forEach(c=>{c.closed=true;});toast('收攤囉，做完手上這幾份');}
@@ -473,9 +474,8 @@ function endNight(){
   S.cash+=N.revenue-N.extraCost;
   const profit=N.revenue-N.cost.total-N.extraCost;
   const rec={day:S.day,profit:Math.round(profit),served:N.served,weather:S.weather,revenue:N.revenue};
-  try{window.GC&&GC.report('night-market',{dayProfit:rec.profit,served:rec.served,day:rec.day});}catch(e){}
   S.history.push(rec);
-  lastDay={rec,cost:N.cost,extra:N.extraCost,left,waste:Math.round(waste),sold:N.sold,start:N.start,lostSold:N.lostSold,lostWait:N.lostWait,lostFull:N.lostFull,repBefore,repAfter:S.rep,loc:S.plan.loc,weather:S.weather,menu:N.menu.slice(),reviews:makeReviews()};
+  lastDay={rec,cost:N.cost,extra:N.extraCost,left,waste:Math.round(waste),sold:N.sold,start:N.start,lostSold:N.lostSold,lostWait:N.lostWait,lostFull:N.lostFull,soldOut:N.soldOut,repBefore,repAfter:S.rep,loc:S.plan.loc,weather:S.weather,menu:N.menu.slice(),reviews:makeReviews()};
   advanceDay();save();
   setTimeout(()=>{renderResult();show('result');},700);
 }
@@ -622,18 +622,20 @@ function drawNight(){
 }
 
 /* ---------- result ---------- */
+function clockOf(t){const mins=Math.min(360,Math.floor(t/NIGHT*360)),h=18+Math.floor(mins/60),m=mins%60;return (h>=24?'00':h)+':'+String(m).padStart(2,'0');}
 function renderResult(){
   const L=lastDay;let h='';
   if(L.rest){h+='<div class="card"><h3>第 '+L.rec.day+' 天</h3><p>颱風天休息一天，好好睡了一覺。</p></div>';}
   else{
     const p=L.rec.profit;
-    h+='<div class="card"><p class="soft">第 '+L.rec.day+' 天收攤，'+WEATHER[L.weather].name+'，'+LOCS[L.loc].name+'</p><p class="big '+(p>=0?'pos':'neg')+'">'+(p>=0?'+':'')+money(p)+'</p><p class="soft">今晚淨利</p></div>';
+    h+='<div class="card"><p class="soft">第 '+L.rec.day+' 天收攤，'+WEATHER[L.weather].name+'，'+LOCS[L.loc].name+'</p><p class="big '+(p>=0?'pos':'neg')+'">'+(p>=0?'+':'')+money(p)+'</p><p class="soft">今晚淨利'+(L.soldOut!=null?'，'+clockOf(L.soldOut)+' 全部賣完提早收攤':'')+'</p></div>';
     h+='<div class="card"><div class="kv"><span>營收</span><b>'+money(L.rec.revenue)+'</b></div><div class="kv"><span>食材</span><b>−'+money(L.cost.ing)+'</b></div><div class="kv"><span>租金</span><b>−'+money(L.cost.rent)+'</b></div>'+(L.cost.wage?'<div class="kv"><span>工資</span><b>−'+money(L.cost.wage)+'</b></div>':'')+(L.extra?'<div class="kv"><span>其他支出</span><b>−'+money(L.extra)+'</b></div>':'')+'<div class="kv"><span>剩下沒賣完的料</span><b>'+money(L.waste)+'</b></div></div>';
     const dr=L.repAfter-L.repBefore;
     h+='<div class="card"><h3>客人</h3><div class="kv"><span>買到東西</span><b>'+L.rec.served+' 位</b></div><div class="kv"><span>想吃的賣完了</span><b>'+L.lostSold+' 位</b></div><div class="kv"><span>等太久走掉</span><b>'+L.lostWait+' 位</b></div><div class="kv"><span>隊伍太長沒排</span><b>'+L.lostFull+' 位</b></div><div class="kv"><span>聲望</span><b>'+Math.round(L.repBefore)+' → '+Math.round(L.repAfter)+'（'+(dr>=0?'+':'')+dr.toFixed(1)+'）</b></div></div>';
     h+='<div class="card"><h3>各品項</h3>'+L.menu.map(d=>'<div class="kv"><span>'+DISHES[d].name+'</span><b>賣出 '+(L.sold[d]||0)+'／備 '+L.start[d]+(L.left[d]>0?'，剩 '+L.left[d]:'，全部賣完')+'</b></div>').join('')+'</div>';
     h+='<div class="card"><h3>網路評論</h3>'+L.reviews.map(r=>'<div class="review"><span class="stars">'+r.s+'</span><br>'+esc(r.t)+'</div>').join('')+'</div>';
     const tips=[];
+    if(L.soldOut!=null&&L.soldOut<NIGHT*.75)tips.push(clockOf(L.soldOut)+' 就全部賣完了，後面的客人都沒賺到。明天可以多備一點料。');
     L.menu.forEach(d=>{if(L.left[d]>=8)tips.push(DISHES[d].name+'剩了 '+L.left[d]+' 份，下次可以少備一點。');if(L.left[d]===0&&L.lostSold>0)tips.push(DISHES[d].name+'賣完了，下次可以多備一些。');});
     if(L.lostWait>=3)tips.push('有客人等太久，可以加爐子、請幫手，或多點爐子加快。');
     if(L.lostFull>=4)tips.push('隊伍常排滿，攤車擴建可以多排幾個人。');
@@ -652,11 +654,10 @@ const TITLES=[[100000,'夜市之王','觀光客專程來朝聖，你的攤位成
 function bankrupt(){S.ended=true;S.bankrupt=true;save();showEnd();}
 function showEnd(){
   const t=TITLES.find(x=>S.cash>=x[0]);
-  try{window.GC&&GC.max('night-market',{cash:Math.round(S.cash),finished:S.bankrupt?0:1});}catch(e){}
   const days=S.history.filter(r=>!r.rest);const best=days.reduce((m,r)=>r.profit>m.profit?r:m,{profit:-1e9,day:0});
   const served=days.reduce((a,r)=>a+r.served,0);
-  let prev=null;try{prev=JSON.parse(GCStore.getItem(BEST)||'null');}catch(e){}
-  let nb='';if(!prev||S.cash>prev.cash){try{GCStore.setItem(BEST,JSON.stringify({cash:Math.round(S.cash),title:t[1]}));}catch(e){}nb=prev?'新紀錄！':'';}
+  let prev=null;try{prev=JSON.parse(localStorage.getItem(BEST)||'null');}catch(e){}
+  let nb='';if(!prev||S.cash>prev.cash){try{localStorage.setItem(BEST,JSON.stringify({cash:Math.round(S.cash),title:t[1]}));}catch(e){}nb=prev?'新紀錄！':'';}
   $('#end-body').innerHTML='<div class="card" style="text-align:center"><p class="soft">'+(S.bankrupt?'第 '+S.day+' 天，資金周轉不靈':'三十天經營結束')+'</p><h2 style="margin:6px 0 2px;font-size:2rem;font-weight:900;color:var(--red)">'+t[1]+'</h2><p class="soft" style="margin-bottom:10px">'+t[2]+'</p><p class="big">'+money(S.cash)+'</p><p class="soft">最後的現金'+(nb?'，<b style="color:var(--teal)">'+nb+'</b>':'')+'</p></div>'+
     '<div class="card"><h3>每天淨利</h3><canvas class="chart" id="chart"></canvas></div>'+
     '<div class="card"><div class="kv"><span>總共服務客人</span><b>'+served+' 位</b></div><div class="kv"><span>最好的一天</span><b>'+(best.day?'第 '+best.day+' 天，'+money(best.profit):'—')+'</b></div><div class="kv"><span>研發菜色</span><b>'+S.unlocked.length+' 道</b></div><div class="kv"><span>最後聲望</span><b>'+Math.round(S.rep)+'</b></div></div>'+

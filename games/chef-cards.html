@@ -142,7 +142,6 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 @media (max-height:680px){.card .nm{font-size:.9rem}.hand{padding-top:12px}}
 @media (prefers-reduced-motion:reduce){.card,.btn,.prog i{transition:none}.pop{animation-duration:.01s}}
 </style>
-<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -270,13 +269,13 @@ let run=null,R=null;let uidN=1;
 function mkCard(id){return{id,u:uidN++};}
 function newRun(){
   uidN=1;
-  run={v:1,city:0,stage:0,money:4,deck:START.map(mkCard),tools:[],levels:{},bosses:shuffle(BOSSES.map(b=>b.id)).slice(0,4),phase:'intro',offer:null,bestDish:0,uid:uidN};
+  run={v:1,city:0,stage:0,money:4,deck:START.map(mkCard),tools:[],levels:{},bosses:shuffle(BOSSES.map(b=>b.id)).slice(0,4),phase:'intro',offer:null,bestDish:0,uid:uidN,retries:3,retried:0};
   save();
 }
-function save(){if(run){run.uid=uidN;try{GCStore.setItem(KEY,JSON.stringify(run));}catch(e){}}}
-function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');if(v&&v.v===1){uidN=v.uid||999;return v;}}catch(e){}return null;}
-function rec(){try{return JSON.parse(GCStore.getItem(REC)||'null')||{best:0,dish:0,wins:0};}catch(e){return{best:0,dish:0,wins:0};}}
-function saveRec(o){try{GCStore.setItem(REC,JSON.stringify(o));}catch(e){}}
+function save(){if(run){run.uid=uidN;try{localStorage.setItem(KEY,JSON.stringify(run));}catch(e){}}}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&v.v===1){uidN=v.uid||999;return v;}}catch(e){}return null;}
+function rec(){try{return JSON.parse(localStorage.getItem(REC)||'null')||{best:0,dish:0,wins:0};}catch(e){return{best:0,dish:0,wins:0};}}
+function saveRec(o){try{localStorage.setItem(REC,JSON.stringify(o));}catch(e){}}
 function roundIdx(){return run.city*3+run.stage;}
 function isBoss(){return run.stage===2;}
 function boss(){return isBoss()?BOSSES.find(b=>b.id===run.bosses[run.city]):null;}
@@ -366,7 +365,7 @@ function goIntro(){
   const map=Array.from({length:12},(_,i)=>'<span class="'+(i<roundIdx()?'done':i===roundIdx()?'now':'')+'"></span>').join('');
   const reward=[3,4,6][run.stage];
   $('#intro-body').innerHTML='<div class="intro"><p class="k">'+CITIES[run.city]+'，第 '+(run.stage+1)+' / 3 位評審</p><h2>'+judgeName()+'</h2><p class="tgt">'+fmt(t)+'</p><p class="k">目標分數</p>'+
-    (B?'<p class="rule">特殊規則：'+B.d+'</p>':'')+'<div class="map" aria-label="進度：第 '+(roundIdx()+1)+' / 12 位評審">'+map+'</div><p class="k">過關獎勵 $'+reward+'，每剩一次上菜再加 $1</p></div>'+
+    (B?'<p class="rule">特殊規則：'+B.d+'</p>':'')+'<div class="map" aria-label="進度：第 '+(roundIdx()+1)+' / 12 位評審">'+map+'</div><p class="k">過關獎勵 $'+reward+'，每剩一次上菜再加 $1</p><p class="k" style="margin-top:4px">再挑戰機會還有 '+(run.retries==null?RETRIES:run.retries)+' 次</p></div>'+
     '<div class="intro" style="text-align:left"><p class="k" style="margin-bottom:6px">你的廚具</p><p>'+(run.tools.length?run.tools.map(t=>'<b>'+TOOLS[t].n+'</b>：'+TOOLS[t].d).join('<br>'):'還沒有廚具，過關後可以在市場買。')+'</p></div>';
   show('intro');
 }
@@ -458,7 +457,6 @@ function winRound(){
   const base=[3,4,6][run.stage],left=R.serves,interest=Math.min(5,Math.floor(run.money/5)),cat=has('cat')?3:0;
   const total=base+left+interest+cat;run.money+=total;
   const r=rec();const reached=roundIdx()+1;if(reached>r.best){r.best=reached;saveRec(r);}
-  try{window.GC&&GC.report('chef-cards',{round:reached,dish:R.best,judge:1});}catch(e){}
   const last=run.city===3&&run.stage===2;
   let h='<div class="intro"><p class="k">'+CITIES[run.city]+'・'+judgeName()+'</p><h2>評審滿意了！</h2><p class="tgt">'+fmt(R.score)+'</p><p class="k">目標 '+fmt(target())+'，單道最高 '+fmt(R.best)+'</p></div>';
   h+='<div class="intro rtable" style="text-align:left"><div class="kv"><span>過關獎勵</span><span>$'+base+'</span></div><div class="kv"><span>剩下 '+left+' 次上菜</span><span>$'+left+'</span></div><div class="kv"><span>利息（每 $5 給 $1，最多 $5）</span><span>$'+interest+'</span></div>'+(cat?'<div class="kv"><span>招財貓</span><span>$3</span></div>':'')+'<div class="kv"><b>合計</b><b>$'+total+'</b></div></div>';
@@ -470,16 +468,20 @@ function winRound(){
 }
 $('#b-tomarket').addEventListener('click',goMarket);
 function loseRun(){finishRun(false);}
+const RETRIES=3;
 function finishRun(won){
-  run.phase='over';
   const r=rec();if(won){r.wins=(r.wins||0)+1;r.best=12;}saveRec(r);
-  try{window.GC&&GC.max('chef-cards',{dish:run.bestDish||0,win:won?1:0});}catch(e){}
-  try{GCStore.removeItem(KEY);}catch(e){}
+  if(run.retries==null)run.retries=RETRIES;
+  const canRetry=!won&&run.retries>0;
+  if(canRetry){run.retries--;run.retried=(run.retried||0)+1;run.phase='intro';save();}
+  else{run.phase='over';try{localStorage.removeItem(KEY);}catch(e){}}
   const reached=roundIdx()+(won?1:0);
-  $('#over-body').innerHTML='<div class="intro"><p class="k">'+(won?'四座城市都征服了':'旅程結束')+'</p><h2>'+(won?'傳奇主廚':'評審不滿意')+'</h2><p class="tgt">'+(won?'12 / 12':reached+' / 12')+'</p><p class="k">'+(won?'十二位評審全部過關':'在'+CITIES[run.city]+'的'+judgeName()+'這關停下來了，得到 '+fmt(R.score)+' / '+fmt(target())+' 分')+'</p></div>'+
+  $('#over-body').innerHTML='<div class="intro"><p class="k">'+(won?'四座城市都征服了':'這一關沒過')+'</p><h2>'+(won?'傳奇主廚':'評審不滿意')+'</h2><p class="tgt">'+(won?'12 / 12':reached+' / 12')+'</p><p class="k">'+(won?'十二位評審全部過關'+(run.retried?'（用了 '+run.retried+' 次再挑戰）':'，一次都沒有重來！'):'在'+CITIES[run.city]+'的'+judgeName()+'這關，得到 '+fmt(R.score)+' / '+fmt(target())+' 分')+'</p></div>'+
     '<div class="intro rtable" style="text-align:left"><div class="kv"><span>單道最高</span><span>'+fmt(run.bestDish||0)+' 分</span></div><div class="kv"><span>牌組</span><span>'+run.deck.length+' 張</span></div><div class="kv"><span>廚具</span><span>'+(run.tools.map(t=>TOOLS[t].n).join('、')||'無')+'</span></div><div class="kv"><span>最常升級</span><span>'+(Object.keys(run.levels).sort((a,b)=>run.levels[b]-run.levels[a]).slice(0,1).map(k=>RMAP[k].n+' Lv'+(run.levels[k]+1))[0]||'沒有升級')+'</span></div></div>'+
-    '<button class="btn main" id="b-again" type="button" style="width:100%">再來一局</button><button class="btn" id="b-home" type="button" style="width:100%;margin-top:8px">回到首頁</button>';
+    (canRetry?'<button class="btn main" id="b-retry" type="button" style="width:100%">再挑戰這位評審</button><p class="k" style="text-align:center;margin:6px 0 10px;color:var(--soft);font-size:.88rem">牌組、廚具和金錢都維持這關開始時的樣子。這趟旅程還能再挑戰 '+run.retries+' 次。</p>':(!won?'<p class="k" style="text-align:center;margin:0 0 10px;color:var(--soft);font-size:.88rem">這趟旅程的再挑戰次數用完了。</p>':''))+
+    '<button class="btn'+(canRetry?'':' main')+'" id="b-again" type="button" style="width:100%">重新開始旅程</button><button class="btn" id="b-home" type="button" style="width:100%;margin-top:8px">回到首頁</button>';
   show('over');
+  const rb=$('#b-retry');if(rb)rb.addEventListener('click',()=>goIntro());
   $('#b-again').addEventListener('click',()=>{newRun();goIntro();});
   $('#b-home').addEventListener('click',()=>{titleInit();show('title');});
 }

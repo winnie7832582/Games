@@ -53,7 +53,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 .btn.held{background:var(--water);border-color:var(--water);color:#FFFFFF}
 .btn:disabled{opacity:.38;cursor:default;transform:none}
 .btn:focus-visible{outline:3px solid var(--cherry);outline-offset:3px}
-#start{min-width:200px}
+#start,#contest{min-width:200px}
 
 /* game */
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 16px 0}
@@ -80,6 +80,8 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 .card .guide{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:var(--bg);font-size:.95rem;line-height:1.7}
 .card .t{margin:0 0 16px;line-height:1.75;text-wrap:pretty}
 .card .btn{width:100%}
+.fixbar{height:10px;border-radius:5px;background:var(--track);overflow:hidden;margin:4px 0 14px}
+.fixbar i{display:block;height:100%;width:100%;background:var(--cherry)}
 .controls{display:flex;gap:10px;padding:10px 12px 16px}
 .controls .btn{flex:1;min-width:0}
 
@@ -105,7 +107,6 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 .sheet .btn{width:100%;margin-top:6px}
 @media (prefers-reduced-motion:reduce){.toast,.btn{transition:none}}
 </style>
-<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -115,6 +116,8 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
     <h1 id="t-h">一杯好咖啡</h1>
     <p class="lede">每次開店都有四位不同的客人，豆子、口味、奶種和拉花都不一樣。磨豆、控溫、萃取、打奶泡，照客人的喜好做出那一杯。</p>
     <button class="btn primary" id="start" type="button">開始沖煮</button>
+    <button class="btn" id="contest" type="button" style="margin-top:10px">咖啡大賽</button>
+    <p class="soft" id="contest-h" style="margin:6px 0 0;color:var(--soft);font-size:.85rem">四杯平均 70 分以上解鎖，跟五位對手比賽</p>
     <p class="best" id="best"></p>
   </section>
 
@@ -201,7 +204,7 @@ const BEANS=[
   {name:'蘇門答臘 曼特寧',roast:'深焙',notes:'黑巧克力、草本、厚實',grind:5,tlo:85,thi:87,dry:'#4E3020',wet:'#2A1810'}
 ];
 const R={};
-function newRound(i){const o=ORDERS[i];const ratioT=o.pref&&o.pref.ratio||15;Object.assign(R,{i,order:o,ratioT,waterT:ratioT*15,shotT:o.shot?o.shot.t:36,mLo:o.tmp?o.tmp.lo:60,mHi:o.tmp?o.tmp.hi:65,fLo:o.milk?o.milk.fLo:25,fHi:o.milk?o.milk.fHi:40,milkTq:o.milk?o.milk.tq:1,bean:o.bean||LATTE_BEAN,stages:o.type==='pour'?[grind,temp,bloom,pour]:[shot,steam,art],shotW:0,shotTime:0,milkTemp:0,foam:0,bubbles:0,tq:.7,crema:'#A0612F',parts:[],fillEnd:0,surfEnd:32.5,artRes:null,grind:4,temp:0,water:0,absorbed:0,level:0,clock:0,clockOn:false,bloomWater:0,bloomTime:0,even:{good:0,edge:0,still:0,total:0},endClock:0});}
+function newRound(i){const o=ORDERS[i];const ratioT=o.pref&&o.pref.ratio||15;Object.assign(R,{i,order:o,penalty:0,fixed:0,brk:null,ratioT,waterT:ratioT*15,shotT:o.shot?o.shot.t:36,mLo:o.tmp?o.tmp.lo:60,mHi:o.tmp?o.tmp.hi:65,fLo:o.milk?o.milk.fLo:25,fHi:o.milk?o.milk.fHi:40,milkTq:o.milk?o.milk.tq:1,bean:o.bean||LATTE_BEAN,stages:o.type==='pour'?[grind,temp,bloom,pour]:[shot,steam,art],shotW:0,shotTime:0,milkTemp:0,foam:0,bubbles:0,tq:.7,crema:'#A0612F',parts:[],fillEnd:0,surfEnd:32.5,artRes:null,grind:4,temp:0,water:0,absorbed:0,level:0,clock:0,clockOn:false,bloomWater:0,bloomTime:0,even:{good:0,edge:0,still:0,total:0},endClock:0});}
 function flow(dt,pour){
   if(pour>0){R.water+=pour*dt;const a=Math.min(30-R.absorbed,pour*dt);R.absorbed+=a;R.level+=pour*dt-a;R.clockOn=true;}
   const kd=.25+.06*(R.grind-1);R.level-=R.level*kd*dt;
@@ -497,127 +500,223 @@ function drawDial(c,gx,gy,gr,val,lo,hi,step,major){
   const na=ang(val);c.beginPath();c.moveTo(gx-Math.cos(na)*2,gy-Math.sin(na)*2);c.lineTo(gx+Math.cos(na)*(gr-2.5),gy+Math.sin(na)*(gr-2.5));c.lineWidth=.8;c.strokeStyle='#B3263A';c.stroke();ell(c,gx,gy,1.3,1.3,OUT);
 }
 
-/* ---------- latte: art ---------- */
-const ART={
+const OUT_LA='#20262B',GLAZE='#2B5FB8',FOAM='#F7EEE0',CREMA='#A0612F',CX=50,CY=50;
+const LA_ART={
+  circ(u,v){return u*u+v*v<=1;},
   heart(u,v){const a=u*u+v*v-1;return a*a*a-u*u*v*v*v<=0;},
-  tulip(u,v){return ART.heart(u*1.18,v*.74);},
-  circ(u,v){return u*u+(v-.1)*(v-.1)<=1.2;}
+  tulip(u,v){return LA_ART.heart(u*1.18,v*.74);},
+  tulip5(u,v){return LA_ART.heart(u*1.28,v*.62);},
+  leaf(u,v){const t=(v-.05)/1.3;if(Math.abs(t)>=1)return false;return Math.abs(u)<.6*Math.pow(1-t*t,.85);},
+  swan(u,v){
+    if(((u+.1)/.8)*((u+.1)/.8)+((v+.5)/.46)*((v+.5)/.46)<=1)return true;
+    if(v>-.3&&v<.85){const t=(v+.3)/1.15,uc=.2+.45*t*t,w=.2-.07*t;if(Math.abs(u-uc)<w)return true;}
+    if((u-.7)*(u-.7)+(v-.92)*(v-.92)<=.04)return true;
+    if(v>.84&&v<1&&u>.85&&u<1.1&&Math.abs(v-.92)<(1.1-u)*.5)return true;
+    if(u<-.78&&u>-1.15&&v>-.62&&v<-.3+(u+.78)*-.6)return true;
+    return false;},
+  rose(u,v){return u*u+v*v<=1.05;},
+  leafheart(u,v){
+    const hu=u/.62,hv=(v-.52)/.62,a=hu*hu+hv*hv-1;if(a*a*a-hu*hu*hv*hv*hv<=0)return true;
+    const t=(v+.5)/.75;if(Math.abs(t)<1&&Math.abs(u)<.5*Math.pow(1-t*t,.85))return true;return false;},
+  ref(u,v){return u*u+(v-.1)*(v-.1)<=1.2;}
 };
-const ACX=50,ACY=48;
-function artGrid(parts){
-  const N=44,size=70,cell=size/N,x0=ACX-size/2,y0=ACY-size/2,den=new Float32Array(N*N);
-  for(const p of parts){const i=Math.floor((p.x-x0)/cell),j=Math.floor((p.y-y0)/cell);
-    for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=N||jj>=N)continue;den[jj*N+ii]+=(di||dj?.35:1)*p.a;}}
-  const cov=new Uint8Array(N*N);let n=0;for(let k=0;k<N*N;k++)if(den[k]>=1){cov[k]=1;n++;}
-  return{N,cell,x0,y0,cov,n};
+const LA_ROTS={swan:1,rose:1,leafheart:1};
+/* ---------- pour engine ---------- */
+class LaPour{
+  constructor(tq){this.tq=tq==null?1:tq;this.parts=[];this.emit=0;this.layer=0;this.fill=0;this.t=0;this.pours=0;this.pourT=0;this.cut=false;this.cutLen=0;this.wiggles=0;this.revT=[];this.dir=null;
+    this.px=CX;this.py=CY;this.tx=CX;this.ty=CY;this.ux=0;this.uy=0;this.active=false;this.pouring=false;this.high=false;this.fresh=false;this.done=false;this.mode='';this.pulled=false;}
+  surfR(){return lerp(21,32.5,clamp(this.fill/100,0,1));}
+  vis(){let n=0;for(const p of this.parts)if(p.a>.6)n++;return n;}
+  down(x,y){if(this.done)return;this.active=true;this.fresh=true;this.px=this.tx=x;this.py=this.ty=y;this.ux=this.uy=0;this.layer++;this.pourT=0;this.cutLen=0;this.dir=null;}
+  move(x,y){this.tx=x;this.ty=y;}
+  up(){if(this.active&&this.pourT>.35)this.pours++;this.active=false;}
+  step(dt){
+    this.t+=dt;
+    let vx=0,vy=0;
+    if(this.active){if(this.fresh){this.fresh=false;}else{vx=(this.tx-this.px)/dt;vy=(this.ty-this.py)/dt;}this.px=this.tx;this.py=this.ty;}
+    this.ux+=(vx-this.ux)*Math.min(1,dt*14);this.uy+=(vy-this.uy)*Math.min(1,dt*14);
+    if(this.done){this.pouring=false;return;}
+    const rs=this.surfR(),inCup=Math.hypot(this.px-CX,this.py-CY)<rs;
+    this.tooEarly=this.active&&inCup&&this.fill<20;const pouring=this.active&&inCup&&!this.tooEarly;this.pouring=pouring;
+    if(this.high&&!pouring){if(this.fill<52)this.fill+=22*dt;else if(!this.halfDone){this.halfDone=true;if(this.onHalf)this.onHalf();}}
+    const sp=Math.hypot(this.ux,this.uy);
+    if(sp>12){const nx=this.ux/sp,ny=this.uy/sp;if(this.dir){const d=nx*this.dir[0]+ny*this.dir[1];if(d<-.25){this.revT.push(this.t);this.dir=[nx,ny];if(pouring){this.layer++;this.wiggles++;}}else if(d>.6)this.dir=[nx,ny];}else this.dir=[nx,ny];}
+    this.revT=this.revT.filter(t=>this.t-t<.5);
+    const wiggle=this.revT.length>=2,fast=sp>32&&!wiggle;
+    this.mode=pouring?(wiggle?'wiggle':fast?'cut':'push'):'';
+    if(this.run&&!(fast&&pouring)){this.run.idle=(this.run.idle||0)+dt;if(this.run.idle>.15){const R=this.run;if(!this.cut&&R.len>14)this.miss={why:R.n<220?'small':'off',t:this.t};this.run=null;}}
+    if(pouring){
+      this.fill+=6*dt;if(!fast)this.pourT+=dt;
+      let q=190*(.75+.25*this.tq);if(fast)q*=.2;else if(wiggle)q*=.9;
+      for(const p of this.parts){const dx=p.x-this.px,dy=p.y-this.py,d2=dx*dx+dy*dy+1e-6;const s=Math.sqrt(d2+q*dt/Math.PI)/Math.sqrt(d2);p.x=this.px+dx*s;p.y=this.py+dy*s;}
+      const sink=smooth(18,34,this.fill);
+      this.emit+=(fast?22:150)*dt;
+      while(this.emit>=1&&this.parts.length<3200){this.emit--;const a=Math.random()*Math.PI*2,r=Math.random()*(fast?.3:.8);
+        this.parts.push({x:this.px+Math.cos(a)*r,y:this.py+Math.sin(a)*r,a:sink,r:(fast?.9:1.45)+(1-this.tq)*Math.random()*1.2,l:this.layer,thin:fast});}
+      if(fast&&this.parts.length>60){const nx=this.ux/sp,ny=this.uy/sp,ds=sp*dt,Rb=Math.sqrt(this.parts.length*.97/Math.PI),w=Math.max(3,.5*Rb);
+        if(!this.run){let n=0,sx=0,sy=0;for(const p of this.parts){if(p.thin||p.a<.6)continue;n++;sx+=p.x;sy+=p.y;}this.run={len:0,near:false,cx:n?sx/n:this.px,cy:n?sy/n:this.py,R:Math.sqrt(n*.97/Math.PI),n};}
+        const R=this.run;R.len+=ds;R.idle=0;if(Math.hypot(this.px-R.cx,this.py-R.cy)<Math.max(4,.6*R.R))R.near=true;
+        if(R.len>16&&R.near&&R.n>=220)this.cut=true;
+        if(R.len>14&&R.n>=150)this.pulled=true;
+        for(const p of this.parts){const rx=p.x-this.px,ry=p.y-this.py,pr=-rx*ny+ry*nx;if(Math.abs(pr)>2.6*w)continue;const G=Math.exp(-pr*pr/(w*w));
+          p.x+=nx*ds*.5*G;p.y+=ny*ds*.5*G;const a=rx*nx+ry*ny;if(a>0){const pin=Math.min(.5,.05*ds*G*a/Rb);p.x+=ny*pr*pin;p.y-=nx*pr*pin;}}}
+    }
+    const lim=rs-.4;for(const p of this.parts){const dx=p.x-CX,dy=p.y-CY,d=Math.hypot(dx,dy);if(d>lim){p.x=CX+dx/d*lim;p.y=CY+dy/d*lim;}}
+    if(this.fill>=100){this.fill=100;}
+  }
 }
-function fitShape(G,type){
-  const f=ART[type];let best={iou:0,sc:1,rot:0,ox:0,oy:0};
-  for(const sc of [.7,.85,1,1.15,1.3])for(let rot=0;rot<1;rot++)for(let ox=-6;ox<=6;ox+=3)for(let oy=-6;oy<=6;oy+=3){
+
+
+function laCup(c,pour,o){
+  o=o||{};
+  if(!o.noSaucer){ell(c,CX+1,CY+1.6,47,47,'rgba(0,0,0,.12)');ell(c,CX,CY,46,46,'#FAFAF8',OUT,.6);ell(c,CX,CY,41,41,null,'rgba(32,38,43,.12)',.5);
+    c.beginPath();c.moveTo(CX+35,CY-4.5);c.quadraticCurveTo(CX+48,CY-5,CX+48,CY);c.quadraticCurveTo(CX+48,CY+5,CX+35,CY+4.5);c.closePath();c.fillStyle=GLAZE;c.fill();c.lineWidth=.6;c.strokeStyle=OUT;c.stroke();}
+  ell(c,CX,CY,37,37,GLAZE,OUT,.7);
+  ell(c,CX,CY,35,35,'#F3F1EC');
+  ell(c,CX,CY,35,35,null,'rgba(255,255,255,.5)',.5);
+  const rs=pour.surfR(),fill=pour.fill;
+  const base=mix(R.crema||CREMA,'#C8956A',clamp(fill/100,0,1)*.45);
+  const g=c.createRadialGradient(CX-3,CY-3,1,CX,CY,rs);g.addColorStop(0,mix(base,'#E2B88A',.28));g.addColorStop(.85,base);g.addColorStop(1,mix(base,'#3A1F10',.4));
+  c.beginPath();c.arc(CX,CY,rs,0,Math.PI*2);c.fillStyle=g;c.fill();
+  c.save();c.beginPath();c.arc(CX,CY,rs,0,Math.PI*2);c.clip();
+  const parts=pour.parts;
+  if(parts.length){
+    let maxL=0;for(const p of parts)if(p.l>maxL)maxL=p.l;
+    const byL=new Map();for(const p of parts){if(p.a<.9)continue;let a=byL.get(p.l);if(!a){a=[];byL.set(p.l,a);}a.push(p);}
+    [...byL.keys()].sort((a,b)=>a-b).forEach(L=>{const arr=byL.get(L);
+      c.beginPath();for(const p of arr){if(p.thin)continue;c.moveTo(p.x+p.r+.7,p.y);c.arc(p.x,p.y,p.r+.7,0,Math.PI*2);}c.fillStyle='rgba(196,150,108,.6)';c.fill();
+      c.beginPath();for(const p of arr){c.moveTo(p.x+p.r,p.y);c.arc(p.x,p.y,p.r,0,Math.PI*2);}c.fillStyle=FOAM;c.fill();});
+    for(const p of parts){if(p.a>=.9)continue;c.globalAlpha=p.a;c.beginPath();c.arc(p.x,p.y,p.r,0,Math.PI*2);c.fillStyle=FOAM;c.fill();}c.globalAlpha=1;
+  }
+  c.restore();
+}
+
+const LA_TGT={};
+function laTarget(c,x,y,r,pat){
+  ell(c,x,y,r+1.2,r+1.2,GLAZE,OUT,.4);ell(c,x,y,r,r,CREMA);
+  if(!LA_TGT[pat]){const pts=[],N=30;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const u=(i+.5)/N*2-1,v=-((j+.5)/N*2-1);const k=pat==='circ'?1.7:1.5;if(LA_ART[pat](u*k,v*k))pts.push([u,-v]);}LA_TGT[pat]=pts;}
+  c.fillStyle=FOAM;const cs=r*2/30+.06;LA_TGT[pat].forEach(([u,v])=>c.fillRect(x+u*r-cs/2,y+v*r-cs/2,cs,cs));
+}
+
+/* ---------- scoring ---------- */
+function laGrid(parts){
+  const N=44,size=70,cell=size/N,x0=CX-size/2,y0=CY-size/2,den=new Float32Array(N*N);
+  for(const p of parts){if(p.thin)continue;const i=Math.floor((p.x-x0)/cell),j=Math.floor((p.y-y0)/cell);
+    for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=N||jj>=N)continue;den[jj*N+ii]+=(di||dj?.35:1)*p.a;}}
+  const cov=new Uint8Array(N*N);let n=0,sx=0,sy=0;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const k=j*N+i;if(den[k]>=1){cov[k]=1;n++;sx+=x0+(i+.5)*cell;sy+=y0+(j+.5)*cell;}}
+  return{N,cell,x0,y0,cov,n,cx:n?sx/n:CX,cy:n?sy/n:CY};
+}
+function laFit(G,pat){
+  const f=LA_ART[pat];let best={iou:0,sc:1,rot:0,ox:0,oy:0,mir:0};
+  for(const mir of (pat==='swan'?[0,1]:[0]))for(const sc of [.6,.75,.9,1.05,1.2,1.35])for(let rot=0;rot<(LA_ROTS[pat]||4);rot++){if(pat==='circ'&&rot)continue;for(let ox=-6;ox<=6;ox+=3)for(let oy=-6;oy<=6;oy+=3){
     const s=15*sc;let inter=0,uni=0;
-    for(let j=0;j<G.N;j++){const y=G.y0+(j+.5)*G.cell-ACY-oy;for(let i=0;i<G.N;i++){const x=G.x0+(i+.5)*G.cell-ACX-ox;let u=x/s,v=-y/s;
+    for(let j=0;j<G.N;j++){const y=G.y0+(j+.5)*G.cell-CY-oy;for(let i=0;i<G.N;i++){const x=G.x0+(i+.5)*G.cell-CX-ox;let u=x/s,v=-y/s;if(mir)u=-u;
       if(rot===1){const t=u;u=v;v=-t;}else if(rot===2){u=-u;v=-v;}else if(rot===3){const t=u;u=-v;v=t;}
       const m=f(u,v),cv=G.cov[j*G.N+i];if(m&&cv)inter++;if(m||cv)uni++;}}
-    const iou=uni?inter/uni:0;if(iou>best.iou)best={iou,sc,rot,ox,oy};}
+    const iou=uni?inter/uni:0;if(iou>best.iou)best={iou,sc,rot,ox,oy,mir};}}
   return best;
 }
-function maskAt(type,fit,x,y){const s=15*fit.sc;let u=(x-ACX-fit.ox)/s,v=-(y-ACY-fit.oy)/s;
-  if(fit.rot===1){const t=u;u=v;v=-t;}else if(fit.rot===2){u=-u;v=-v;}else if(fit.rot===3){const t=u;u=-v;v=t;}return ART[type](u,v);}
-function scoreArt(parts,type,pours,cut){
-  const G=artGrid(parts);if(G.n<40)return{score:0,fit:null,iou:0};
-  const fit=fitShape(G,type),C=fitShape(G,'circ').iou,T=fit.iou;let score;
-  if(type==='heart')score=clamp((T-.45)/.33,0,1)*60+clamp((T-C+.05)/.12,0,1)*40;
-  else score=clamp((T-.42)/.3,0,1)*50+clamp((T-C+.03)/.1,0,1)*20+Math.min(pours,3)/3*30;
-  if(!cut)score-=15;
-  return{score:Math.round(clamp(score,0,100)),fit,iou:T};
+function laMask(pat,F,x,y){const s=15*F.sc;let u=(x-CX-F.ox)/s,v=-(y-CY-F.oy)/s;if(F.mir)u=-u;if(F.rot===1){const t=u;u=v;v=-t;}else if(F.rot===2){u=-u;v=-v;}else if(F.rot===3){const t=u;u=-v;v=t;}return LA_ART[pat](u,v);}
+function laSym(G,F){
+  if(!G.n)return 0;const vert=!F||F.rot%2===0;const ax=F?CX+F.ox:G.cx,ay=F?CY+F.oy:G.cy;let match=0;
+  for(let j=0;j<G.N;j++)for(let i=0;i<G.N;i++){if(!G.cov[j*G.N+i])continue;const x=G.x0+(i+.5)*G.cell,y=G.y0+(j+.5)*G.cell;
+    const mx=vert?2*ax-x:x,my=vert?y:2*ay-y;const ii=Math.floor((mx-G.x0)/G.cell),jj=Math.floor((my-G.y0)/G.cell);
+    if(ii>=0&&jj>=0&&ii<G.N&&jj<G.N&&G.cov[jj*G.N+ii])match++;}
+  return match/G.n;
 }
+function laZones(G,pat,F){const k=pat==='tulip'?[1.18,.74]:pat==='tulip5'?[1.28,.62]:[1,1];const s=15*F.sc;const A={lobe:[0,0],tip:[0,0],notch:[0,0],side:[0,0]};
+  for(let j=0;j<G.N;j++)for(let i=0;i<G.N;i++){const x=G.x0+(i+.5)*G.cell,y=G.y0+(j+.5)*G.cell;let u=(x-CX-F.ox)/s,v=-(y-CY-F.oy)/s;
+    if(F.rot===1){const t=u;u=v;v=-t;}else if(F.rot===2){u=-u;v=-v;}else if(F.rot===3){const t=u;u=-v;v=t;}
+    u*=k[0];v*=k[1];const au=Math.abs(u);let z=null;
+    if(au<.2&&v>.45&&v<1.15)z='notch';else if(au>.3&&au<.85&&v>.3&&v<.95)z='lobe';else if(au<.22&&v<-.55&&v>-1.05)z='tip';else if(au>.55&&au<1.15&&v<-.3&&v>-1)z='side';
+    if(z){A[z][1]++;if(G.cov[j*G.N+i])A[z][0]++;}}
+  const r={};Object.keys(A).forEach(z=>r[z]=A[z][1]?A[z][0]/A[z][1]:0);return r;}
+function laScore(pour,level){
+  const G=laGrid(pour.parts);
+  const cupCells=Math.PI*32.5*32.5/(G.cell*G.cell);const cover=G.n/cupCells;
+  const sunk=pour.parts.length?pour.parts.filter(p=>p.a<.9).length/pour.parts.length:0;
+  let contrast=100*clamp(1-sunk*1.3,0,1);if(cover>.6)contrast*=clamp(1-(cover-.6)*2.5,0,1);if(cover<.1)contrast*=cover/.1;
+  const d=Math.hypot(G.cx-CX,G.cy-CY);const center=G.n?clamp(1-(d-2)/12,0,1)*100:0;
+  const out={contrast:Math.round(contrast),center:Math.round(center),cover,sunk,fit:null};
+  if(G.n<40){out.shape=0;out.sym=0;out.total=0;return out;}
+  if(!level){const F=laFit(G,'circ');out.sym=Math.round(laSym(G,null)*100);out.shape=null;out.total=Math.round(out.sym*.4+center*.3+contrast*.3);return out;}
+  const F=laFit(G,level.pat);out.fit=F;const T=F.iou;let shape;
+  if(level.pat==='circ'){shape=clamp((T-.45)/.4,0,1)*100;}
+  else{const C=laFit(G,'ref').iou;
+    if(level.pat==='heart'){const Z=laZones(G,'heart',F);out.tip=Z.tip;out.notch=Z.notch;const hn=clamp(Z.tip*.75+(1-Z.notch)*2-Z.side*.3,0,1);shape=clamp((T-.5)/.25,0,1)*35+hn*65;if(!pour.cut)shape*=.75;}
+    else if(level.pat==='leaf'){shape=clamp((T-.4)/.32,0,1)*60+clamp((T-C+.03)/.1,0,1)*40;shape*=.4+.6*Math.min(pour.wiggles,level.wiggles)/level.wiggles;if(!pour.cut)shape*=.85;}
+    else if(level.pat==='swan'){shape=clamp((T-.38)/.3,0,1)*70+clamp((T-C+.03)/.1,0,1)*30;if(!pour.pulled)shape*=.8;}
+    else if(level.pat==='rose'){const lc={};pour.parts.forEach(p=>{if(p.a>=.9&&!p.thin)lc[p.l]=(lc[p.l]||0)+1;});const ln=Object.values(lc).filter(n=>n>=25).length;out.layersN=ln;shape=clamp((T-.5)/.35,0,1)*50+clamp(ln/level.layers,0,1)*50;}
+    else if(level.pat==='leafheart'){shape=clamp((T-.4)/.3,0,1)*50+clamp((T-C+.03)/.1,0,1)*20+Math.min(pour.wiggles,level.wiggles)/level.wiggles*30;if(!pour.cut)shape*=.85;}
+    else{const Z=laZones(G,level.pat,F);out.tip=Z.tip;out.notch=Z.notch;const hn=clamp(Z.tip*.7+(1-Z.notch)*1.2-Z.side*.4,0,1);shape=clamp((T-.45)/.3,0,1)*40+hn*60;shape*=.55+.45*Math.min(pour.pours,level.layers)/level.layers;if(!pour.cut)shape*=.85;}}
+  out.shape=Math.round(shape);out.sym=Math.round(laSym(G,F)*100);
+  out.total=Math.round(clamp(out.shape*.55+out.sym*.2+center*.1+out.contrast*.15,0,100));
+  if(level.pat==='swan'){out.sym=null;out.total=Math.round(clamp(out.shape*.7+center*.1+out.contrast*.2,0,100));}
+  return out;
+}
+
+const LA_GHOST={};
+function laGhostPts(pat){if(LA_GHOST[pat])return LA_GHOST[pat];const F={sc:1,rot:0,ox:0,oy:0};const pts=[],st=1.25;
+  for(let y=CY-30;y<=CY+30;y+=st)for(let x=CX-30;x<=CX+30;x+=st){if(laMask(pat,F,x,y)&&(!laMask(pat,F,x+st,y)||!laMask(pat,F,x-st,y)||!laMask(pat,F,x,y+st)||!laMask(pat,F,x,y-st)))pts.push([x,y]);}
+  return LA_GHOST[pat]=pts;}
+function laGhost(c,pat,rs){c.fillStyle='rgba(255,255,255,.42)';laGhostPts(pat).forEach(([x,y])=>{if(Math.hypot(x-CX,y-CY)<rs-1)c.fillRect(x-.3,y-.3,.6,.6);});}
+
+/* ---------- latte: art (same engine as 拉一杯花) ---------- */
+const OFFA=10;
+function artLevel(){const a=R.order.art;return{pat:a,layers:a==='tulip'?3:undefined};}
+function artCut(){return R.order.art==='heart'?'從圓的上方外側，快速往下劃穿過圓':'從最上方快速往下劃，穿過三團';}
 const art={
   key:'art',name:'拉花',
   hint(){return '目標：'+R.order.artName+'。先高處注入到一半，再按在杯面上拉花';},
   intro(){return R.order.art==='heart'?
-    '先按住「高處注入」把杯子倒到一半左右，這時奶會沉下去，表面還是咖啡色。接著手指按在杯子中間不動，白色奶泡會長成一個圓；圓夠大時，從圓的上方外側開始，快速往下一劃穿過它，下方就會拉出愛心的尖角。杯子滿了就會結束。':
-    '一樣先高處注入到一半。這次要在一直線上推出三團奶泡：先在上方推出一團，放手；往下一點再推一團，再一團。最後從最上方快速往下一劃，穿過三團，就是鬱金香。';},
-  init(){this.st={fill:0,parts:[],emit:0,active:false,px:ACX,py:ACY,lx:ACX,ly:ACY,ax:0,ay:0,ux:0,uy:0,high:false,done:false,layer:0,pourT:0,pours:0,cutLen:0,cut:false,warned:false,pouring:false};},
-  controls(){return[{label:'高處注入',hold:true,onStart:()=>{if(running&&!this.st.done)this.st.high=true;},onEnd:()=>{this.st.high=false;}},{label:'完成',primary:true,onTap:()=>this.stop()}];},
-  down(x,y){const st=this.st;if(st.done)return;st.active=true;st.px=st.lx=x;st.py=st.ly=y;st.ux=st.uy=0;st.layer++;st.pourT=0;st.cutLen=0;},
-  move(x,y){const st=this.st;if(!st.active)return;st.ax+=x-st.lx;st.ay+=y-st.ly;st.lx=x;st.ly=y;st.px=x;st.py=y;},
-  up(){const st=this.st;if(st.active&&st.pourT>.35)st.pours++;st.active=false;},
-  surfR(){return lerp(21,32.5,clamp(this.st.fill/100,0,1));},
-  update(dt){
-    const st=this.st;const ux=st.ax/Math.max(dt,.001),uy=st.ay/Math.max(dt,.001);st.ax=st.ay=0;
-    st.ux+=(ux-st.ux)*Math.min(1,dt*14);st.uy+=(uy-st.uy)*Math.min(1,dt*14);
-    if(st.done||!running){st.pouring=false;return;}
-    const rs=this.surfR(),inCup=Math.hypot(st.px-ACX,st.py-ACY)<rs;
-    const pouring=st.active&&inCup;st.pouring=pouring;
-    if(st.high&&!pouring)st.fill+=16*dt;
-    const sp=Math.hypot(st.ux,st.uy),tq=R.tq||.7;
-    if(pouring){
-      st.fill+=9*dt;
-      if(st.fill<30&&!st.warned){st.warned=true;toast('杯子還太空，奶泡會沉下去','bad');}
-      const fast=sp>25;
-      if(!fast)st.pourT+=dt;
-      let q=190*(.75+.25*tq);if(fast)q*=.22;
-      for(const p of st.parts){const dx=p.x-st.px,dy=p.y-st.py,d2=dx*dx+dy*dy+1e-6;const s=Math.sqrt(d2+q*dt/Math.PI)/Math.sqrt(d2);p.x=st.px+dx*s;p.y=st.py+dy*s;}
-      const sink=smooth(26,44,st.fill);
-      st.emit+=(fast?22:150)*dt;
-      while(st.emit>=1&&st.parts.length<2800){st.emit--;const a=Math.random()*Math.PI*2,r=Math.random()*.8;
-        st.parts.push({x:st.px+Math.cos(a)*r*(fast?.4:1),y:st.py+Math.sin(a)*r*(fast?.4:1),a:sink,r:(fast?.9:1.45)+(1-tq)*Math.random()*1.2,l:st.layer});}
-      if(fast&&st.parts.length>60){const nx=st.ux/sp,ny=st.uy/sp,ds=sp*dt,Rb=Math.sqrt(st.parts.length*.97/Math.PI),w=Math.max(3,.42*Rb);
-        st.cutLen+=ds;if(st.cutLen>12)st.cut=true;
-        for(const p of st.parts){const rx=p.x-st.px,ry=p.y-st.py,pr=-rx*ny+ry*nx;if(Math.abs(pr)>2.6*w)continue;const G=Math.exp(-pr*pr/(w*w));
-          p.x+=nx*ds*.32*G;p.y+=ny*ds*.32*G;const a=rx*nx+ry*ny;if(a>0){const pin=Math.min(.5,.036*ds*G*a/Rb);p.x+=ny*pr*pin;p.y-=nx*pr*pin;}}}
-    }
-    const lim=rs-.4;for(const p of st.parts){const dx=p.x-ACX,dy=p.y-ACY,d=Math.hypot(dx,dy);if(d>lim){p.x=ACX+dx/d*lim;p.y=ACY+dy/d*lim;}}
-    if(st.fill>=100){st.fill=100;toast('杯子滿了');this.stop(true);}
+    '先按住「高處注入」，杯子倒到一半會自動停。接著手指按在杯面上，奶泡會落在指尖上方的白圈。推出一個圓，圓夠大時，從圓的上方外側快速往下一劃穿過它，就會拉出愛心的尖角。':
+    '先按住「高處注入」，杯子倒到一半會自動停。接著在一直線上由上往下推三團奶泡，每團之間要放手。最後從最上方快速往下一劃，穿過三團，就是鬱金香。';},
+  init(){const p=new LaPour(R.tq||.7);p.onHalf=()=>{p.high=false;document.querySelectorAll('#controls .btn.held').forEach(b=>b.classList.remove('held'));toast('倒到一半了，放開按鈕開始拉花');buzz(20);};this.p=p;this.finger=null;},
+  controls(){return[{label:'高處注入',hold:true,onStart:()=>{if(running&&this.p&&!this.p.done)this.p.high=true;},onEnd:()=>{if(this.p)this.p.high=false;}},{label:'完成',primary:true,onTap:()=>this.stop()}];},
+  down(x,y){if(!this.p||this.p.done)return;this.finger={x,y};this.p.down(x,y-OFFA);},
+  move(x,y){if(!this.p||!this.p.active)return;this.finger={x,y};this.p.move(x,y-OFFA);},
+  up(){this.finger=null;if(this.p)this.p.up();},
+  coach(){
+    const p=this.p,lv=artLevel();
+    if(p.vis()===0)return p.tooEarly?'杯子還太空，先按住「高處注入」':p.fill<40?(p.high?'按著不放，倒到一半會自動停':'先按住下面的「高處注入」'):(p.high?'可以放開了':'手指按在杯面上，奶泡會落在指尖上方的白圈');
+    if(lv.pat==='heart')return p.cut?'按完成看看成果':(p.active?(p.vis()>380?'圓夠大了，快速往下一劃！':'按住不動，推出一個圓'):'從圓的上方按下去，快速往下劃');
+    return p.cut?'按完成看看成果':(p.pours<3?'已推出 '+p.pours+' / 3 團'+(p.active?'':'，往下一點再推'):'最後從最上方快速往下一劃');
   },
-  stop(auto){const st=this.st;if(!running||st.done)return;
-    if(!auto&&st.parts.length<20){toast('先按住杯面拉花');return;}
-    if(st.active&&st.pourT>.35)st.pours++;
-    st.done=true;st.active=false;st.high=false;
-    R.parts=st.parts.map(p=>({x:p.x,y:p.y,a:p.a,r:p.r,l:p.l}));R.fillEnd=st.fill;R.surfEnd=this.surfR();
-    R.artRes=scoreArt(st.parts,R.order.art,st.pours,st.cut);
-    toast(R.artRes.score>=80?'漂亮！':R.artRes.score>=50?'看得出來是'+R.order.artName:'形狀不太明顯',R.artRes.score>=80?'good':'');buzz(20);
-    finishStage();}
-  ,
+  update(dt){
+    const p=this.p;if(!p||p.done||!running)return;p.step(dt);
+    const h=this.coach();const el=$('#s-hint');if(el.textContent!==h)el.textContent=h;
+    if(p.fill>=100&&!p.done){toast('杯子滿了');this.stop(true);}
+  },
+  stop(auto){
+    const p=this.p;if(!running||!p||p.done)return;
+    if(!auto&&p.vis()<20){toast('先在杯面上拉花');return;}
+    p.up();p.done=true;p.high=false;
+    const r=laScore(p,artLevel());
+    R.parts=p.parts.map(q=>({x:q.x,y:q.y,a:q.a,r:q.r,l:q.l,thin:q.thin}));R.fillEnd=p.fill;R.surfEnd=p.surfR();
+    R.artRes={score:r.total,fit:r.fit,tip:r.tip,notch:r.notch,iou:r.fit?r.fit.iou:0};R.artMeta={pours:p.pours,cut:p.cut,vis:p.vis()};
+    toast(r.total>=80?'漂亮！':r.total>=50?'看得出是'+R.order.artName:'形狀不太明顯',r.total>=80?'good':'');buzz(20);finishStage();
+  },
   draw(c){
-    const st=this.st;
-    drawLatte(c,ACX,ACY,1,this.surfR(),st.fill,st.parts);
-    if(st.high&&running&&!st.done&&!st.pouring){for(let k=0;k<3;k++){const ph=(NOW*2+k/3)%1;c.globalAlpha=1-ph;ell(c,ACX,ACY+6,1+ph*5,1+ph*5,null,'rgba(255,255,255,.8)',.4);}c.globalAlpha=1;ell(c,ACX,ACY+6,1,1,'#F4EEE2');}
-    if(st.pouring){const k=Math.hypot(st.ux,st.uy)>25?.5:1;ell(c,st.px,st.py,1.3*k,1.3*k,'#FFFFFF');for(let i=0;i<2;i++){const ph=(NOW*3+i/2)%1;c.globalAlpha=(1-ph)*.6;ell(c,st.px,st.py,1.5+ph*3,1.5+ph*3,null,'rgba(255,255,255,.9)',.3);}c.globalAlpha=1;}
-    txt(c,'杯量',4,4.5,3,P.soft,'left',700);bar(c,4,7,22,2.6,st.fill/100,P.water);
-    txt(c,'目標',96,4.5,3,P.soft,'right',700);drawTarget(c,90,14,7,R.order.art);
-    if(running&&!st.done&&st.fill<1&&!st.high){c.globalAlpha=.55+.45*Math.sin(NOW*5);txt(c,'先按住高處注入',50,94,3.4,P.ink,'center',700);c.globalAlpha=1;}
-    else if(running&&!st.done&&st.fill>=40&&st.parts.length===0){c.globalAlpha=.55+.45*Math.sin(NOW*5);txt(c,'手指按在杯面上拉花',50,94,3.4,P.ink,'center',700);c.globalAlpha=1;}
+    const p=this.p;
+    laCup(c,p,{});
+    if(!p.done)laGhost(c,R.order.art,p.surfR());
+    if(this.finger&&p.active){const now=performance.now()/1000;c.save();c.setLineDash([.9,.9]);c.beginPath();c.moveTo(this.finger.x,this.finger.y-2);c.lineTo(p.px,p.py+2);c.lineWidth=.5;c.strokeStyle='rgba(255,255,255,.75)';c.stroke();c.restore();
+      const rr_=p.pouring?(p.mode==='cut'?1.6:2.4+Math.sin(now*10)*.3):2.4;ell(c,p.px,p.py,rr_,rr_,null,p.pouring?'#FFFFFF':'rgba(255,255,255,.6)',.6);if(p.pouring)ell(c,p.px,p.py,p.mode==='cut'?.7:1.2,p.mode==='cut'?.7:1.2,'#FFFFFF');}
+    if(p.high&&!p.pouring&&!p.done){const now=performance.now()/1000;for(let k=0;k<3;k++){const ph=(now*2+k/3)%1;c.globalAlpha=1-ph;ell(c,CX,CY+6,1+ph*5,1+ph*5,null,'rgba(255,255,255,.8)',.4);}c.globalAlpha=1;ell(c,CX,CY+6,1,1,'#F4EEE2');}
+    txt(c,'杯量',4,4.5,3,P.soft,'left',700);bar(c,4,7,22,2.6,p.fill/100,P.water);
+    txt(c,'目標',96,4.5,3,P.soft,'right',700);laTarget(c,90,14,7,R.order.art);
   }
 };
-function drawLatte(c,cx,cy,k,rs,fill,parts){
-  c.save();c.translate(cx,cy);c.scale(k,k);c.translate(-ACX,-ACY);
-  ell(c,ACX+1,ACY+1.5,45,45,'rgba(0,0,0,.1)');ell(c,ACX,ACY,44,44,'#FAFAF8',OUT,.6);ell(c,ACX,ACY,40,40,null,'rgba(35,32,29,.12)',.4);
-  rr(c,ACX+33,ACY-4,13,8,4);fs(c,'#FAFAF8',OUT,.6);
-  ell(c,ACX,ACY,35.5,35.5,'#FAFAF8',OUT,.7);
-  ell(c,ACX,ACY,34,34,'#EDECE8');
-  const base=mix(R.crema||'#A0612F','#C8956A',clamp(fill/100,0,1)*.45);
-  const g=c.createRadialGradient(ACX-3,ACY-3,1,ACX,ACY,rs);g.addColorStop(0,mix(base,'#E2B88A',.25));g.addColorStop(.85,base);g.addColorStop(1,mix(base,'#3A1F10',.35));
-  c.beginPath();c.arc(ACX,ACY,rs,0,Math.PI*2);c.fillStyle=g;c.fill();
-  c.save();c.beginPath();c.arc(ACX,ACY,rs,0,Math.PI*2);c.clip();
-  if(parts.length){
-    let maxL=0;parts.forEach(p=>{if(p.l>maxL)maxL=p.l;});
-    for(let L=0;L<=maxL;L++){
-      c.beginPath();let any=false;for(const p of parts){if(p.l!==L||p.a<.9)continue;any=true;c.moveTo(p.x+p.r+.7,p.y);c.arc(p.x,p.y,p.r+.7,0,Math.PI*2);}
-      if(any){c.fillStyle='rgba(196,150,108,.55)';c.fill();}
-      c.beginPath();for(const p of parts){if(p.l!==L||p.a<.9)continue;c.moveTo(p.x+p.r,p.y);c.arc(p.x,p.y,p.r,0,Math.PI*2);}
-      if(any){c.fillStyle='#F7EEE0';c.fill();}
-    }
-    for(const p of parts){if(p.a>=.9)continue;c.globalAlpha=p.a;c.beginPath();c.arc(p.x,p.y,p.r,0,Math.PI*2);c.fillStyle='#F7EEE0';c.fill();}c.globalAlpha=1;
-  }
-  c.restore();
-  c.restore();
-}
-const TGT={};
-function drawTarget(c,x,y,r,type){
-  ell(c,x,y,r+1,r+1,'#FAFAF8',OUT,.4);ell(c,x,y,r,r,'#A0612F');
-  if(!TGT[type]){const pts=[];const N=26;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const u=(i+.5)/N*2-1,v=-((j+.5)/N*2-1);if(ART[type](u*1.5,v*1.5))pts.push([u,-v]);}TGT[type]=pts;}
-  c.fillStyle='#F7EEE0';const cs=r*2/26+.08;TGT[type].forEach(([u,v])=>c.fillRect(x+u*r-cs/2,y+v*r-cs/2,cs,cs));
+function drawArtResult(){
+  const c=fitCanvas($('#chart'),120,100);
+  const fake={surfR:()=>R.surfEnd,fill:R.fillEnd,parts:R.parts};
+  c.save();c.translate(52-CX*1.02,50-CY*1.02);c.scale(1.02,1.02);laCup(c,fake,{});c.restore();
+  const a=R.artRes;
+  if(a&&a.fit){c.save();c.translate(52,50);c.scale(1.02,1.02);c.translate(-CX,-CY);c.fillStyle=rgba(P.cherry,.85);
+    const st=1.1,F=a.fit,pat=R.order.art;for(let y=CY-30;y<=CY+30;y+=st)for(let x=CX-30;x<=CX+30;x+=st){const m=laMask(pat,F,x,y);if(m&&(!laMask(pat,F,x+st,y)||!laMask(pat,F,x-st,y)||!laMask(pat,F,x,y+st)||!laMask(pat,F,x,y-st)))c.fillRect(x-.3,y-.3,.6,.6);}
+    c.restore();}
+  txt(c,'目標',110,6,3.2,P.soft,'center',700);laTarget(c,110,16,7,R.order.art);
+  txt(c,'虛線是目標形狀',110,28,2.6,P.soft,'center');
 }
 
 const LATTE_BEAN={name:'拿鐵',roast:'義式配方',dry:'#6E4426',wet:'#3A2214'};
@@ -634,9 +733,9 @@ function makeOrders(){
   const beans=BEANS.slice();for(let i=beans.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[beans[i],beans[j]]=[beans[j],beans[i]];}
   const cust=CUSTOMERS.slice();for(let i=cust.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cust[i],cust[j]]=[cust[j],cust[i]];}
   ORDERS=types.map((t,i)=>{const who={n:cust[i][0],line:cust[i][1]};
-    if(t==='pour')return{type:'pour',bean:beans[i],pref:rpick(POUR_PREFS),who};
+    if(t==='pour')return{type:'pour',bean:beans[i],pref:rpick(POUR_PREFS),who,brk:Math.random()<.5?rpick(['grind','temp','pour']):null};
     const art=Math.random()<.55?'heart':'tulip';
-    return{type:'latte',art,artName:art==='heart'?'愛心':'鬱金香',shot:rpick(SHOTS),milk:rpick(MILKS),tmp:rpick(TEMPS),who};});
+    return{type:'latte',art,artName:art==='heart'?'愛心':'鬱金香',shot:rpick(SHOTS),milk:rpick(MILKS),tmp:rpick(TEMPS),who,brk:Math.random()<.5?rpick(['shot','steam']):null};});
 }
 const seen=new Set();
 
@@ -653,7 +752,7 @@ function evaluate(){
   const ratio=(R.water)/15;let S=(15-ratio)/.8-ef*.6;S=clamp(S,-3,3);
   const Xe=X-xT,Se=S-(15-rT)/.8;
   let score=100-Math.abs(Xe)*20-Math.abs(Se)*15-(1-ev)*18-(R.bloomTime>60?5:0);
-  score=Math.round(clamp(score,0,100));
+  score=Math.round(clamp(score-(R.penalty||0),0,100));
   const taste=[];
   taste.push(X<-.8?'偏酸、單薄':X>.8?'苦澀、乾口':'酸甜平衡');
   if(S>.8)taste.push('太濃');else if(S<-.8)taste.push('太淡');
@@ -670,6 +769,7 @@ function evaluate(){
   if(xT&&Math.abs(Xe)>.8)iss.push([1,'客人'+pf.n+(xT<0?'，可以磨粗一點、水溫低一點，或縮短時間。':'，可以磨細一點、水溫高一點，或拉長時間。')]);
   if(pf.n&&Math.abs(Xe)<=.8&&Math.abs(Se)<=.6)iss.push([.05,'客人說「'+pf.n+'」，你剛好做到了。']);
   if(Math.abs(timeD)>.8)iss.push([Math.abs(timeD)*.45,'總時間 '+fmtClock(R.endClock)+(timeD>0?'，偏長。':'，偏短。')]);
+  if(R.penalty)iss.push([2,'機器故障沒有及時修好，扣了 '+R.penalty+' 分。']);else if(R.fixed)iss.push([.05,'機器故障了，不過你很快就修好。']);
   iss.sort((a,b)=>b[0]-a[0]);
   return{score,X,S,xT,sT:(15-rT)/.8,taste:taste.join('，'),issues:iss.slice(0,3).map(x=>x[1]),ev};
 }
@@ -679,7 +779,7 @@ function evaluateLatte(){
   const milkS=clamp(100-tOff*6-fOff*2.5-R.bubbles*1.2,0,100);
   const a=R.artRes||{score:0},artS=a.score;
   const fillPen=R.fillEnd<85?(85-R.fillEnd)*.8:0;
-  const score=Math.round(clamp(shotS*.2+milkS*.3+artS*.5-fillPen,0,100));
+  const score=Math.round(clamp(shotS*.2+milkS*.3+artS*.5-fillPen-(R.penalty||0),0,100));
   const taste=[w<R.shotT-4?'偏酸、單薄':w>R.shotT+4?'偏苦':'咖啡香濃',T>R.mHi+3?'奶太燙':T<R.mLo-3?'溫溫的':R.bubbles>12?'口感粗':'奶泡綿密'].join('，');
   const iss=[];
   iss.push([9,artS>=80?'拉花很成功，'+R.order.artName+'的形狀很清楚。':artS>=50?'看得出是'+R.order.artName+'，形狀還不夠俐落。':'拉花看不太出'+R.order.artName+'的形狀。']);
@@ -687,21 +787,12 @@ function evaluateLatte(){
   if(tOff>0)iss.push([tOff*.4,'奶溫 '+T+'°C，'+(T>R.mHi?'比客人要的燙，甜味跑掉了。':'比客人要的涼。')]);
   if(fOff>0)iss.push([fOff*.2,'奶泡 '+R.foam+'%，'+(R.foam<R.fLo?'太少，拉不出白色的花。':'太多，奶泡太硬。')]);
   if(R.bubbles>8)iss.push([R.bubbles*.1,'噴嘴常露出奶面，奶泡裡有大泡泡。']);
-  if(R.order.art==='tulip'&&art.st&&art.st.pours<3)iss.push([1,'鬱金香要推出三團奶泡，這次只有 '+art.st.pours+' 團。']);
-  if(R.artRes&&R.artRes.fit&&!art.st.cut)iss.push([1,'最後少了快速一劃，形狀收不起來。']);
+  if(R.order.art==='tulip'&&R.artMeta&&R.artMeta.pours<3)iss.push([1,'鬱金香要推出三團奶泡，這次只有 '+R.artMeta.pours+' 團。']);
+  if(R.artRes&&R.artRes.fit&&R.artMeta&&!R.artMeta.cut)iss.push([1,'最後少了快速一劃，形狀收不起來。']);
   if(fillPen>0)iss.push([fillPen*.1,'杯子沒有倒滿。']);
+  if(R.penalty)iss.push([2,'機器故障沒有及時修好，扣了 '+R.penalty+' 分。']);else if(R.fixed)iss.push([.05,'機器故障了，不過你很快就修好。']);
   const first=iss.shift();iss.sort((x,y)=>y[0]-x[0]);
   return{score,taste,issues:[first[1]].concat(iss.slice(0,2).map(x=>x[1])),art:artS};
-}
-function drawArtResult(){
-  const c=fitCanvas($('#chart'),120,100);
-  drawLatte(c,52,50,1.02,R.surfEnd,R.fillEnd,R.parts);
-  const a=R.artRes;
-  if(a&&a.fit){c.save();c.translate(52,50);c.scale(1.02,1.02);c.translate(-ACX,-ACY);c.fillStyle=rgba(P.cherry,.85);
-    const st=1.1;for(let y=ACY-30;y<=ACY+30;y+=st)for(let x=ACX-30;x<=ACX+30;x+=st){const m=maskAt(R.order.art,a.fit,x,y);if(m&&(!maskAt(R.order.art,a.fit,x+st,y)||!maskAt(R.order.art,a.fit,x-st,y)||!maskAt(R.order.art,a.fit,x,y+st)||!maskAt(R.order.art,a.fit,x,y-st)))c.fillRect(x-.3,y-.3,.6,.6);}
-    c.restore();}
-  txt(c,'目標',110,6,3.2,P.soft,'center',700);drawTarget(c,110,16,7,R.order.art);
-  txt(c,'虛線是目標形狀',110,28,2.6,P.soft,'center');
 }
 const QUOTES=[[90,'這杯可以排進我今年喝過的前三名。'],[75,'很好喝，豆子的風味很清楚。'],[55,'還不錯，但好像少了點什麼。'],[35,'嗯……我加點糖好了。'],[0,'這杯我可能喝不完。']];
 
@@ -781,7 +872,7 @@ function setControlsEnabled(on){document.querySelectorAll('#controls .btn').forE
 function esc(s){return String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));}
 function goStage(i){
   curIdx=i;cur=R.stages[i];running=false;finishing=false;cur.init();
-  $('#cupn').textContent='第 '+(R.i+1)+' 杯，共 '+ORDERS.length+' 杯';
+  $('#cupn').textContent=(CONTEST?'咖啡大賽・':'')+'第 '+(R.i+1)+' 杯，共 '+ORDERS.length+' 杯';
   $('#s-title').textContent=cur.name;$('#s-hint').textContent=cur.hint();
   renderSteps();renderControls(cur.controls());setControlsEnabled(false);
   const o=R.order,b=R.bean,key=cur.key==='art'?'art-'+o.art:cur.key,fresh=!seen.has(key);seen.add(key);
@@ -792,13 +883,31 @@ function goStage(i){
       '<p class="guide">建議研磨：'+GRIND[b.grind-1]+'<br>建議水溫：'+b.tlo+'–'+b.thi+'°C<br>粉量 15 公克，總水量 '+R.waterT+' 公克'+(o.pref?'<br><b>客人說：'+esc(o.pref.n)+'</b>':'')+'</p>';
     else html=who+'<h3>'+(o.milk.n==='燕麥奶'?'燕麥拿鐵':'拿鐵')+'，'+o.artName+'拉花</h3><p class="notes">義式配方，焦糖、可可'+(o.milk.n==='燕麥奶'?'。燕麥奶的奶泡比較不穩，要打少一點':'')+'</p>'+
       '<p class="guide">濃縮 '+R.shotT+' 公克（'+o.shot.n+'）<br>'+o.milk.n+'，奶泡 '+R.fLo+'–'+R.fHi+'%<br>奶溫 '+R.mLo+'–'+R.mHi+'°C（'+o.tmp.n+'）<br>拉花：'+o.artName+'</p>';
+    if(o.brk)html+='<p class="notes" style="color:var(--cherry)">機器狀況不太穩，做的時候可能會故障。</p>';
     if(fresh)html+='<p class="t">'+intro+'</p>';
   }else if(fresh)html='<p class="k">'+(o.type==='pour'?'手沖':'拿鐵')+'，第 '+(i+1)+' 步</p><h3>'+cur.name+'</h3><p class="t">'+intro+'</p>';
   if(html){$('#card').innerHTML=html+'<button class="btn primary" id="go" type="button">開始</button>';$('#intro').hidden=false;
     $('#go').addEventListener('click',begin);setTimeout(()=>{try{$('#go').focus({preventScroll:true});}catch(e){}},50);}
   else{$('#intro').hidden=true;setTimeout(begin,350);}
 }
-function begin(){$('#intro').hidden=true;running=true;setControlsEnabled(true);}
+function begin(){$('#intro').hidden=true;running=true;setControlsEnabled(true);armBreak();}
+
+/* ---------- machine breakdowns ---------- */
+const BRK={grind:['研磨機卡豆了！','豆子卡在刀盤裡'],temp:['電熱水壺跳電了！','按一下重置開關'],pour:['濾杯堵住了！','水流變得不穩'],shot:['義式機壓力異常！','壓力表亂跳'],steam:['蒸汽管堵住了！','噴嘴被奶泡塞住']};
+function armBreak(){R.brk=null;if(R.order&&cur&&R.order.brk===cur.key)R.brk={at:2.5+Math.random()*3.5,t:0,done:false};}
+function tickBreak(dt){if(!running||!R.brk||R.brk.done)return;R.brk.t+=dt;if(R.brk.t>=R.brk.at)startBreak();}
+function startBreak(){
+  R.brk.done=true;running=false;setControlsEnabled(false);
+  const[k1,k2]=BRK[cur.key];let n=0,left=5;const need=6;
+  $('#card').innerHTML='<p class="k">機器故障</p><h3>'+k1+'</h3><p class="notes">'+k2+'。5 秒內快速連點修理鈕 '+need+' 下。</p><div class="fixbar"><i id="fixi"></i></div><button class="btn primary" id="fix" type="button">修理（0 / '+need+'）</button>';
+  $('#intro').hidden=false;
+  let over=false;
+  const end=ok=>{if(over)return;over=true;clearInterval(iv);$('#intro').hidden=true;running=true;setControlsEnabled(true);
+    if(ok){R.fixed++;toast('修好了！','good');buzz([15,30]);}else{R.penalty+=8;toast('沒修好，品質受影響','bad');buzz([30,40,30]);}};
+  const iv=setInterval(()=>{left-=.1;const f=$('#fixi');if(f)f.style.width=Math.max(0,left/5*100)+'%';if(left<=0)end(false);},100);
+  $('#fix').addEventListener('click',()=>{n++;buzz(8);$('#fix').textContent='修理（'+n+' / '+need+'）';if(n>=need)end(true);});
+  setTimeout(()=>{try{$('#fix').focus({preventScroll:true});}catch(e){}},50);
+}
 function finishStage(){
   if(finishing)return;finishing=true;running=false;setControlsEnabled(false);
   setTimeout(()=>{if(screen!=='game')return;if(curIdx<R.stages.length-1)goStage(curIdx+1);else showCup();},1200);
@@ -806,7 +915,6 @@ function finishStage(){
 function showCup(){
   const latte=R.order.type==='latte';const res=latte?evaluateLatte():evaluate();
   RESULTS.push({name:latte?'拿鐵，'+R.order.artName+'拉花':R.bean.name,roast:latte?'拿鐵':R.bean.roast,...res});
-  try{window.GC&&GC.report('cafe',(function(){var o={cup:res.score};o[latte?'latte':'pour']=res.score;return o;})());}catch(e){}
   $('#c-k').textContent='第 '+(R.i+1)+' 杯，'+(latte?'拿鐵':R.bean.roast+'手沖');$('#c-name').textContent=latte?R.order.artName+'拉花拿鐵':R.bean.name;
   $('#c-score').textContent=res.score;$('#c-taste').textContent=res.taste;
   $('#c-quote').textContent=(R.order.who?R.order.who.n:'客人')+'說：「'+QUOTES.find(q=>res.score>=q[0])[1]+'」';
@@ -816,26 +924,42 @@ function showCup(){
 }
 $('#next').addEventListener('click',()=>{if(R.i<ORDERS.length-1){newRound(R.i+1);show('game');goStage(0);}else showFinal();});
 const TITLES=[[90,'冠軍咖啡師','每一杯都穩，客人會為了你再來。'],[75,'精品咖啡店主理人','風味很清楚，再精準一點就是冠軍等級。'],[55,'居家手沖玩家','已經沖得不錯，看看哪一步最常失分。'],[35,'咖啡見習生','先把研磨和水溫照建議做，味道會差很多。'],[0,'今天的豆子不太配合','手沖很看細節，再來一輪會更順。']];
-function loadBest(){try{const v=GCStore.getItem('cafe-best');return v?JSON.parse(v):null;}catch(e){return null;}}
-function saveBest(o){try{GCStore.setItem('cafe-best',JSON.stringify(o));}catch(e){}}
-function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.score==='number'?'最佳平均 '+b.score+' 分，'+b.title:'';}
+function loadBest(){try{const v=localStorage.getItem('cafe-best');return v?JSON.parse(v):null;}catch(e){return null;}}
+function saveBest(o){try{localStorage.setItem('cafe-best',JSON.stringify(o));}catch(e){}}
+function showBest(){try{const bb=loadBest();$('#contest').disabled=!(bb&&bb.score>=70);}catch(e){}const b=loadBest();$('#best').textContent=b&&typeof b.score==='number'?'最佳平均 '+b.score+' 分，'+b.title:'';}
 showBest();
 function showFinal(){
   const avg=Math.round(RESULTS.reduce((a,r)=>a+r.score,0)/RESULTS.length);const t=TITLES.find(x=>avg>=x[0]);
-  try{window.GC&&GC.max('cafe',{avg:avg});}catch(e){}
   $('#f-score').textContent=avg;$('#f-title').textContent=t[1];$('#f-desc').textContent=t[2];
   $('#f-rows').innerHTML=RESULTS.map(r=>'<div class="row"><div>'+esc(r.name)+'<small>'+r.roast+'，'+esc(r.taste)+'</small></div><b>'+r.score+'</b></div>').join('');
   const best=loadBest();
-  if(avg>0&&(!best||avg>best.score)){saveBest({score:avg,title:t[1]});$('#f-best').textContent=best?'新紀錄！比上次多 '+(avg-best.score)+' 分':'第一筆紀錄已存下';}
+  if(!CONTEST&&avg>0&&(!best||avg>best.score)){saveBest({score:avg,title:t[1]});$('#f-best').textContent=best?'新紀錄！比上次多 '+(avg-best.score)+' 分':'第一筆紀錄已存下';}
   else $('#f-best').textContent=best?'最佳平均 '+best.score+' 分':'';
-  show('final');showBest();$('#final .scroll').scrollTop=0;
+  if(CONTEST){
+    const total=RESULTS.reduce((a,r)=>a+r.score,0);const names=RIVALS.slice().sort(()=>Math.random()-.5).slice(0,5);
+    const board=names.map(n=>({n,t:Math.round(3*(60+Math.random()*26)),me:false}));board.push({n:'你',t:total,me:true});board.sort((a,b)=>b.t-a.t);
+    const rank=board.findIndex(x=>x.me)+1;
+    const T2=[null,['咖啡大賽冠軍','全場的目光都在你的杯子上。'],['咖啡大賽亞軍','只差一點點就是冠軍。'],['咖啡大賽季軍','站上頒獎台，實力得到肯定。']][rank]||['入圍選手','這次沒進前三名，下次再挑戰。'];
+    $('#f-score').textContent=total;$('#f-title').textContent=T2[0];$('#f-desc').textContent=T2[1];
+    $('#f-rows').innerHTML=board.map((x,i)=>'<div class="row"><div>'+(i+1)+'. '+esc(x.n)+(x.me?'（你）':'')+'</div><b>'+x.t+'</b></div>').join('');
+    let prev=null;try{prev=JSON.parse(localStorage.getItem('cafe-contest')||'null');}catch(e){}
+    if(!prev||rank<prev.rank||(rank===prev.rank&&total>prev.total)){try{localStorage.setItem('cafe-contest',JSON.stringify({rank,total}));}catch(e){}$('#f-best').textContent=prev?'大賽新紀錄！':'第一次參賽，成績已記下';}else $('#f-best').textContent='大賽最佳：第 '+prev.rank+' 名，'+prev.total+' 分';
+    try{window.GC&&GC.max('cafe',{contestDone:1,contestWin:rank===1?1:0,contestPodium:rank<=3?1:0});}catch(e){}
+    $('#again').textContent='再參賽一次';document.querySelector('#final .k').textContent='三杯合計';show('final');$('#final .scroll').scrollTop=0;return;
+  }
+  $('#again').textContent='再沖一輪';document.querySelector('#final .k').textContent='四杯平均';show('final');showBest();$('#final .scroll').scrollTop=0;
 }
-function startGame(){RESULTS.length=0;seen.clear();makeOrders();newRound(0);show('game');goStage(0);}
-$('#start').addEventListener('click',startGame);$('#again').addEventListener('click',startGame);
+let CONTEST=false;
+const JUDGES=[{n:'評審・阿森',line:'手沖看的是風味的平衡。'},{n:'評審・Mia',line:'拉花要又快又漂亮。'},{n:'評審團長・林老師',line:'最後一杯，讓我們看看你的全部實力。'}];
+const RIVALS=['咖啡師小凱','Barista Lily','阿德','Hana','老陳','Rosa','Jun','麥可'];
+function startGame(contest){CONTEST=contest===true;RESULTS.length=0;seen.clear();makeOrders();
+  if(CONTEST){const po=ORDERS.find(o=>o.type==='pour'),la=ORDERS.find(o=>o.type==='latte'),rest=ORDERS.filter(o=>o!==po&&o!==la);ORDERS=[po,la,rest[0]];ORDERS.forEach((o,i)=>{o.who=JUDGES[i];o.contest=true;if(o.brk&&Math.random()<.4)o.brk=null;});}
+  newRound(0);show('game');goStage(0);}
+$('#start').addEventListener('click',()=>startGame(false));$('#again').addEventListener('click',()=>startGame(CONTEST));$('#contest').addEventListener('click',()=>{if(!$('#contest').disabled)startGame(true);});
 
 let last=performance.now();
 function loop(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;NOW+=dt;
-  if(screen==='game'&&cur){cur.update(dt);if(W>0&&H>0)render();}
+  if(screen==='game'&&cur){tickBreak(dt);cur.update(dt);if(W>0&&H>0)render();}
   else if(screen==='title')drawHero();
   requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
