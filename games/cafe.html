@@ -513,7 +513,7 @@ function artGrid(parts){
 }
 function fitShape(G,type){
   const f=ART[type];let best={iou:0,sc:1,rot:0,ox:0,oy:0};
-  for(const sc of [.7,.85,1,1.15,1.3])for(let rot=0;rot<4;rot++)for(let ox=-6;ox<=6;ox+=3)for(let oy=-6;oy<=6;oy+=3){
+  for(const sc of [.7,.85,1,1.15,1.3])for(let rot=0;rot<1;rot++)for(let ox=-6;ox<=6;ox+=3)for(let oy=-6;oy<=6;oy+=3){
     const s=15*sc;let inter=0,uni=0;
     for(let j=0;j<G.N;j++){const y=G.y0+(j+.5)*G.cell-ACY-oy;for(let i=0;i<G.N;i++){const x=G.x0+(i+.5)*G.cell-ACX-ox;let u=x/s,v=-y/s;
       if(rot===1){const t=u;u=v;v=-t;}else if(rot===2){u=-u;v=-v;}else if(rot===3){const t=u;u=-v;v=t;}
@@ -535,8 +535,8 @@ const art={
   key:'art',name:'拉花',
   hint(){return '目標：'+R.order.artName+'。先高處注入到一半，再按在杯面上拉花';},
   intro(){return R.order.art==='heart'?
-    '先按住「高處注入」把杯子倒到一半左右，這時奶會沉下去，表面還是咖啡色。接著手指按在杯子中間不動，白色奶泡會長成一個圓；圓夠大時，手指快速一劃穿過它，就能拉出愛心。杯子滿了就會結束。':
-    '一樣先高處注入到一半。這次要在一直線上推出三團奶泡：先在遠處推出一團，放手；往你這邊靠近一點再推一團，再一團。最後從近處快速一劃穿過三團，就是鬱金香。';},
+    '先按住「高處注入」把杯子倒到一半左右，這時奶會沉下去，表面還是咖啡色。接著手指按在杯子中間不動，白色奶泡會長成一個圓；圓夠大時，從圓的上方外側開始，快速往下一劃穿過它，下方就會拉出愛心的尖角。杯子滿了就會結束。':
+    '一樣先高處注入到一半。這次要在一直線上推出三團奶泡：先在上方推出一團，放手；往下一點再推一團，再一團。最後從最上方快速往下一劃，穿過三團，就是鬱金香。';},
   init(){this.st={fill:0,parts:[],emit:0,active:false,px:ACX,py:ACY,lx:ACX,ly:ACY,ax:0,ay:0,ux:0,uy:0,high:false,done:false,layer:0,pourT:0,pours:0,cutLen:0,cut:false,warned:false,pouring:false};},
   controls(){return[{label:'高處注入',hold:true,onStart:()=>{if(running&&!this.st.done)this.st.high=true;},onEnd:()=>{this.st.high=false;}},{label:'完成',primary:true,onTap:()=>this.stop()}];},
   down(x,y){const st=this.st;if(st.done)return;st.active=true;st.px=st.lx=x;st.py=st.ly=y;st.ux=st.uy=0;st.layer++;st.pourT=0;st.cutLen=0;},
