@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@500;700&display=swap">
 <script src="config.js"></script>
+<script src="gc.js"></script>
 <style>
 :root{
   --bg:#EAF1F7; --surface:#FFFFFF; --ink:#1F2A37; --soft:#5E6B7A; --line:#D5E0EA; --accent:#3B6EF5; --on-accent:#FFFFFF; --warn:#C2453B;
@@ -57,6 +58,38 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .cont .tx{flex:1;min-width:0}
 .cont small{display:block;color:var(--soft)}
 .cont b{font-size:1.05rem}
+.prog{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px 14px;margin:0 0 14px}
+.prog .lv{display:flex;align-items:center;gap:10px}
+.prog .lvn{background:var(--accent);color:var(--on-accent);font-weight:700;border-radius:10px;padding:3px 9px;font-size:.9rem;white-space:nowrap}
+.prog .lvt{font-weight:700;white-space:nowrap}
+.prog .xpb{flex:1;height:8px;border-radius:4px;background:var(--line);overflow:hidden;min-width:30px}
+.prog .xpb i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.prog .xps{color:var(--soft);font-size:.78rem;white-space:nowrap}
+.prog .qh{display:flex;align-items:baseline;gap:8px;margin:12px 0 6px}
+.prog .qh b{font-size:1rem}
+.prog .qh .qc{color:var(--accent);font-weight:700}
+.prog .qh .st{margin-left:auto;color:var(--soft);font-size:.82rem}
+.ql{list-style:none;margin:0;padding:0}
+.ql li{border-top:1px solid var(--line)}
+.ql a{display:flex;align-items:center;gap:10px;padding:9px 2px;text-decoration:none;color:inherit}
+.ql a:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.ql .ck{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:.8rem;font-weight:700}
+.ql .done .ck{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.ql .tx{flex:1;min-width:0;line-height:1.45;font-size:.93rem}
+.ql .done .tx{color:var(--soft);text-decoration:line-through}
+.ql .pr{color:var(--soft);font-size:.82rem;white-space:nowrap}
+.prog .btn.mini2{width:100%;margin-top:8px;padding:9px 12px;font-size:.95rem}
+.achg{margin:16px 0 6px;font-weight:700;color:var(--soft);font-size:.9rem}
+.achi{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.achi:last-child{border-bottom:0}
+.achi .ic{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:.95rem;border:2px solid var(--line);color:var(--line)}
+.achi.on .ic{background:#F2C14E;border-color:#F2C14E;color:#3B2A00}
+.achi.on.hard .ic{background:#E5483A;border-color:#E5483A;color:#fff}
+.achi .tx{flex:1;min-width:0;line-height:1.5}
+.achi .tx b{display:block}
+.achi .tx span{display:block;color:var(--soft);font-size:.86rem}
+.achi.off{opacity:.62}
+.achi .xp{color:var(--soft);font-size:.8rem;white-space:nowrap}
 .find{margin:0 0 12px}
 .find input{width:100%;border:2px solid var(--line);border-radius:14px;padding:11px 14px;background:var(--surface);font-size:1rem}
 .find input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
@@ -79,6 +112,7 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .game b{display:block;font-size:1.05rem}
 .game span{display:block;color:var(--soft);font-size:.84rem;line-height:1.5;margin-top:2px}
 .foot{display:flex;gap:10px;margin-top:18px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .credit{margin:22px 0 4px;text-align:center;color:var(--soft);font-size:.82rem;line-height:1.7}
 .foot .btn{flex:1}
 .sheet{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(10,15,25,.5)}
@@ -119,6 +153,12 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
   <header><h1 id="ttl"></h1><button class="chip" type="button" id="chip" aria-label="切換玩家"><span class="av" id="chip-av"></span><span id="chip-n"></span></button></header>
   <div class="tip" id="tip" hidden><button class="x" type="button" id="tip-x" aria-label="關閉提示">×</button><b id="tip-h"></b><span id="tip-t"></span><div id="tip-a"></div></div>
   <a class="cont" id="cont" hidden><span class="ic" id="cont-ic"></span><span class="tx"><small>繼續玩</small><b id="cont-n"></b></span><span aria-hidden="true">›</span></a>
+  <section class="prog" id="prog" aria-label="玩家等級與每日挑戰">
+    <div class="lv"><span class="lvn" id="lv-n"></span><span class="lvt" id="lv-t"></span><span class="xpb" role="progressbar" aria-label="經驗值" id="xp-bar"><i id="xp-i"></i></span><span class="xps" id="xp-s"></span></div>
+    <div class="qh"><b>今日挑戰</b><span class="qc" id="q-c"></span><span class="st" id="q-st"></span></div>
+    <ul class="ql" id="ql"></ul>
+    <button class="btn mini2" type="button" id="b-ach"></button>
+  </section>
   <div class="find"><input id="q" type="search" placeholder="搜尋遊戲名稱或類型" aria-label="搜尋遊戲" autocomplete="off" enterkeyhint="search"><div class="cats" id="cats" role="group" aria-label="遊戲類型"></div></div>
   <div class="grid" id="grid"></div>
   <p class="none" id="none" hidden>找不到符合的遊戲，換個關鍵字試試。</p>
@@ -159,9 +199,38 @@ function render(){
   $('#chip-av').textContent=p.name.slice(0,1);$('#chip-av').style.background=p.color;$('#chip-n').textContent=p.name;
   const m=meta(p.id);const g=C.games.find(x=>x.id===m.lastGame);
   const cont=$('#cont');if(g){cont.hidden=false;cont.href=g.file;$('#cont-ic').textContent=g.icon;$('#cont-ic').style.background=g.color+'33';$('#cont-n').textContent=g.name;}else cont.hidden=true;
-  renderCats();renderGrid();
+  renderCats();renderGrid();renderProg();
   installTip();
 }
+
+/* ---------- level, daily quests, achievements ---------- */
+function gameName(id){const g=C.games.find(x=>x.id===id);return g?g.name:'';}
+function gameFile(id){const g=C.games.find(x=>x.id===id);return g?g.file:'#';}
+function renderProg(){
+  if(!window.GC||!current())return;
+  const g=GC.get();
+  $('#lv-n').textContent='Lv'+g.level;$('#lv-t').textContent=g.title;
+  const pct=Math.max(0,Math.min(100,g.xpIn/g.xpNeed*100));$('#xp-i').style.width=pct+'%';
+  $('#xp-bar').setAttribute('aria-valuenow',Math.round(pct));$('#xp-s').textContent=g.xpIn+' / '+g.xpNeed+' XP';
+  const done=g.quests.filter(q=>q.done).length;
+  $('#q-c').textContent=done+' / '+g.quests.length;
+  $('#q-st').textContent=g.streak>1?'連續玩 '+g.streak+' 天':'';
+  $('#ql').innerHTML=g.quests.map(q=>'<li class="'+(q.done?'done':'')+'"><a href="'+esc(gameFile(q.def.game))+'"><span class="ck" aria-hidden="true">'+(q.done?'✓':'')+'</span><span class="tx">'+esc(q.def.text)+'</span><span class="pr">'+(q.done?'完成':(q.def.type==='sum'?q.pr+' / '+q.def.target:'去挑戰'))+'</span></a></li>').join('');
+  const n=Object.keys(g.ach).length;
+  $('#b-ach').textContent='成就 '+n+' / '+GC.ACH.length;
+}
+function achSheet(){
+  const g=GC.get();const groups=C.games.map(x=>x.id).concat(['']);
+  let h='<div class="shead"><h2>成就</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">已解鎖 '+Object.keys(g.ach).length+' / '+GC.ACH.length+'。紅色是進階成就，完成可以拿更多經驗值。</p>';
+  groups.forEach(id=>{
+    const list=GC.ACH.filter(a=>a.game===id);if(!list.length)return;
+    const n=list.filter(a=>g.ach[a.id]).length;
+    h+='<p class="achg">'+(id?esc(gameName(id)):'綜合')+'　'+n+' / '+list.length+'</p>'+list.map(a=>{const on=!!g.ach[a.id];return '<div class="achi '+(on?'on':'off')+(a.hard?' hard':'')+'"><span class="ic" aria-hidden="true">'+(on?'★':'☆')+'</span><span class="tx"><b>'+esc(a.name)+'<span class="sr-only">'+(on?'（已解鎖）':'（未解鎖）')+'</span></b><span>'+esc(a.desc)+'</span></span><span class="xp">+'+a.xp+'</span></div>';}).join('');
+  });
+  sheet(h);
+}
+$('#b-ach').addEventListener('click',achSheet);
+window.addEventListener('pageshow',e=>{if(e.persisted)render();});
 
 /* ---------- categories & search ---------- */
 let CAT='全部',Q='';
