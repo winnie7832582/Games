@@ -54,7 +54,7 @@
   A('la3', 'latte-art', '鬱金香盛開', '三層鬱金香拿到 70 分以上', ['max', 'latte-art', 's_tulip', 70]);
   A('la4', 'latte-art', '葉子飄落', '葉子課拿到 70 分以上', ['max', 'latte-art', 's_leaf', 70]);
   A('la5', 'latte-art', '自由創作', '用自由創作拉一杯', ['sum', 'latte-art', 'free', 1]);
-  A('la6', 'latte-art', '拉花大師', '五堂課全部拿到三顆星', ['max', 'latte-art', 'totalStars', 15], 1);
+  A('la6', 'latte-art', '拉花大師', '八堂課全部拿到三顆星', ['max', 'latte-art', 'totalStars', 24], 1);
   A('nm1', 'night-market', '第一晚', '完成第一個晚上的營業', ['plays', 'night-market', 1]);
   A('nm2', 'night-market', '賺錢了', '單晚淨利 $1500 以上', ['max', 'night-market', 'dayProfit', 1500]);
   A('nm3', 'night-market', '服務大眾', '累計服務 300 位客人', ['sum', 'night-market', 'served', 300]);
@@ -80,14 +80,50 @@
   A('cn3', 'corner-cafe', '戀愛進行中', '走到任一個戀愛結局', ['sum', 'corner-cafe', 'love', 1]);
   A('cn4', 'corner-cafe', '結局收藏家', '解鎖 6 個結局', ['max', 'corner-cafe', 'endings', 6]);
   A('cn5', 'corner-cafe', '情定咖啡館', '四位角色的戀愛結局都看過', [['max', 'corner-cafe', 'end_love-yuan', 1], ['max', 'corner-cafe', 'end_love-qing', 1], ['max', 'corner-cafe', 'end_love-kai', 1], ['max', 'corner-cafe', 'end_love-lin', 1]], 1);
-  A('cn6', 'corner-cafe', '全結局', '解鎖全部 11 個結局', ['max', 'corner-cafe', 'endings', 11], 1);
-  A('x1', '', '全明星', '九款遊戲都玩過', ['gamesPlayed', 9]);
+  A('cn6', 'corner-cafe', '全結局', '解鎖全部 15 個結局', ['max', 'corner-cafe', 'endings', 15], 1);
+A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['max', 'souffle', 'choc', 70]);
+  A('sf5', 'souffle', '抹茶職人', '抹茶口味拿到 80 分以上', ['max', 'souffle', 'matcha', 80], 1);
+  A('sf6', 'souffle', '逆境烘焙', '遇到特殊條件，還是拿到 80 分以上', ['max', 'souffle', 'hard', 80]);
+  A('sw5', 'sanwei-kitchen', '蛋炒飯上桌', '做出蛋炒飯', ['max', 'sanwei-kitchen', 'dish_friedrice', 1]);
+  A('sw6', 'sanwei-kitchen', '四味俱全', '四道料理都做過', [['max', 'sanwei-kitchen', 'dish_souffle', 1], ['max', 'sanwei-kitchen', 'dish_omurice', 1], ['max', 'sanwei-kitchen', 'dish_oajian', 1], ['max', 'sanwei-kitchen', 'dish_friedrice', 1]]);
+  A('sw7', 'sanwei-kitchen', '職人挑戰', '職人版任一道菜拿到 70 分以上', ['max', 'sanwei-kitchen', 'pro', 70], 1);
+  A('bt6', 'bubble-tea', '貴賓接待', '單次營業服務 2 位 VIP', ['max', 'bubble-tea', 'vip', 2]);
+  A('bt7', 'bubble-tea', '一次兩杯', '單次營業完成 3 張雙杯訂單', ['max', 'bubble-tea', 'multi', 3]);
+  A('cf7', 'cafe', '大賽選手', '參加一次咖啡大賽', ['max', 'cafe', 'contestDone', 1]);
+  A('cf8', 'cafe', '咖啡大賽冠軍', '在咖啡大賽拿到第一名', ['max', 'cafe', 'contestWin', 1], 1);
+  A('la7', 'latte-art', '天鵝', '天鵝課拿到 70 分以上', ['max', 'latte-art', 's_swan', 70]);
+  A('la8', 'latte-art', '玫瑰綻放', '玫瑰課拿到 70 分以上', ['max', 'latte-art', 's_rose', 70]);
+  A('la9', 'latte-art', '葉心合一', '葉子加愛心拿到 70 分以上', ['max', 'latte-art', 's_leafheart', 70]);
+  A('la10', 'latte-art', '客人都滿意', '客人指定平均 80 分以上', ['max', 'latte-art', 'orderAvg', 80]);
+  A('la11', 'latte-art', '限時達人', '限時挑戰兩分鐘拉出 8 杯以上', ['max', 'latte-art', 'timedCups', 8], 1);
+  A('nm7', 'night-market', '四種攤位', '四種攤位類型都開過', [['max', 'night-market', 'stall_fry', 1], ['max', 'night-market', 'stall_drink', 1], ['max', 'night-market', 'stall_snack', 1], ['max', 'night-market', 'stall_sweet', 1]]);
+  A('nm8', 'night-market', '商場如戰場', '遇到對面開攤的競爭對手', ['max', 'night-market', 'rival', 1]);
+  A('nm9', 'night-market', '無限經營', '無限模式撐到第 40 天', ['max', 'night-market', 'endlessDay', 40], 1);
+  A('cc8', 'chef-cards', '挑戰階級', '通關任一難度階級', ['max', 'chef-cards', 'ascWin', 1]);
+  A('cc9', 'chef-cards', '最高階級', '通關階級 3 以上', ['max', 'chef-cards', 'ascWin', 4], 1);
+  A('cc10', 'chef-cards', '今日牌局', '完成一次今日固定牌局的第一位評審', ['max', 'chef-cards', 'daily', 1]);
+  A('ph8', 'pet-house', '倉鼠主人', '養過一隻倉鼠', ['max', 'pet-house', 'sp_hamster', 1]);
+  A('ph9', 'pet-house', '夢想莊園', '把小屋擴建到最大', ['max', 'pet-house', 'room', 3]);
+  A('ph10', 'pet-house', '展覽新手', '參加一次寵物展覽', ['sum', 'pet-house', 'shows', 1]);
+  A('ph11', 'pet-house', '展覽冠軍', '在寵物展覽拿到第一名', ['max', 'pet-house', 'champion', 1], 1);
+  A('cn7', 'corner-cafe', '麻糬的位子', '走到亦辰的戀愛結局', ['max', 'corner-cafe', 'end_love-yichen', 1], 1);
+  A('cn8', 'corner-cafe', '轉角的兩間店', '走到若蘭的戀愛結局', ['max', 'corner-cafe', 'end_love-ruolan', 1], 1);
+  A('cn9', 'corner-cafe', '再玩一輪', '用繼承的成長開始新的一輪', ['max', 'corner-cafe', 'inherit', 1]);
+  A('fm1', 'farm', '第一次收成', '收成第一個作物', ['sum', 'farm', 'harvest', 1]);
+  A('fm2', 'farm', '菜園主人', '累計收成 50 個作物', ['sum', 'farm', 'harvest', 50]);
+  A('fm3', 'farm', '擴建農田', '田地擴建到 9 塊', ['max', 'farm', 'plots', 9]);
+  A('fm4', 'farm', '自動化農場', '買齊灑水器、稻草人和肥料', ['max', 'farm', 'upgrades', 3]);
+  A('fm5', 'farm', '訂單達人', '累計完成 10 張村民訂單', ['sum', 'farm', 'orders', 10]);
+  A('fm6', 'farm', '農場等級 5', '小菜園升到 Lv5', ['max', 'farm', 'level', 5]);
+  A('fm7', 'farm', '什麼都種', '七種作物都收成過', [['max', 'farm', 'k_cabbage', 1], ['max', 'farm', 'k_radish', 1], ['max', 'farm', 'k_tomato', 1], ['max', 'farm', 'k_corn', 1], ['max', 'farm', 'k_strawberry', 1], ['max', 'farm', 'k_pumpkin', 1], ['max', 'farm', 'k_sunflower', 1]], 1);
+  A('fm8', 'farm', '小富翁', '賣菜和交貨累計賺到 3000 金幣', ['sum', 'farm', 'earned', 3000]);
+  A('x1', '', '全明星', '十款遊戲都玩過', ['gamesPlayed', 10]);
   A('x2', '', '三天連續', '連續三天都有玩', ['streak', 3]);
   A('x3', '', '每日全勤', '一天完成三個每日挑戰', ['questAll', 1]);
   A('x4', '', '成就獵人', '解鎖 15 個成就', ['count', 15]);
   A('x5', '', '一週連續', '連續七天都有玩', ['streak', 7], 1);
   A('x6', '', '挑戰達人', '七天完成全部三個每日挑戰', ['questAll', 7], 1);
-  A('x7', '', '成就大師', '解鎖 40 個成就', ['count', 40], 1);
+  A('x7', '', '成就大師', '解鎖 60 個成就', ['count', 60], 1);
 
   /* ================= 每日挑戰清單 ================= */
   /* type: 'max' 單次達到、'sum' 今天累計。每天依日期從裡面抽 3 個不同遊戲的，全世界同一天抽到一樣的 */
@@ -103,7 +139,10 @@
     { id: 'q-cc', game: 'chef-cards', metric: 'judge', type: 'sum', target: 2, text: '主廚牌局今天通過 2 位評審' },
     { id: 'q-ph', game: 'pet-house', metric: 'fed', type: 'sum', target: 3, text: '毛孩小屋餵毛孩 3 次' },
     { id: 'q-ph2', game: 'pet-house', metric: 'played', type: 'sum', target: 1, text: '毛孩小屋陪毛孩玩一次' },
-    { id: 'q-cn', game: 'corner-cafe', metric: 'days', type: 'sum', target: 1, text: '巷口咖啡館經營一天' }
+    { id: 'q-cn', game: 'corner-cafe', metric: 'days', type: 'sum', target: 1, text: '巷口咖啡館經營一天' },
+    { id: 'q-fm', game: 'farm', metric: 'harvest', type: 'sum', target: 6, text: '小菜園收成 6 個作物' },
+    { id: 'q-fm2', game: 'farm', metric: 'orders', type: 'sum', target: 1, text: '小菜園完成一張村民訂單' },
+    { id: 'q-la2', game: 'latte-art', metric: 'orderAvg', type: 'max', target: 70, text: '拉一杯花的「客人指定」平均 70 分以上' }
   ];
   var QXP = 30, QBONUS = 60;
 
