@@ -316,7 +316,7 @@ function isBoss(){return run.stage===2;}
 function boss(){return isBoss()?BOSSES.find(b=>b.id===run.bosses[run.city]):null;}
 function judgeName(){return isBoss()?boss().n:JUDGES[run.city][run.stage];}
 function target(){const B=boss();return Math.round(TARGETS[run.city][run.stage]*ASCM[run.asc||0]*(B&&B.id==='bigeater'?1.25:1));}
-const tp=T=>tp(T)+((run.asc||0)>=3?1:0);
+const tp=T=>T.p+((run.asc||0)>=3?1:0);
 function has(t){return run.tools.includes(t);}
 function lvl(r){return run.levels[r]||0;}
 
