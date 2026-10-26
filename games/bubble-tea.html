@@ -128,6 +128,7 @@ button{font:inherit;color:inherit}
 @media (max-height:640px){.cust{min-height:136px}.ticket{font-size:.85rem}.pad .btn{min-height:44px;padding:8px 4px}}
 @media (prefers-reduced-motion:reduce){.float{animation-duration:.01s}.toast,.btn,.cust{transition:none}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -205,8 +206,8 @@ const ICE=['去冰','少冰','正常冰'];
 const TOPS={none:'不加料',pearl:'加珍珠',coco:'加椰果'};
 const DUR=120,COOK=7;let STOCK=5,FRESH=40,RATE=50,PATM=1;
 const SHOPK='teashop-shop';let SHOP={coins:0,lv:{pot:0,keep:0,sign:0,rate:0}};
-try{const v=JSON.parse(localStorage.getItem(SHOPK)||'null');if(v&&v.lv)SHOP={coins:v.coins||0,lv:Object.assign({pot:0,keep:0,sign:0,rate:0},v.lv)};}catch(e){}
-function saveShop(){try{localStorage.setItem(SHOPK,JSON.stringify(SHOP));}catch(e){}}
+try{const v=JSON.parse(GCStore.getItem(SHOPK)||'null');if(v&&v.lv)SHOP={coins:v.coins||0,lv:Object.assign({pot:0,keep:0,sign:0,rate:0},v.lv)};}catch(e){}
+function saveShop(){try{GCStore.setItem(SHOPK,JSON.stringify(SHOP));}catch(e){}}
 function applyShop(){STOCK=5+2*SHOP.lv.pot;FRESH=40+20*SHOP.lv.keep;PATM=1+.1*SHOP.lv.sign;RATE=50+15*SHOP.lv.rate;}
 const UPG=[{k:'pot',n:'大鍋子',d:'珍珠一鍋多 2 份',c:[40,100]},{k:'keep',n:'保溫鍋',d:'珍珠變硬的時間多 20 秒',c:[40,100]},{k:'sign',n:'親切招牌',d:'客人多等 10% 的時間',c:[60,140]},{k:'rate',n:'快速出茶',d:'倒茶更快，要抓準時機',c:[50,120]}];
 applyShop();
@@ -508,10 +509,10 @@ function render(){
 
 /* ---------- flow ---------- */
 function show(n){screen=n;['title','game','result'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
-let LIVES=3;try{const v=parseInt(localStorage.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
+let LIVES=3;try{const v=parseInt(GCStore.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
 function renderLives(){$('#lv-v').textContent=LIVES<=5?'♥'.repeat(LIVES):'♥ × '+LIVES;$('#lv-v').setAttribute('aria-label',LIVES+' 次');$('#lv-m').disabled=LIVES<=1;$('#lv-p').disabled=LIVES>=10;}
-$('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{localStorage.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
-$('#lv-p').addEventListener('click',()=>{LIVES=Math.min(10,LIVES+1);try{localStorage.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+$('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+$('#lv-p').addEventListener('click',()=>{LIVES=Math.min(10,LIVES+1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
 renderLives();
 
 function renderShopBtn(){$('#shop-open').textContent='升級店面（點數 '+SHOP.coins+'）';}
@@ -528,14 +529,15 @@ renderShopBtn();
 function start(){newGame();buildQueue();updateHud();show('game');toast('開店了！');}
 $('#open').addEventListener('click',start);$('#again').addEventListener('click',start);
 
-function loadBest(){try{const v=localStorage.getItem('teashop-best');return v?JSON.parse(v):null;}catch(e){return null;}}
-function saveBest(o){try{localStorage.setItem('teashop-best',JSON.stringify(o));}catch(e){}}
+function loadBest(){try{const v=GCStore.getItem('teashop-best');return v?JSON.parse(v):null;}catch(e){return null;}}
+function saveBest(o){try{GCStore.setItem('teashop-best',JSON.stringify(o));}catch(e){}}
 function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.money==='number'?'最佳營業額 $'+b.money+'，'+b.title+(b.lives?'（'+b.lives+' 次失誤機會）':''):'';}
 showBest();
 
 const TITLES=[[1000,'排隊名店','門口排到轉角，今天的手速是專業級。'],[700,'巷口人氣店','熟客越來越多，再快一點就要排隊了。'],[400,'穩定營業中','節奏抓到了，下次試著同時顧好珍珠鍋。'],[150,'新手老闆','慢慢來，先記熟每位客人的單再動手。'],[0,'今天先休息','每家名店都有手忙腳亂的第一天。']];
 function endGame(early){
   if(!G||G.over)return;G.over=true;G.pouring=null;
+  try{window.GC&&GC.report('bubble-tea',{money:G.money,served:G.served,perfect:G.perfect,angry:G.angry,lives:G.maxHearts,hardMoney:G.maxHearts<=1?G.money:0,vip:G.vipN||0,multi:G.multiN||0});}catch(e){}
   const gainP=Math.floor(G.money/10)+(G.perfect>=10?5:0);SHOP.coins+=gainP;saveShop();
   const t=TITLES.find(x=>G.money>=x[0]);
   $('#r-title').textContent=t[1];
