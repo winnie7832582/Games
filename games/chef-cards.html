@@ -39,6 +39,14 @@ button{font:inherit;color:inherit}
 .num{font-variant-numeric:tabular-nums}
 .btn{border:2px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:12px;padding:11px 14px;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .05s}
 .btn:active{transform:translateY(2px)}
+.optl{display:flex;flex-direction:column;gap:8px}
+.opt{display:flex;flex-direction:column;text-align:left;width:100%;background:var(--surface);border:2px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;color:inherit;font:inherit}
+.opt b{font-size:1rem}.opt span{color:var(--soft);font-size:.86rem;line-height:1.5}
+.opt.on{border-color:var(--gold);background:var(--panel)}
+.opt:disabled{opacity:.5;cursor:default}
+.chips2{display:flex;gap:8px;margin:6px 0}
+.chip2{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--surface);font-weight:900;cursor:pointer;color:inherit}
+.chip2.on{border-color:var(--gold);background:var(--gold);color:var(--on-gold)}
 .btn.main{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:900}
 .btn:disabled{opacity:.4;cursor:default;transform:none}
 .btn:focus-visible,.card:focus-visible,.tool:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
@@ -142,6 +150,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 @media (max-height:680px){.card .nm{font-size:.9rem}.hand{padding-top:12px}}
 @media (prefers-reduced-motion:reduce){.card,.btn,.prog i{transition:none}.pop{animation-duration:.01s}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -150,7 +159,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
     <div class="fan" id="fan" aria-hidden="true"></div>
     <h1 id="t-h">主廚牌局</h1>
     <p class="lede">每張牌都是一種食材。湊出好組合、收集廚具、升級食譜，征服四座城市、十二位評審的味蕾。</p>
-    <div class="tb"><button class="btn main" id="b-cont" type="button" hidden>繼續旅程</button><button class="btn" id="b-new" type="button">開始新旅程</button><button class="btn" id="b-how" type="button">怎麼玩</button></div>
+    <div class="tb"><button class="btn main" id="b-cont" type="button" hidden>繼續旅程</button><button class="btn" id="b-new" type="button">開始新旅程</button><button class="btn" id="b-daily" type="button">今日固定牌局</button><button class="btn" id="b-how" type="button">怎麼玩</button></div>
     <p class="rec" id="rec"></p>
   </section>
 
@@ -199,8 +208,10 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 'use strict';
 const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const pick=a=>a[Math.floor(Math.random()*a.length)];
-const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+let RNG=Math.random;
+function seedRng(str){let h=1779033703^str.length;for(let i=0;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);h^=h>>>16;return(h>>>0)/4294967296;};}
+const pick=a=>a[Math.floor(RNG()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(RNG()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function buzz(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
@@ -220,6 +231,15 @@ const CARDS={
   sugar:{n:'冰糖',cat:'spice',f:2,p:5,e:'sugar',d:'倍率 ×1.3',t:'×1.3'},umami:{n:'鮮味粉',cat:'spice',f:1,p:7,e:'umami',d:'倍率 ×2',t:'×2'}
 };
 const START=['pork','pork','pork','chicken','chicken','chicken','shrimp','shrimp','shrimp','fish','fish','fish','cabbage','cabbage','cabbage','bokchoy','bokchoy','bokchoy','rice','rice','rice','noodle','noodle','noodle','salt','salt','soy','soy'];
+const DECKS={
+  balanced:{n:'均衡主廚',d:'肉、海鮮、蔬菜、主食各一些，最好上手。',unlock:0,cards:START},
+  sea:{n:'海鮮派',d:'海鮮牌特別多，還附一張蛤蜊和九層塔。',unlock:3,cards:['shrimp','shrimp','shrimp','shrimp','shrimp','shrimp','fish','fish','fish','fish','fish','fish','squid','clam','cabbage','cabbage','cabbage','bokchoy','bokchoy','rice','rice','rice','noodle','noodle','salt','soy','soy','basil']},
+  meat:{n:'肉食派',d:'肉類牌很多，附一張牛肉和辣椒，適合堆倍率。',unlock:6,cards:['pork','pork','pork','pork','pork','pork','chicken','chicken','chicken','chicken','chicken','chicken','beef','cabbage','cabbage','cabbage','bokchoy','bokchoy','rice','rice','rice','noodle','noodle','noodle','salt','soy','chili','bao']},
+  veg:{n:'素食派',d:'蔬菜牌很多，附香菇和松露，肉和海鮮比較少。',unlock:9,cards:['cabbage','cabbage','cabbage','cabbage','cabbage','cabbage','bokchoy','bokchoy','bokchoy','bokchoy','bokchoy','mushroom','mushroom','truffle','rice','rice','rice','rice','noodle','noodle','noodle','pork','pork','shrimp','shrimp','salt','soy','soy']}
+};
+const ASC=['標準','目標分數 +15%','再少 1 次換牌','起始資金只有 $2，商店全部漲價 $1','目標分數再提高到 +35%'];
+const ASCM=[1,1.15,1.15,1.15,1.35];
+const TWISTS={cash:'起始資金 +$3',serve:'每關多 1 次上菜',discard:'每關多 1 次換牌'};
 const RECIPES=[
   {id:'single',n:'單點',base:5,mult:1,lb:10,lm:1,d:'沒有任何組合'},
   {id:'pair',n:'雙拼',base:10,mult:2,lb:15,lm:1,d:'2 張同類'},
@@ -244,6 +264,12 @@ const TOOLS={
   plating:{n:'擺盤夾',d:'用 5 張牌上菜 +8 倍率',p:6,k:'add'},
   minimal:{n:'極簡主義',d:'只用 1–2 張牌上菜 倍率 ×3',p:7,k:'x'},
   firstwok:{n:'快炒爐',d:'每關第一道菜 倍率 ×2',p:7,k:'x'},
+  pressure:{n:'壓力鍋',d:'每張美味 6 以上的牌 +2 倍率',p:6,k:'card'},
+  wine:{n:'料理紅酒',d:'每張調味牌 +6 美味',p:5,k:'card'},
+  whisk:{n:'打蛋器',d:'只出一張牌時 +6 倍率',p:5,k:'add'},
+  scale:{n:'電子秤',d:'剛好出 3 張牌時 +4 倍率',p:5,k:'add'},
+  oven:{n:'電烤箱',d:'三拼、主廚特餐、同味全席 倍率 ×1.5',p:8,k:'x'},
+  sponsor:{n:'贊助商',d:'每次過關多拿 $4',p:7,k:'pass'},
   secret:{n:'祖傳秘方',d:'倍率 ×1.5',p:8,k:'x'},
   fridge:{n:'雙門冰箱',d:'每關多 1 次換牌',p:5,k:'pass'},
   tray:{n:'多層托盤',d:'每關多 1 次上菜',p:9,k:'pass'},
@@ -259,28 +285,38 @@ const BOSSES=[
   {id:'hurry',n:'急性子評審',d:'只能上菜 2 次'},
   {id:'five',n:'挑嘴評審',d:'每道菜都要剛好 5 張牌'},
   {id:'lowcarb',n:'減醣評審',d:'主食的美味變成 0'},
-  {id:'nodup',n:'老饕評審',d:'同一種料理只能出一次'}
+  {id:'nodup',n:'老饕評審',d:'同一種料理只能出一次'},
+  {id:'four',n:'精緻派評審',d:'一道菜最多 4 張牌'},
+  {id:'firstzero',n:'挑剔評審',d:'你選的第一張牌，美味變成 0'},
+  {id:'bigeater',n:'大胃王評審',d:'目標分數 +25%，但可以多上菜 1 次'}
 ];
 const MAXTOOLS=5;
+const SELMAX=()=>{const B=boss();return B&&B.id==='four'?4:5;};
 
 /* ---------- state ---------- */
 const KEY='chefcards-v1',REC='chefcards-rec';
 let run=null,R=null;let uidN=1;
 function mkCard(id){return{id,u:uidN++};}
-function newRun(){
-  uidN=1;
-  run={v:1,city:0,stage:0,money:4,deck:START.map(mkCard),tools:[],levels:{},bosses:shuffle(BOSSES.map(b=>b.id)).slice(0,4),phase:'intro',offer:null,bestDish:0,uid:uidN,retries:3,retried:0};
+function dstr(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function newRun(o){
+  o=o||{};uidN=1;const daily=!!o.daily,seed=daily?'cc-'+dstr(new Date()):'';
+  RNG=daily?seedRng(seed+':boss'):Math.random;
+  const twist=daily?pick(Object.keys(TWISTS)):'';
+  const asc=daily?0:(o.asc||0),deckId=daily?'balanced':(o.deck||'balanced');
+  run={v:1,city:0,stage:0,money:(asc>=3?2:4)+(twist==='cash'?3:0),deck:DECKS[deckId].cards.map(mkCard),tools:[],levels:{},bosses:shuffle(BOSSES.map(b=>b.id)).slice(0,4),phase:'intro',offer:null,bestDish:0,uid:uidN,retries:3,retried:0,asc,daily,seed,twist,deckId,rr:0};
+  if(!daily)RNG=Math.random;
   save();
 }
-function save(){if(run){run.uid=uidN;try{localStorage.setItem(KEY,JSON.stringify(run));}catch(e){}}}
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&v.v===1){uidN=v.uid||999;return v;}}catch(e){}return null;}
-function rec(){try{return JSON.parse(localStorage.getItem(REC)||'null')||{best:0,dish:0,wins:0};}catch(e){return{best:0,dish:0,wins:0};}}
-function saveRec(o){try{localStorage.setItem(REC,JSON.stringify(o));}catch(e){}}
+function save(){if(run){run.uid=uidN;try{GCStore.setItem(KEY,JSON.stringify(run));}catch(e){}}}
+function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');if(v&&v.v===1){uidN=v.uid||999;return v;}}catch(e){}return null;}
+function rec(){try{return JSON.parse(GCStore.getItem(REC)||'null')||{best:0,dish:0,wins:0};}catch(e){return{best:0,dish:0,wins:0};}}
+function saveRec(o){try{GCStore.setItem(REC,JSON.stringify(o));}catch(e){}}
 function roundIdx(){return run.city*3+run.stage;}
 function isBoss(){return run.stage===2;}
 function boss(){return isBoss()?BOSSES.find(b=>b.id===run.bosses[run.city]):null;}
 function judgeName(){return isBoss()?boss().n:JUDGES[run.city][run.stage];}
-function target(){return TARGETS[run.city][run.stage];}
+function target(){const B=boss();return Math.round(TARGETS[run.city][run.stage]*ASCM[run.asc||0]*(B&&B.id==='bigeater'?1.25:1));}
+const tp=T=>tp(T)+((run.asc||0)>=3?1:0);
 function has(t){return run.tools.includes(t);}
 function lvl(r){return run.levels[r]||0;}
 
@@ -300,6 +336,8 @@ function evalDish(cards,first){
     const D=CARDS[c.id];let f=D.f+(garlic-(D.e==='garlic'?1:0))*5;
     if(bid==='veg'&&(D.cat==='meat'||D.cat==='sea'))f=0;
     if(bid==='lowcarb'&&D.cat==='grain')f=0;
+    if(bid==='firstzero'&&i===0)f=0;
+    if(has('wine')&&D.cat==='spice'&&bid!=='bland'&&f>0)f+=6;
     if(has('steamer')&&D.cat==='grain'&&f>0)f+=8;
     if(has('knife')&&D.cat==='veg'&&f>0)f+=7;
     chips+=f;let addM=0,xM=1;
@@ -308,6 +346,7 @@ function evalDish(cards,first){
       case'salt':addM+=2;break;case'soy':addM+=3;break;case'chili':addM+=3*(cnt.meat||0);break;case'sugar':xM*=1.3;break;case'umami':xM*=2;break;
       case'truffle':xM*=1.5;break;case'basil':if(cnt.sea)addM+=5;break;case'clam':addM+=3*Math.max(0,(cnt.sea||0)-1);break;case'ricecake':addM+=cards.length;break;case'duck':addM+=2*(cnt.grain||0);break;}}
     if(has('grill')&&D.cat==='meat')addM+=3;
+    if(has('pressure')&&D.f>=6)addM+=2;
     if(has('spicebox')&&D.cat==='spice'&&bid!=='bland')addM+=3;
     if(has('sashimi')&&D.cat==='sea')xM*=1.2;
     mult+=addM;mult*=xM;
@@ -318,6 +357,9 @@ function evalDish(cards,first){
     if(t==='wok'&&(rid==='pair'||rid==='twopair')){mult+=5;ok=true;}
     if(t==='bento'&&rid==='teishoku'){chips+=40;mult+=5;ok=true;}
     if(t==='plating'&&cards.length===5){mult+=8;ok=true;}
+    if(t==='whisk'&&cards.length===1){mult+=6;ok=true;}
+    if(t==='scale'&&cards.length===3){mult+=4;ok=true;}
+    if(t==='oven'&&(rid==='three'||rid==='four'||rid==='five')){mult*=1.5;ok=true;}
     if(t==='claypot'&&rid==='full'){mult*=2;ok=true;}
     if(t==='minimal'&&cards.length<=2){mult*=3;ok=true;}
     if(t==='firstwok'&&first){mult*=2;ok=true;}
@@ -347,9 +389,23 @@ $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();}
 function titleInit(){
   const fan=$('#fan');fan.innerHTML='';['wagyu','truffle','lobster','umami','bao'].forEach((id,i)=>{const el=cardEl({id},{div:true});el.style.width='64px';el.style.transform='rotate('+((i-2)*12)+'deg) translate('+((i-2)*26)+'px,'+(Math.abs(i-2)*6)+'px)';el.style.transformOrigin='50% 120%';fan.appendChild(el);});
   const sv=load();$('#b-cont').hidden=!(sv&&sv.phase!=='over');
-  const r=rec();$('#rec').innerHTML=r.best?'最遠走到第 '+r.best+' 位評審'+(r.wins?'，通關 '+r.wins+' 次':'')+'<br>單道最高 '+fmt(r.dish)+' 分':'';
+  const r=rec();const dk=dstr(new Date());const dl=r.daily&&r.daily.day===dk?'今日固定牌局：最遠走到第 '+r.daily.best+' 位評審':'今日固定牌局：還沒挑戰';
+  $('#rec').innerHTML=dl+'<br>'+(r.best?'最遠走到第 '+r.best+' 位評審':'')+(r.asc?'，已解鎖階級 '+r.asc:'')+(r.wins?'，通關 '+r.wins+' 次':'')+(r.dish?'<br>單道最高 '+fmt(r.dish)+' 分':'');
+  if(false)$('#rec').innerHTML=r.best?'最遠走到第 '+r.best+' 位評審'+(r.wins?'，通關 '+r.wins+' 次':'')+'<br>單道最高 '+fmt(r.dish)+' 分':'';
 }
-$('#b-new').addEventListener('click',()=>{newRun();goIntro();});
+let SETUP={deck:'balanced',asc:0};
+function openSetup(){
+  const r=rec(),maxA=Math.min(4,r.asc||0);if(SETUP.asc>maxA)SETUP.asc=maxA;if(r.best<DECKS[SETUP.deck].unlock)SETUP.deck='balanced';
+  modal('<h3>新旅程</h3><p class="soft">起始牌組</p><div class="optl">'+Object.keys(DECKS).map(k=>{const D=DECKS[k],ok=r.best>=D.unlock;return '<button class="opt'+(SETUP.deck===k?' on':'')+'" type="button" data-deck="'+k+'"'+(ok?'':' disabled')+'><b>'+D.n+'</b><span>'+(ok?D.d:'走到第 '+D.unlock+' 位評審後解鎖')+'</span></button>';}).join('')+'</div>'+
+    '<p class="soft" style="margin-top:12px">難度階級'+(maxA?'':'（通關一次解鎖階級 1）')+'</p><div class="chips2">'+Array.from({length:maxA+1},(_,i)=>'<button class="chip2'+(SETUP.asc===i?' on':'')+'" type="button" data-asc="'+i+'">'+i+'</button>').join('')+'</div><p class="soft" id="asc-d">'+ASC.slice(0,SETUP.asc+1).map((t,i)=>i?'階級 '+i+'：'+t:'標準難度').join('<br>')+'</p>'+
+    '<button class="btn main" type="button" id="su-go">開始旅程</button><button class="btn" type="button" id="m-ok">取消</button>',b=>{
+    b.querySelectorAll('[data-deck]').forEach(x=>x.addEventListener('click',()=>{if(x.disabled)return;SETUP.deck=x.dataset.deck;openSetup();}));
+    b.querySelectorAll('[data-asc]').forEach(x=>x.addEventListener('click',()=>{SETUP.asc=+x.dataset.asc;openSetup();}));
+    b.querySelector('#su-go').addEventListener('click',()=>{closeModal();newRun({deck:SETUP.deck,asc:SETUP.asc});goIntro();});
+    b.querySelector('#m-ok').addEventListener('click',closeModal);});
+}
+$('#b-new').addEventListener('click',openSetup);
+$('#b-daily').addEventListener('click',()=>{newRun({daily:true});goIntro();});
 $('#b-cont').addEventListener('click',()=>{run=load();if(!run){newRun();}if(run.phase==='market')goMarket();else goIntro();});
 $('#b-how').addEventListener('click',()=>showHow());
 function showHow(){
@@ -364,7 +420,7 @@ function goIntro(){
   const B=boss(),t=target();
   const map=Array.from({length:12},(_,i)=>'<span class="'+(i<roundIdx()?'done':i===roundIdx()?'now':'')+'"></span>').join('');
   const reward=[3,4,6][run.stage];
-  $('#intro-body').innerHTML='<div class="intro"><p class="k">'+CITIES[run.city]+'，第 '+(run.stage+1)+' / 3 位評審</p><h2>'+judgeName()+'</h2><p class="tgt">'+fmt(t)+'</p><p class="k">目標分數</p>'+
+  $('#intro-body').innerHTML='<div class="intro"><p class="k">'+CITIES[run.city]+'，第 '+(run.stage+1)+' / 3 位評審</p>'+(run.daily?'<p class="k">今日固定牌局'+(run.twist?'・今日特色：'+TWISTS[run.twist]:'')+'</p>':'')+((run.asc||0)?'<p class="k">階級 '+run.asc+'・'+DECKS[run.deckId||'balanced'].n+'</p>':run.deckId&&run.deckId!=='balanced'?'<p class="k">'+DECKS[run.deckId].n+'</p>':'')+'<h2>'+judgeName()+'</h2><p class="tgt">'+fmt(t)+'</p><p class="k">目標分數</p>'+
     (B?'<p class="rule">特殊規則：'+B.d+'</p>':'')+'<div class="map" aria-label="進度：第 '+(roundIdx()+1)+' / 12 位評審">'+map+'</div><p class="k">過關獎勵 $'+reward+'，每剩一次上菜再加 $1</p><p class="k" style="margin-top:4px">再挑戰機會還有 '+(run.retries==null?RETRIES:run.retries)+' 次</p></div>'+
     '<div class="intro" style="text-align:left"><p class="k" style="margin-bottom:6px">你的廚具</p><p>'+(run.tools.length?run.tools.map(t=>'<b>'+TOOLS[t].n+'</b>：'+TOOLS[t].d).join('<br>'):'還沒有廚具，過關後可以在市場買。')+'</p></div>';
   show('intro');
@@ -375,7 +431,8 @@ $('#b-start').addEventListener('click',startRound);
 function handSize(){return 8+(has('apron')?1:0);}
 function startRound(){
   const B=boss();
-  R={score:0,serves:(B&&B.id==='hurry'?2:4)+(has('tray')?1:0),discards:3+(has('fridge')?1:0),draw:shuffle(run.deck.slice()),hand:[],sel:[],used:[],first:true,busy:false,sortBy:'cat',best:0};
+  if(run.daily)RNG=seedRng(run.seed+':r'+roundIdx()+':'+(run.retried||0));
+  R={score:0,serves:(B&&B.id==='hurry'?2:4)+(has('tray')?1:0)+(B&&B.id==='bigeater'?1:0)+(run.twist==='serve'?1:0),discards:3+(has('fridge')?1:0)-((run.asc||0)>=2?1:0)+(run.twist==='discard'?1:0),draw:shuffle(run.deck.slice()),hand:[],sel:[],used:[],first:true,busy:false,sortBy:'cat',best:0};
   draw();renderRound();show('round');
 }
 function draw(){while(R.hand.length<handSize()&&R.draw.length)R.hand.push(R.draw.pop());sortHand();}
@@ -396,7 +453,7 @@ function renderTools(hlT){
 function renderHand(){
   const box=$('#hand');box.innerHTML='';
   R.hand.forEach(c=>{const el=cardEl(c);const on=R.sel.includes(c.u);el.setAttribute('aria-pressed',String(on));
-    el.addEventListener('click',()=>{if(R.busy)return;const i=R.sel.indexOf(c.u);if(i>=0)R.sel.splice(i,1);else if(R.sel.length<5)R.sel.push(c.u);else{flashPlate('一道菜最多 5 張牌');return;}buzz(5);renderHand();renderPreview();});
+    el.addEventListener('click',()=>{if(R.busy)return;const i=R.sel.indexOf(c.u);if(i>=0)R.sel.splice(i,1);else if(R.sel.length<SELMAX())R.sel.push(c.u);else{flashPlate('一道菜最多 '+SELMAX()+' 張牌');return;}buzz(5);renderHand();renderPreview();});
     box.appendChild(el);});
 }
 function selCards(){return R.sel.map(u=>R.hand.find(c=>c.u===u)).filter(Boolean);}
@@ -454,12 +511,14 @@ async function countUp(el,to,warn){if(warn){el.textContent='0 分';flashPlate(wa
 
 /* ---------- win / lose ---------- */
 function winRound(){
-  const base=[3,4,6][run.stage],left=R.serves,interest=Math.min(5,Math.floor(run.money/5)),cat=has('cat')?3:0;
+  const base=[3,4,6][run.stage],left=R.serves,interest=Math.min(5,Math.floor(run.money/5)),cat=(has('cat')?3:0)+(has('sponsor')?4:0);
   const total=base+left+interest+cat;run.money+=total;
   const r=rec();const reached=roundIdx()+1;if(reached>r.best){r.best=reached;saveRec(r);}
+  try{window.GC&&GC.report('chef-cards',{round:reached,dish:R.best,judge:1});}catch(e){}
   const last=run.city===3&&run.stage===2;
+  if(run.daily){const rr=rec();const dk=dstr(new Date());if(!rr.daily||rr.daily.day!==dk||reached>rr.daily.best){rr.daily={day:dk,best:reached};saveRec(rr);}try{window.GC&&GC.max('chef-cards',{daily:1,dailyRound:reached});}catch(e){}}
   let h='<div class="intro"><p class="k">'+CITIES[run.city]+'・'+judgeName()+'</p><h2>評審滿意了！</h2><p class="tgt">'+fmt(R.score)+'</p><p class="k">目標 '+fmt(target())+'，單道最高 '+fmt(R.best)+'</p></div>';
-  h+='<div class="intro rtable" style="text-align:left"><div class="kv"><span>過關獎勵</span><span>$'+base+'</span></div><div class="kv"><span>剩下 '+left+' 次上菜</span><span>$'+left+'</span></div><div class="kv"><span>利息（每 $5 給 $1，最多 $5）</span><span>$'+interest+'</span></div>'+(cat?'<div class="kv"><span>招財貓</span><span>$3</span></div>':'')+'<div class="kv"><b>合計</b><b>$'+total+'</b></div></div>';
+  h+='<div class="intro rtable" style="text-align:left"><div class="kv"><span>過關獎勵</span><span>$'+base+'</span></div><div class="kv"><span>剩下 '+left+' 次上菜</span><span>$'+left+'</span></div><div class="kv"><span>利息（每 $5 給 $1，最多 $5）</span><span>$'+interest+'</span></div>'+(cat?'<div class="kv"><span>廚具收入</span><span>$'+cat+'</span></div>':'')+'<div class="kv"><b>合計</b><b>$'+total+'</b></div></div>';
   $('#win-body').innerHTML=h;
   if(last){finishRun(true);return;}
   run.stage++;if(run.stage>2){run.stage=0;run.city++;}
@@ -470,11 +529,12 @@ $('#b-tomarket').addEventListener('click',goMarket);
 function loseRun(){finishRun(false);}
 const RETRIES=3;
 function finishRun(won){
-  const r=rec();if(won){r.wins=(r.wins||0)+1;r.best=12;}saveRec(r);
+  const r=rec();if(won){r.wins=(r.wins||0)+1;r.best=12;if(!run.daily)r.asc=Math.max(r.asc||0,Math.min(4,(run.asc||0)+1));try{window.GC&&GC.max('chef-cards',{ascWin:run.daily?0:(run.asc||0)+1});}catch(e){}}saveRec(r);
+  try{window.GC&&GC.max('chef-cards',{dish:run.bestDish||0,win:won?1:0});}catch(e){}
   if(run.retries==null)run.retries=RETRIES;
   const canRetry=!won&&run.retries>0;
   if(canRetry){run.retries--;run.retried=(run.retried||0)+1;run.phase='intro';save();}
-  else{run.phase='over';try{localStorage.removeItem(KEY);}catch(e){}}
+  else{run.phase='over';try{GCStore.removeItem(KEY);}catch(e){}}
   const reached=roundIdx()+(won?1:0);
   $('#over-body').innerHTML='<div class="intro"><p class="k">'+(won?'四座城市都征服了':'這一關沒過')+'</p><h2>'+(won?'傳奇主廚':'評審不滿意')+'</h2><p class="tgt">'+(won?'12 / 12':reached+' / 12')+'</p><p class="k">'+(won?'十二位評審全部過關'+(run.retried?'（用了 '+run.retried+' 次再挑戰）':'，一次都沒有重來！'):'在'+CITIES[run.city]+'的'+judgeName()+'這關，得到 '+fmt(R.score)+' / '+fmt(target())+' 分')+'</p></div>'+
     '<div class="intro rtable" style="text-align:left"><div class="kv"><span>單道最高</span><span>'+fmt(run.bestDish||0)+' 分</span></div><div class="kv"><span>牌組</span><span>'+run.deck.length+' 張</span></div><div class="kv"><span>廚具</span><span>'+(run.tools.map(t=>TOOLS[t].n).join('、')||'無')+'</span></div><div class="kv"><span>最常升級</span><span>'+(Object.keys(run.levels).sort((a,b)=>run.levels[b]-run.levels[a]).slice(0,1).map(k=>RMAP[k].n+' Lv'+(run.levels[k]+1))[0]||'沒有升級')+'</span></div></div>'+
@@ -482,14 +542,15 @@ function finishRun(won){
     '<button class="btn'+(canRetry?'':' main')+'" id="b-again" type="button" style="width:100%">重新開始旅程</button><button class="btn" id="b-home" type="button" style="width:100%;margin-top:8px">回到首頁</button>';
   show('over');
   const rb=$('#b-retry');if(rb)rb.addEventListener('click',()=>goIntro());
-  $('#b-again').addEventListener('click',()=>{newRun();goIntro();});
+  $('#b-again').addEventListener('click',()=>{if(run&&run.daily){newRun({daily:true});goIntro();}else openSetup();});
   $('#b-home').addEventListener('click',()=>{titleInit();show('title');});
 }
 
 /* ---------- market ---------- */
 const SHOPCARDS=Object.keys(CARDS).filter(k=>CARDS[k].p);
 function rollOffer(){
-  const cards=[];for(let i=0;i<4;i++){const id=Math.random()<.15?pick(['pork','shrimp','cabbage','rice','soy']):pick(SHOPCARDS);cards.push({id,price:CARDS[id].p||2,sold:false});}
+  if(run.daily)RNG=seedRng(run.seed+':m'+roundIdx()+':'+(run.rr||0));
+  const cards=[];for(let i=0;i<4;i++){const id=RNG()<.15?pick(['pork','shrimp','cabbage','rice','soy']):pick(SHOPCARDS);cards.push({id,price:(CARDS[id].p||2)+((run.asc||0)>=3?1:0),sold:false});}
   const avail=Object.keys(TOOLS).filter(t=>!run.tools.includes(t));shuffle(avail);
   const tools=avail.slice(0,2).map(t=>({t,sold:false}));
   const recipe=pick(RECIPES).id;
@@ -500,7 +561,7 @@ function renderMarket(){
   const o=run.offer;$('#m-money').textContent='$'+run.money;
   let h='<p class="sect">食材（加進牌組）</p><div class="offers" id="of-cards"></div>';
   h+='<p class="sect">廚具（'+run.tools.length+' / '+MAXTOOLS+'）</p>';
-  o.tools.forEach((x,i)=>{const T=TOOLS[x.t];h+='<div class="item"><div class="tx"><b>'+T.n+'</b><span>'+T.d+'</span></div><button class="btn" type="button" data-tool="'+i+'"'+(x.sold||run.money<T.p||run.tools.length>=MAXTOOLS?' disabled':'')+'>'+(x.sold?'已買':'$'+T.p)+'</button></div>';});
+  o.tools.forEach((x,i)=>{const T=TOOLS[x.t];h+='<div class="item"><div class="tx"><b>'+T.n+'</b><span>'+T.d+'</span></div><button class="btn" type="button" data-tool="'+i+'"'+(x.sold||run.money<tp(T)||run.tools.length>=MAXTOOLS?' disabled':'')+'>'+(x.sold?'已買':'$'+tp(T))+'</button></div>';});
   const RC=RMAP[o.recipe],L=lvl(o.recipe);
   h+='<p class="sect">食譜升級</p><div class="item"><div class="tx"><b>'+RC.n+' Lv'+(L+1)+' → Lv'+(L+2)+'</b><span>'+RC.d+'。基礎 '+(RC.base+L*RC.lb)+' → '+(RC.base+(L+1)*RC.lb)+'，倍率 '+(RC.mult+L*RC.lm)+' → '+(RC.mult+(L+1)*RC.lm)+'</span></div><button class="btn" type="button" id="buy-rec"'+(o.recipeSold||run.money<4?' disabled':'')+'>'+(o.recipeSold?'已升級':'$4')+'</button></div>';
   h+='<p class="sect">服務</p><div class="item"><div class="tx"><b>丟掉一張牌</b><span>牌組越精簡，越容易抽到想要的組合。每次逛市場一次。</span></div><button class="btn" type="button" id="buy-rm"'+(o.removed||run.money<3||run.deck.length<=10?' disabled':'')+'>'+(o.removed?'已使用':'$3')+'</button></div>';
@@ -516,10 +577,10 @@ function renderMarket(){
 }
 $('#market-body').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;const o=run.offer;
-  if(b.dataset.tool!=null){const x=o.tools[+b.dataset.tool],T=TOOLS[x.t];if(run.money<T.p||run.tools.length>=MAXTOOLS)return;run.money-=T.p;x.sold=true;run.tools.push(x.t);}
+  if(b.dataset.tool!=null){const x=o.tools[+b.dataset.tool],T=TOOLS[x.t];if(run.money<tp(T)||run.tools.length>=MAXTOOLS)return;run.money-=tp(T);x.sold=true;run.tools.push(x.t);}
   else if(b.id==='buy-rec'){if(run.money<4)return;run.money-=4;run.levels[o.recipe]=lvl(o.recipe)+1;o.recipeSold=true;}
   else if(b.id==='buy-rm'){showDeck(true,c=>{if(run.money<3)return;run.money-=3;run.deck=run.deck.filter(d=>d.u!==c.u);o.removed=true;save();renderMarket();});return;}
-  else if(b.id==='buy-rr'){if(run.money<2)return;run.money-=2;const keep={recipe:o.recipe,recipeSold:o.recipeSold,removed:o.removed};run.offer=Object.assign(rollOffer(),keep);}
+  else if(b.id==='buy-rr'){if(run.money<2)return;run.money-=2;const keep={recipe:o.recipe,recipeSold:o.recipeSold,removed:o.removed};run.rr=(run.rr||0)+1;run.offer=Object.assign(rollOffer(),keep);}
   else if(b.dataset.sell!=null){const i=+b.dataset.sell,t=run.tools[i];run.money+=Math.floor(TOOLS[t].p/2);run.tools.splice(i,1);}
   else if(b.id==='see-deck'){showDeck(false);return;}
   else return;

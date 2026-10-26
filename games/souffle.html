@@ -57,6 +57,11 @@ h1 span:nth-child(2){animation-delay:1.62s}
 h1 span:nth-child(3){animation-delay:1.74s}
 @keyframes puff{from{transform:scale(.55,.4);opacity:0}to{transform:none;opacity:1}}
 .lede{text-wrap:balance;max-width:20em;margin:0 0 22px;color:var(--ink-soft);font-size:1.05rem;line-height:1.75}
+.flavs{display:flex;gap:8px;margin:0 0 6px;justify-content:center;flex-wrap:wrap}
+.flavs button{border:2px solid var(--vein);background:var(--surface);color:var(--ink);border-radius:14px;padding:8px 14px;font:inherit;cursor:pointer}
+.flavs button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.flavs button:disabled{opacity:.45;cursor:default}
+.fdesc{margin:0 0 14px;color:var(--ink-soft);min-height:1.5em;text-align:center;font-size:.95rem}
 .best{margin:14px 0 0;color:var(--ink-soft);font-size:.95rem;min-height:1.5em}
 
 /* buttons */
@@ -97,7 +102,7 @@ h1 span:nth-child(3){animation-delay:1.74s}
 .card{background:var(--surface);border:2px solid var(--ink);border-radius:20px;padding:18px 18px 20px;max-width:340px;width:100%;box-shadow:0 6px 0 var(--ink)}
 .card .n{margin:0;color:var(--ink-soft);font-size:.9rem}
 .card h3{margin:2px 0 8px;font-weight:400;font-size:1.7rem}
-.card .t{text-wrap:pretty;margin:0 0 18px;line-height:1.75;font-size:1rem}
+.card .t{white-space:pre-line;text-wrap:pretty;margin:0 0 18px;line-height:1.75;font-size:1rem}
 .card .act{width:100%}
 .controls{display:flex;gap:10px;padding:10px 12px 16px}
 
@@ -135,6 +140,8 @@ h1 span:nth-child(3){animation-delay:1.74s}
     <canvas class="hero" id="hero" aria-hidden="true"></canvas>
     <h1 id="t-h"><span>舒</span><span>芙</span><span>蕾</span></h1>
     <p class="lede">從分蛋到出爐，一共六步。<br>每一步都會決定它最後能膨多高。</p>
+    <div class="flavs" id="flavs" role="group" aria-label="口味"></div>
+    <p class="fdesc" id="fdesc"></p>
     <button class="act" id="start" type="button">開始做</button>
     <p class="best" id="best"></p>
   </section>
@@ -206,7 +213,8 @@ function buzz(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
 function seeded(n,seed){const a=[];let s=seed;for(let i=0;i<n;i++){s=(s*9301+49297)%233280;a.push(s/233280);}return a;}
 
 const RAMP=[[0,'#F7E8B5'],[0.45,'#F0D088'],[0.62,'#E0A04A'],[0.8,'#B56E2A'],[1.0,'#784218'],[1.25,'#3A2416']];
-function crust(t){t=clamp(t,0,1.25);for(let i=1;i<RAMP.length;i++){if(t<=RAMP[i][0]){const a=RAMP[i-1],b=RAMP[i];return mixHex(a[1],b[1],(t-a[0])/(b[0]-a[0]));}}return RAMP[RAMP.length-1][1];}
+function crustBase(t){t=clamp(t,0,1.25);for(let i=1;i<RAMP.length;i++){if(t<=RAMP[i][0]){const a=RAMP[i-1],b=RAMP[i];return mixHex(a[1],b[1],(t-a[0])/(b[0]-a[0]));}}return RAMP[RAMP.length-1][1];}
+function crust(t){const b=crustBase(t),F=FLV();if(!F.tint)return b;return mixHex(b,F.tint,F.tw*(F===FLAVORS.matcha?(1-clamp(t,0,1)*.55):1));}
 
 let P={};
 function readPalette(){
@@ -280,7 +288,7 @@ function drawSouffle(c,cx,rimY,rx,rise,ct,o){
   o=o||{};const ry=rx*.3,w=rx*.94;
   if(rise<.6){ell(c,cx,rimY,w,ry*.9,crust(ct*.9),OUT,.5);return;}
   const tilt=o.tilt||0,tx=cx+tilt*rx*.3,top=rimY-rise;
-  const side=mixHex('#F6E6B0',crust(ct*.8),.55);
+  const side=mixHex(tintC('#F6E6B0',.35),crust(ct*.8),.55);
   c.beginPath();c.moveTo(cx-w,rimY);c.lineTo(tx-w,top);c.lineTo(tx+w,top);c.lineTo(cx+w,rimY);c.ellipse(cx,rimY,w,ry*.94,0,0,Math.PI,false);c.closePath();
   fs(c,side,OUT,.6);
   c.save();c.clip();c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=.5;
@@ -333,7 +341,29 @@ function flame(c,x,y,w,h){
 
 /* ---------- run state ---------- */
 const S={};
-function resetRun(){Object.assign(S,{scores:{},notes:{},contam:0,overflow:0,finalH:0,finalColor:.6});}
+const FLAVORS={
+  plain:{n:'原味',tint:null,tw:0,win:[.55,.75],mid:.65,zone:[65,85],d:'經典的香草舒芙蕾，最適合練習。'},
+  choc:{n:'巧克力',tint:'#4B2A1E',tw:.5,win:[.68,.88],mid:.78,zone:[65,85],d:'烤色要更深一點，烤得久才夠香。'},
+  matcha:{n:'抹茶',tint:'#7FA256',tw:.5,win:[.48,.64],mid:.56,zone:[69,82],d:'烤色要淺，蛋白霜的甜蜜點也更窄。'}
+};
+const CONDS=[
+  {id:'ok',n:'一切正常',d:'今天廚房的狀況很好。',w:3},
+  {id:'hot',n:'烤箱偏熱',d:'烤色會比平常快，要早一點出爐。',w:2},
+  {id:'cold',n:'烤箱偏冷',d:'烤得比較慢，要多等一下。',w:2},
+  {id:'humid',n:'濕氣很重',d:'蛋白比較難打發，要多刷一會兒。',w:2},
+  {id:'big',n:'今天的蛋比較大',d:'敲蛋的容錯變大，比較好分蛋。',w:1},
+  {id:'cool',n:'廚房很冷',d:'麵糊比較慢變稠，要多煮一下。',w:2}
+];
+const FKEY='souffle-fl';let FL={best:{},pick:'plain'};
+try{const v=JSON.parse(GCStore.getItem(FKEY)||'null');if(v&&v.best)FL={best:v.best,pick:v.pick||'plain'};}catch(e){}
+function saveFL(){try{GCStore.setItem(FKEY,JSON.stringify(FL));}catch(e){}}
+function starsOfScore(v){return v>=85?3:v>=65?2:v>=40?1:0;}
+function flavorOpen(k){return k==='plain'||(k==='choc'&&starsOfScore(FL.best.plain||0)>=2)||(k==='matcha'&&starsOfScore(FL.best.choc||0)>=2);}
+function FLV(){return FLAVORS[S.flavor||'plain'];}
+function tintC(h,w){const F=FLV();return F.tint?mixHex(h,F.tint,w==null?F.tw:w):h;}
+function rollCond(){const t=CONDS.reduce((a,c)=>a+c.w,0);let r=Math.random()*t;for(const c of CONDS){r-=c.w;if(r<=0)return c;}return CONDS[0];}
+function condOf(){return CONDS.find(c=>c.id===S.cond)||CONDS[0];}
+function resetRun(){Object.assign(S,{scores:{},notes:{},contam:0,overflow:0,finalH:0,finalColor:.6,flavor:FL.pick,cond:rollCond().id});}
 resetRun();
 let NOW=0;
 
@@ -342,7 +372,7 @@ const eggs={
   key:'eggs',name:'分蛋',hint:'光標到綠區正中間時點一下',
   intro:'蛋白待會要打發，蛋黃一點都不能混進去。光標滑到綠區正中間時點一下，把蛋敲開。共三顆，一顆比一顆快。',
   speeds:[.85,1.2,1.6],ok:[.17,.13,.10],pf:[.055,.045,.035],
-  init(){this.st={n:0,p:.03,dir:1,phase:'aim',t:0,res:[],whites:0,yolks:[],streaks:[],cur:null,done:false};},
+  init(){const k=S.cond==='big'?1.2:1;this.ok=[.17,.13,.10].map(x=>x*k);this.pf=[.055,.045,.035].map(x=>x*k);this.st={n:0,p:.03,dir:1,phase:'aim',t:0,res:[],whites:0,yolks:[],streaks:[],cur:null,done:false};},
   controls(){return[{label:'敲蛋',onTap:()=>this.tap()}];},
   down(){this.tap();},
   key_(k){if(k===' '||k==='Enter')this.tap();},
@@ -433,10 +463,10 @@ const base={
     st.temp+=(st.holding?30:0)*dt-.17*(st.temp-24)*dt+st.gust*.7*dt;
     st.temp=clamp(st.temp,20,125);
     const T=st.temp;
-    if(T>=76&&T<=92)st.thick+=9*dt;
-    else if(T>92){st.thick+=9*dt;st.lumps+=(T-92)*.4*dt;if(T>105)st.lumps+=2.5*dt;
+    if(T>=76&&T<=92)st.thick+=9*(S.cond==='cool'?.75:1)*dt;
+    else if(T>92){st.thick+=9*(S.cond==='cool'?.75:1)*dt;st.lumps+=(T-92)*.4*dt;if(T>105)st.lumps+=2.5*dt;
       if(st.time-st.warnAt>1.6){st.warnAt=st.time;toast(T>105?'快燒焦了！':'太燙了，會結塊','bad');buzz(20);}}
-    else if(T>60)st.thick+=2.2*dt;
+    else if(T>60)st.thick+=2.2*(S.cond==='cool'?.75:1)*dt;
     if(st.thick>=100){st.thick=100;this.end();}else if(st.time>=32){toast('時間到');this.end();}
   },
   end(){
@@ -457,7 +487,7 @@ const base={
     c.fillStyle='rgba(255,225,195,.35)';c.fillRect(28.5,47,3,21);c.fillStyle='rgba(60,20,5,.12)';c.fillRect(58,46,10,26);
     ell(c,46,44,22,5.6,C.copperDark);
     c.save();c.beginPath();c.ellipse(46,44,21,5.1,0,0,Math.PI*2);c.clip();
-    let bc=mixHex(C.batterPale,C.batter,st.thick/100);if(st.lumps>14)bc=mixHex(bc,'#C08A3A',clamp((st.lumps-14)/20,0,.6));
+    let bc=mixHex(C.batterPale,C.batter,st.thick/100);bc=tintC(bc,.45);if(st.lumps>14)bc=mixHex(bc,'#C08A3A',clamp((st.lumps-14)/20,0,.6));
     ell(c,46,45.4,21,5,bc);
     const nl=Math.min(st.lumpPts.length,Math.floor(st.lumps*1.5));
     for(let k=0;k<nl;k++){const p=st.lumpPts[k];ell(c,p.x,p.y,.75,.45,'#D29B3C','rgba(58,35,24,.6)',.25);}
@@ -498,10 +528,10 @@ const whip={
     const q=Math.min(st.queue,300*dt);st.queue-=q;
     const travel=Math.min(st.acc+q,420*dt);st.acc=0;
     if(travel>.05)st.idle=0;else st.idle+=dt;
-    let gain=travel*.024;
+    let gain=travel*.024*(S.cond==='humid'?.75:1);
     if(st.v>st.cap-8)gain*=clamp((st.cap-st.v)/8,0,1);
     st.v+=gain;
-    const z=st.v<35?0:st.v<65?1:st.v<85?2:3;
+    const FZ=FLV().zone,z=st.v<35?0:st.v<FZ[0]?1:st.v<FZ[1]?2:3;
     if(z>st.zone){st.zone=z;toast(['','濕性發泡了','硬性發泡！可以停了','打過頭了'][z],z===2?'good':z===3?'bad':'');if(z===2)buzz(20);}
     if(!st.capWarned&&st.cap<85&&st.v>st.cap-2){st.capWarned=true;toast('蛋黃讓蛋白打不上去了','bad');}
     if(st.time>=30){toast('時間到');this.stop();}
@@ -509,8 +539,8 @@ const whip={
   stop(){
     const st=this.st;if(!running||st.done)return;st.done=true;st.active=false;
     const v=st.v;let score;
-    if(v>=65&&v<=85)score=100-Math.abs(v-75)*2;else if(v>85)score=Math.max(10,75-(v-85)*4);else if(v>=45)score=30+(v-45)*2.2;else score=v*.66;
-    let note=v>85?'打過頭，蛋白霜變得粗糙分離':v>=65?'硬性發泡，尖角挺立':v>=45?'只到濕性發泡，撐不太起來':'蛋白幾乎沒打發';
+    if(v>=FLV().zone[0]&&v<=FLV().zone[1])score=100-Math.abs(v-(FLV().zone[0]+FLV().zone[1])/2)*2;else if(v>FLV().zone[1])score=Math.max(10,75-(v-FLV().zone[1])*4);else if(v>=45)score=30+(v-45)*2.2;else score=v*.66;
+    let note=v>FLV().zone[1]?'打過頭，蛋白霜變得粗糙分離':v>=FLV().zone[0]?'硬性發泡，尖角挺立':v>=45?'只到濕性發泡，撐不太起來':'蛋白幾乎沒打發';
     if(st.cap<85)note+='，蛋黃混入也拖累了蛋白';
     finishStage([{key:'whip',score,note}]);
   },
@@ -537,8 +567,8 @@ const whip={
     drawWhisk(c,st.wx,st.wy-6,st.rot);
     const mx=8,mw=84,my=91,mh=4;
     c.save();rr(c,mx,my,mw,mh,2);c.clip();
-    c.fillStyle=P.track;c.fillRect(mx,my,mw,mh);c.fillStyle=rgba(P.yolk,.45);c.fillRect(mx+mw*.35,my,mw*.3,mh);
-    c.fillStyle=P.good;c.fillRect(mx+mw*.65,my,mw*.2,mh);c.fillStyle=P.bad;c.fillRect(mx+mw*.85,my,mw*.15,mh);c.restore();
+    c.fillStyle=P.track;c.fillRect(mx,my,mw,mh);const FZ=FLV().zone;c.fillStyle=rgba(P.yolk,.45);c.fillRect(mx+mw*.35,my,mw*(FZ[0]/100-.35),mh);
+    c.fillStyle=P.good;c.fillRect(mx+mw*FZ[0]/100,my,mw*(FZ[1]-FZ[0])/100,mh);c.fillStyle=P.bad;c.fillRect(mx+mw*FZ[1]/100,my,mw*(1-FZ[1]/100),mh);c.restore();
     rr(c,mx,my,mw,mh,2);fs(c,null,P.ink,.45);
     txt(c,'起泡',mx+mw*.175,87,3,P.inkSoft);txt(c,'濕性發泡',mx+mw*.5,87,3,P.inkSoft);txt(c,'硬性發泡',mx+mw*.75,87,3,P.ink);txt(c,'過頭',mx+mw*.925,87,3,P.inkSoft);
     if(st.cap<100){const cx=mx+mw*st.cap/100;c.setLineDash([.8,.8]);c.beginPath();c.moveTo(cx,my-1.2);c.lineTo(cx,my+mh+1.2);c.lineWidth=.5;c.strokeStyle=P.bad;c.stroke();c.setLineDash([]);}
@@ -597,7 +627,7 @@ const fold={
     const st=this.st,bx=50,by=54,R=35,inR=R-3;
     ell(c,bx,by,R,R,C.bowl,OUT,.7);ell(c,bx,by,R-1.3,R-1.3,null,C.enamel,1);
     c.save();c.beginPath();c.arc(bx,by,inR,0,Math.PI*2);c.clip();
-    c.fillStyle=mixHex('#F1CB6A','#F7E3A4',st.mix/100);c.fillRect(bx-inR,by-inR,inR*2,inR*2);
+    c.fillStyle=mixHex(tintC('#F1CB6A',.5),tintC('#F7E3A4',.5),st.mix/100);c.fillRect(bx-inR,by-inR,inR*2,inR*2);
     const rot=st.mix*.045,a=Math.pow(1-st.mix/100,.8);
     if(a>.01){c.globalAlpha=a;st.blobs.forEach(b=>{const ang=b.a+rot*(1.2-b.d/30),dist=b.d*(1-st.mix/260);
       c.save();c.translate(bx+Math.cos(ang)*dist,by+Math.sin(ang)*dist);c.rotate(ang+Math.PI/2);c.beginPath();c.ellipse(0,0,b.r*(1+st.mix/45),Math.max(.3,b.r*(1-st.mix/140)),0,0,Math.PI*2);c.fillStyle='#FFFFFF';c.fill();c.restore();});c.globalAlpha=1;}
@@ -674,14 +704,14 @@ const fill={
 };
 
 /* ---------- stage 6: bake + serve ---------- */
-function colorScore(ct){if(ct>=.55&&ct<=.75)return 100;if(ct<.55)return clamp(100-(.55-ct)*320,0,100);return clamp(100-(ct-.75)*330,0,100);}
+function colorScore(ct){const w=FLV().win;if(ct>=w[0]&&ct<=w[1])return 100;if(ct<w[0])return clamp(100-(w[0]-ct)*320,0,100);return clamp(100-(ct-w[1])*330,0,100);}
 const bake={
   key:'bake',name:'烘烤',hint:'膨到最高、表面金黃時出爐',
   intro:'舒芙蕾在烤箱裡會慢慢膨起來。等它膨到最高、表面轉成金黃色時按出爐。出爐後幾秒內就會開始塌，要馬上上桌。',
   init(){
     const sc=S.scores;
     const q=((sc.eggs||0)*.08+(sc.base||0)*.14+(sc.whip||0)*.3+(sc.fold||0)*.3+(sc.fill||0)*.18)/100;
-    S.q=q;this.st={phase:'bake',tb:0,k:.88+Math.random()*.24,Hmax:10+30*q,h:0,c:0,s:0,set:0,warned:false,flick:1,tilt:clamp((S.overflow-2)/10,0,1),done:false};
+    S.q=q;this.st={phase:'bake',tb:0,k:(.88+Math.random()*.24)*(S.cond==='hot'?1.3:S.cond==='cold'?.8:1),Hmax:10+30*q,h:0,c:0,s:0,set:0,warned:false,flick:1,tilt:clamp((S.overflow-2)/10,0,1),done:false};
   },
   controls(){return[{label:'出爐',onTap:()=>this.takeOut()}];},
   heightAt(tb){const st=this.st;let h=st.Hmax*easeOutCubic(clamp(tb/11,0,1));if(tb>14)h-=Math.min(.3,(tb-14)*.035)*st.Hmax;return h;},
@@ -701,7 +731,7 @@ const bake={
     const st=this.st;if(!running||st.phase!=='bake')return;
     st.phase='serve';st.s=0;st.set=smooth(6,11,st.tb);
     const cs=colorScore(st.c);st.bakeScore=cs*.6+(st.h/st.Hmax)*100*.4;
-    st.bakeNote=st.c<.5?'太早出爐，表面還很白，中間沒定型':st.c<.55?'再多烤一下會更金黃':st.c<=.75?'表面金黃，出爐時機剛好':st.c<=1?'烤得偏久，表面有點乾':'烤焦了';
+    {const w=FLV().win;st.bakeNote=st.c<w[0]-.05?'太早出爐，表面還很白，中間沒定型':st.c<w[0]?'再多烤一下顏色會更好':st.c<=w[1]?'烤色剛好，出爐時機對了（'+FLV().n+'）':st.c<=w[1]+.25?'烤得偏久，表面有點乾':'烤焦了';}
     renderControls([{label:'上桌！',onTap:()=>this.serve()}]);setControlsEnabled(true);buzz(20);
     $('#stage-hint').textContent='它很快就會塌，馬上上桌';
   },
@@ -724,7 +754,7 @@ const bake={
     rr(c,8,4,84,92,6);fs(c,C.oven,OUT,.8);
     rr(c,12,8,76,14,3);fs(c,C.ovenDark,OUT,.5);
     [[22,NOW*.3],[35,-.7],[48,st.tb*.25]].forEach(([kx,rot])=>{ell(c,kx,15,4.2,4.2,C.brass,OUT,.5);ell(c,kx,15,2.8,2.8,'#E2C27E');c.save();c.translate(kx,15);c.rotate(rot);c.beginPath();c.moveTo(0,0);c.lineTo(0,-3.3);c.lineWidth=.8;c.strokeStyle=OUT;c.stroke();c.restore();});
-    txt(c,'目標色',67,15,3,'#F2E6D2');rr(c,76,11.5,9,7,2);fs(c,crust(.65),OUT,.5);
+    txt(c,'目標色',67,15,3,'#F2E6D2');rr(c,76,11.5,9,7,2);fs(c,crust(FLV().mid),OUT,.5);
     rr(c,12,25,76,67,4);fs(c,C.door,OUT,.6);
     rr(c,20,28,60,2.6,1.3);fs(c,C.brass,OUT,.5);
     rr(c,20,34,60,52,5);fs(c,C.glass,OUT,.6);
@@ -785,7 +815,7 @@ function drawResultHero(){const c=fitHero($('#res-hero'));drawPlate(c,S.finalH*.
 
 /* ---------- UI flow ---------- */
 let screen='title',cur=null,curIdx=0,running=false,finishing=false;
-function show(name){screen=name;['title','game','result'].forEach(n=>$('#'+n).classList.toggle('on',n===name));if(name==='game')requestAnimationFrame(resize);}
+function show(name){screen=name;if(name==='title'&&typeof renderFlavs==='function')renderFlavs();['title','game','result'].forEach(n=>$('#'+n).classList.toggle('on',n===name));if(name==='game')requestAnimationFrame(resize);}
 let toastTimer=0;
 function toast(msg,kind){const t=$('#toast');t.textContent=msg;t.className='toast show'+(kind?' '+kind:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='toast';},1300);}
 function renderSteps(){
@@ -813,7 +843,7 @@ function goStage(i){
   cur.init();
   $('#stage-title').textContent=cur.name;$('#stage-hint').textContent=cur.hint;
   renderSteps();renderControls(cur.controls());setControlsEnabled(false);
-  $('#intro-n').textContent='第 '+(i+1)+' 步，共 6 步';$('#intro-title').textContent=cur.name;$('#intro-text').textContent=cur.intro;
+  $('#intro-n').textContent='第 '+(i+1)+' 步，共 6 步';$('#intro-title').textContent=cur.name;$('#intro-text').textContent=cur.intro+(i===0?'\n\n今天做「'+FLV().n+'」。今日條件：'+condOf().n+'，'+condOf().d:'');
   $('#intro').hidden=false;setTimeout(()=>{try{$('#intro-go').focus({preventScroll:true});}catch(e){}},50);
 }
 $('#intro-go').addEventListener('click',()=>{$('#intro').hidden=true;running=true;setControlsEnabled(true);const b=document.querySelector('#controls .act');if(b)try{b.focus({preventScroll:true});}catch(e){}});
@@ -822,6 +852,13 @@ function finishStage(results){
   results.forEach(r=>{S.scores[r.key]=Math.round(clamp(r.score,0,100));S.notes[r.key]=r.note;});
   setTimeout(()=>{if(screen!=='game'||cur!==STAGES[curIdx])return;if(curIdx<STAGES.length-1)goStage(curIdx+1);else showResult();},1400);
 }
+function renderFlavs(){
+  const box=$('#flavs');box.innerHTML=Object.keys(FLAVORS).map(k=>{const ok=flavorOpen(k);return '<button type="button" data-fl="'+k+'" aria-pressed="'+(FL.pick===k)+'"'+(ok?'':' disabled')+'>'+FLAVORS[k].n+(ok?'':'（未解鎖）')+'</button>';}).join('');
+  const F=FLAVORS[FL.pick];$('#fdesc').textContent=F.d+(flavorOpen('choc')&&flavorOpen('matcha')?'':'　原味 2 顆星解鎖巧克力，巧克力 2 顆星解鎖抹茶。');
+  S.flavor=FL.pick;
+}
+renderFlavs();
+$('#flavs').addEventListener('click',e=>{const b=e.target.closest('[data-fl]');if(!b||b.disabled)return;FL.pick=b.dataset.fl;saveFL();renderFlavs();});
 function startGame(){resetRun();show('game');goStage(0);}
 $('#start').addEventListener('click',startGame);
 $('#again').addEventListener('click',startGame);
@@ -835,10 +872,11 @@ showBest();
 function scoreColor(v){return v>=80?'var(--good)':v>=50?'var(--yolk)':'var(--bad)';}
 function showResult(){
   const qf=.4+.6*clamp(S.q||0,0,1);let total=0;ROWS.forEach(([k,,w])=>{total+=(S.scores[k]||0)*w*(k==='bake'||k==='serve'?qf:1);});total=Math.round(total);
-  try{window.GC&&GC.report('souffle',{score:total});}catch(e){}
+  try{window.GC&&GC.report('souffle',{score:total,choc:S.flavor==='choc'?total:0,matcha:S.flavor==='matcha'?total:0,hard:S.cond!=='ok'?total:0});}catch(e){}
   const g=GRADES.find(x=>total>=x[0]);
   $('#r-score').textContent=total;$('#r-grade').textContent=g[1];$('#r-desc').textContent=g[2];
-  const cm=S.finalH*.14;$('#r-rise').textContent=cm<.4?'幾乎沒有膨起來':'高出杯緣 '+cm.toFixed(1)+' 公分';
+  const cm=S.finalH*.14;const stN=starsOfScore(total);$('#r-rise').textContent=(cm<.4?'幾乎沒有膨起來':'高出杯緣 '+cm.toFixed(1)+' 公分')+'　口味：'+FLV().n+'　條件：'+condOf().n+'　'+'★'.repeat(stN)+'☆'.repeat(3-stN);
+  {const pb=FL.best[S.flavor||'plain']||0;const before={choc:flavorOpen('choc'),matcha:flavorOpen('matcha')};if(total>pb){FL.best[S.flavor||'plain']=total;saveFL();}if(!before.choc&&flavorOpen('choc'))toast('解鎖巧克力口味！');if(!before.matcha&&flavorOpen('matcha'))toast('解鎖抹茶口味！');}
   const best=loadBest();
   if(!best||total>best.score){saveBest({score:total,grade:g[1]});$('#r-best').textContent=best?'新紀錄！比上次多 '+(total-best.score)+' 分':'第一份成績已記下';}
   else $('#r-best').textContent='最佳紀錄 '+best.score+' 分';

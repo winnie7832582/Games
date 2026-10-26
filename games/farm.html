@@ -69,6 +69,7 @@ button{font:inherit;color:inherit}
 .done{opacity:.55}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -135,8 +136,8 @@ function newFarm(){
   const plots=[];for(let i=0;i<12;i++)plots.push({c:null,g:0,w:0,weed:false,bug:false});
   return{v:1,last:Date.now(),coins:30,xp:0,plots,seeds:{cabbage:4},stock:{},up:{plots:4,sprinkler:false,scarecrow:false,fert:false},orders:{day:'',list:[]},daily:'',stats:{harvest:0,orders:0,earned:0}};
 }
-function save(){try{localStorage.setItem(KEY,JSON.stringify(F));}catch(e){}}
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
+function save(){try{GCStore.setItem(KEY,JSON.stringify(F));}catch(e){}}
+function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
 function level(){return Math.min(10,1+Math.floor(Math.sqrt(F.xp/25)));}
 function xpAt(l){return 25*(l-1)*(l-1);}
 function price(id){const base=CROPS[id].sell;const r=rng(today()+id)();return Math.round(base*(0.8+0.4*r));}

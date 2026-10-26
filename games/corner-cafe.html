@@ -209,9 +209,24 @@ const CHARS={
     fav:'earlgrey',ok:['lemontart','latte','cheesecake'],bad:['sandwich'],visit:[3,5,6],eve:{days:[3,5],place:'Livehouse',bg:'stage'},
     gifts:{candle:10,vinyl:10,flowers:5,pen:2,towel:-4,bento:-2},stats:['taste','charm'],
     topics:{good:['古典音樂','旅行','老電影'],bad:['健身','加班']},
-    lines:{fav:'伯爵茶的香氣，剛剛好。',ok:'謝謝，很好喝。',bad:'（她放下杯子）早上吃這麼多，我不太習慣。',again:'今天也麻煩你了。',good:'她輕輕笑了，眼神比平常柔和。',meh:'她托著下巴，饒有興致地看著你。',dull:'「是嗎。」她轉頭看向窗外的雨。'}}
+    lines:{fav:'伯爵茶的香氣，剛剛好。',ok:'謝謝，很好喝。',bad:'（她放下杯子）早上吃這麼多，我不太習慣。',again:'今天也麻煩你了。',good:'她輕輕笑了，眼神比平常柔和。',meh:'她托著下巴，饒有興致地看著你。',dull:'「是嗎。」她轉頭看向窗外的雨。'}},
+  yichen:{n:'江亦辰',short:'亦辰',age:31,job:'獸醫',desc:'溫柔穩重，身上總有淡淡的消毒水味和一點狗毛。',
+    look:{skin:'#EBCDB4',hair:'#4A3A2E',outfit:'#6FA48F',collar:'#F4F7F5',style:'short',acc:'none'},
+    fav:'cinnamon',ok:['latte','cocoa'],bad:['pourover','lemontart'],visit:[1,3,6],eve:{days:[0,4],place:'動物醫院',bg:'clinic'},
+    gifts:{bento:10,towel:8,flowers:5,pencils:2,pen:0,vinyl:-2,candle:-1},stats:['cook','fit'],
+    topics:{good:['動物','散步','咖啡豆的故事'],bad:['外食','抱怨天氣']},
+    lines:{fav:'肉桂捲……整間店都是香的，謝謝。',ok:'謝謝，剛好是我想喝的。',bad:'（他禮貌地笑了笑）我今天喝不太下，抱歉。',again:'老樣子，麻煩你了。',good:'他笑得很溫柔，說話的速度也慢了下來。',meh:'他點點頭，專心地聽著。',dull:'他笑了笑，視線落到手機裡的寵物照片。'}},
+  ruolan:{n:'白若蘭',short:'若蘭',age:27,job:'花藝師',desc:'優雅又有點俏皮，身上總有花草的香氣。',
+    look:{skin:'#F5DCC9',hair:'#B05A3C',outfit:'#E6A5B8',collar:'#FFFFFF',style:'long',acc:'earring'},
+    fav:'matcha',ok:['earlgrey','cheesecake'],bad:['americano','sandwich'],visit:[0,2,5],eve:{days:[2,6],place:'花市',bg:'flower'},
+    gifts:{candle:10,vinyl:6,pencils:5,pen:4,flowers:2,towel:-3,bento:-2},stats:['taste','charm'],
+    topics:{good:['季節的花','茶道','旅行'],bad:['加班','速食']},
+    lines:{fav:'抹茶的香氣，像早晨剛開的花。',ok:'謝謝你，很好喝。',bad:'（她輕輕皺了一下眉）這個……我可能不太適合。',again:'今天也請給我一杯暖的。',good:'她眼睛彎成月牙，聲音輕快了起來。',meh:'她托著臉頰，認真地聽你說。',dull:'她禮貌地笑著，手指卻無意識地轉著花莖。'}}
 };
 const ORDER_IDS=['yuan','qing','kai','lin'];
+const S2=['yichen','ruolan'];
+function s2on(){return gal().length>=1;}
+function ids(){return s2on()?ORDER_IDS.concat(S2):ORDER_IDS;}
 const EVREQ=[{aff:12},{aff:28,si:0,sv:25},{aff:45,si:1,sv:35},{aff:62},{aff:80,day:18}];
 const ACTS=[
   {id:'cooking',n:'烹飪教室',cost:500,en:25,fx:{cook:6},d:'廚藝 +6，也能研發新品'},
@@ -224,13 +239,14 @@ const ACTS=[
 /* ================= STATE ================= */
 const KEY='cornercafe-v1',GAL='cornercafe-endings';
 let G=null;
-function newGame(name){
-  G={v:1,name:name||'小晞',day:1,money:3000,rep:20,energy:100,stats:{cook:10,talk:10,charm:10,taste:10,fit:10},aff:{yuan:0,qing:0,kai:0,lin:0},met:{},ev:{yuan:0,qing:0,kai:0,lin:0},
+function newGame(name,inh){
+  G={v:1,name:name||'小晞',day:1,money:3000,rep:20,energy:100,stats:{cook:10,talk:10,charm:10,taste:10,fit:10},aff:{yuan:0,qing:0,kai:0,lin:0,yichen:0,ruolan:0},met:{},ev:{yuan:0,qing:0,kai:0,lin:0,yichen:0,ruolan:0},
     menu:['americano','latte','earlgrey','cocoa','sandwich'],gifts:{},partner:null,friend:{},phase:'morning',log:[],seenHint:{}};
+  if(inh){try{Object.keys(G.stats).forEach(k=>{G.stats[k]=Math.max(10,Math.round((inh.stats&&inh.stats[k]||10)*.5));});G.menu=Array.from(new Set(G.menu.concat(inh.menu||[])));G.money=3000+Math.min(3000,Math.round((inh.money||0)*.1));G.rep=Math.max(20,Math.round((inh.rep||0)*.5));G.inherit=true;window.GC&&GC.max('corner-cafe',{inherit:1});}catch(e){}}
   save();
 }
 function save(){try{GCStore.setItem(KEY,JSON.stringify(G));}catch(e){}}
-function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
+function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');if(v&&v.v===1){v.aff=Object.assign({yichen:0,ruolan:0},v.aff);v.ev=Object.assign({yichen:0,ruolan:0},v.ev);return v;}return null;}catch(e){return null;}}
 function gal(){try{return JSON.parse(GCStore.getItem(GAL)||'[]');}catch(e){return [];}}
 function addGal(id){const g=gal();if(!g.includes(id)){g.push(id);try{GCStore.setItem(GAL,JSON.stringify(g));}catch(e){}}
   try{if(window.GC){var o={endings:gal().length};o['end_'+id]=1;if(id.indexOf('love-')===0)o.love=1;GC.report('corner-cafe',o);}}catch(e){}}
@@ -273,6 +289,8 @@ function portrait(L,face){
 }
 function genericLook(){return{skin:pick(['#F2D4BF','#E9BE9C','#D9A57E','#F6DCC8','#C98E66']),hair:pick(['#22242B','#4A3326','#8A5A3B','#B9B1A8','#6B3A2E']),outfit:pick(['#7FA7C9','#9BC48F','#E3A86B','#B392C9','#D97A7A','#7A8899']),collar:'#FFFFFF',style:pick(['short','bob','part','long','spiky']),acc:pick(['none','none','glasses'])};}
 const BG={
+  clinic:(t)=>'<svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="300" fill="'+(t==='night'?'#2E3A3A':'#E6F1EC')+'"/><rect y="210" width="420" height="90" fill="'+(t==='night'?'#3D4B49':'#C5D8CF')+'"/><rect x="40" y="50" width="120" height="100" rx="6" fill="'+(t==='night'?'#1F2A44':'#CFE6F2')+'" stroke="#8AA79B" stroke-width="6"/><path d="M100 50V150M40 100H160" stroke="#8AA79B" stroke-width="4"/><rect x="230" y="110" width="150" height="100" rx="6" fill="'+(t==='night'?'#566866':'#F4F8F6')+'" stroke="#8AA79B" stroke-width="4"/><path d="M290 150h30M305 135v30" stroke="#4FA383" stroke-width="10" stroke-linecap="round"/><ellipse cx="90" cy="244" rx="34" ry="14" fill="#D9B38C"/><circle cx="116" cy="228" r="13" fill="#D9B38C"/><circle cx="108" cy="218" r="5" fill="#B88F66"/></svg>',
+  flower:(t)=>'<svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="300" fill="'+(t==='night'?'#3B2F3F':'#FCEBEF')+'"/><rect y="215" width="420" height="85" fill="'+(t==='night'?'#4A3B44':'#D9B99A')+'"/><rect x="30" y="140" width="360" height="10" rx="3" fill="#A87A55"/><rect x="30" y="100" width="360" height="10" rx="3" fill="#A87A55"/>'+['#E76F99','#F2C14E','#9B7FD1','#F28C8C','#7BC47F','#5AA9E6'].map((c,i)=>'<rect x="'+(48+i*58)+'" y="118" width="32" height="22" rx="4" fill="#C98E66"/><circle cx="'+(64+i*58)+'" cy="106" r="13" fill="'+c+'"/><circle cx="'+(64+i*58)+'" cy="106" r="4" fill="#FFF3C4"/><rect x="'+(48+i*58)+'" y="158" width="32" height="22" rx="4" fill="#C98E66"/><circle cx="'+(64+i*58)+'" cy="146" r="12" fill="'+c+'"/>').join('')+'<rect x="150" y="190" width="120" height="14" rx="4" fill="#8A5A3B"/></svg>',
   cafe:(t)=>'<svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="300" fill="'+(t==='night'?'#3B2E2A':'#E9D3BC')+'"/><rect y="200" width="420" height="100" fill="'+(t==='night'?'#4A3328':'#B9835A')+'"/><rect x="30" y="40" width="130" height="110" rx="8" fill="'+(t==='night'?'#24304F':'#BFE0F0')+'" stroke="#6B4A33" stroke-width="8"/><path d="M95 40 V150 M30 95 H160" stroke="#6B4A33" stroke-width="6"/><rect x="230" y="60" width="160" height="10" fill="#6B4A33"/><rect x="230" y="110" width="160" height="10" fill="#6B4A33"/>'+[0,1,2,3,4].map(i=>'<rect x="'+(240+i*28)+'" y="'+(i%2?38:44)+'" width="16" height="'+(i%2?22:16)+'" rx="3" fill="'+['#F2C14E','#D35D7A','#7FA7C9','#9BC48F','#E3A86B'][i]+'"/>').join('')+'<circle cx="250" cy="98" r="9" fill="#FFFFFF"/><circle cx="290" cy="98" r="9" fill="#FFFFFF"/><rect y="190" width="420" height="16" fill="#6B4A33"/>'+(t==='night'?'<circle cx="210" cy="20" r="60" fill="#F2A94A" opacity=".18"/>':'')+'</svg>',
   books:()=>'<svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="300" fill="#4A3A35"/>'+[0,1,2,3].map(r=>'<rect y="'+(30+r*62)+'" width="420" height="8" fill="#2E2420"/>'+Array.from({length:22},(_,i)=>'<rect x="'+(i*19+4)+'" y="'+(38+r*62)+'" width="15" height="'+(40+((i*7+r*3)%14))+'" fill="'+['#B85C4A','#D9A54A','#5E7EA6','#7FA27A','#E3D3B8','#8C5E8A'][(i+r)%6]+'"/>').join('')).join('')+'<circle cx="210" cy="0" r="120" fill="#F2A94A" opacity=".15"/></svg>',
   park:(t)=>'<svg viewBox="0 0 420 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg"><rect width="420" height="300" fill="'+(t==='night'?'#2B3354':'#F5C9A8')+'"/><circle cx="330" cy="70" r="28" fill="'+(t==='night'?'#F4E9C6':'#F7A86E')+'"/><rect y="200" width="420" height="100" fill="'+(t==='night'?'#24402F':'#7FAE6E')+'"/><circle cx="70" cy="150" r="60" fill="'+(t==='night'?'#1F3626':'#5E8F57')+'"/><rect x="62" y="170" width="16" height="50" fill="#5A3E2B"/><circle cx="360" cy="170" r="45" fill="'+(t==='night'?'#1F3626':'#6C9C60')+'"/><rect x="170" y="210" width="110" height="10" rx="4" fill="#8A5A3B"/><rect x="178" y="220" width="8" height="22" fill="#5A3E2B"/><rect x="264" y="220" width="8" height="22" fill="#5A3E2B"/></svg>',
@@ -326,11 +344,12 @@ function affPop(v){if(!v)return;pop((v>0?'♥ +':'♥ ')+v,v>0?'var(--rose)':'va
 function show(n){['title','hub','scene','ending'].forEach(x=>$('#'+x).classList.toggle('on',x===n));}
 
 /* ================= TITLE ================= */
-function titleInit(){$('#store').innerHTML=storeSVG();const sv=load();$('#b-cont').hidden=!sv;const g=gal();$('#rec').textContent=g.length?'已解鎖 '+g.length+' / '+ENDINGS.length+' 個結局':'';show('title');}
+function hasInh(){try{return !!JSON.parse(GCStore.getItem('cornercafe-inherit')||'null');}catch(e){return false;}}
+function titleInit(){$('#store').innerHTML=storeSVG();const sv=load();$('#b-cont').hidden=!sv;const g=gal();$('#rec').textContent=g.length?'已解鎖 '+g.length+' / '+ENDINGS.length+' 個結局'+(s2on()?'　第二季角色已登場（第 5 天起會來店裡）':''):'';show('title');}
 $('#b-cont').addEventListener('click',()=>{G=load();if(!G){titleInit();return;}goHub();});
 $('#b-new').addEventListener('click',()=>{
-  sheet('<h3>你的名字</h3><p class="soft">大家會這樣叫你。</p><div class="namein"><input id="nm" maxlength="6" value="小晞" aria-label="你的名字"></div><button class="btn main close" type="button" id="nm-go">開始</button>',b=>{
-    const go=()=>{const v=($('#nm').value||'').trim()||'小晞';closeSheet();newGame(v);prologue();};
+  sheet('<h3>你的名字</h3><p class="soft">大家會這樣叫你。</p><div class="namein"><input id="nm" maxlength="6" value="小晞" aria-label="你的名字"></div>'+(hasInh()?'<label class="inh" style="display:flex;gap:10px;align-items:flex-start;margin:10px 0;line-height:1.5"><input type="checkbox" id="nm-inh" checked style="width:22px;height:22px;margin-top:2px"><span>繼承上一輪的成長<br><small style="color:var(--soft)">能力值減半、保留研發過的菜單、拿回一部分資金和名聲</small></span></label>':'')+'<button class="btn main close" type="button" id="nm-go">開始</button>',b=>{
+    const go=()=>{const v=($('#nm').value||'').trim()||'小晞';let inh=null;try{if($('#nm-inh')&&$('#nm-inh').checked)inh=JSON.parse(GCStore.getItem('cornercafe-inherit')||'null');}catch(e){}closeSheet();newGame(v,inh);prologue();};
     b.querySelector('#nm-go').addEventListener('click',go);b.querySelector('#nm').addEventListener('keydown',e=>{if(e.key==='Enter')go();});});
 });
 $('#b-gal').addEventListener('click',showGallery);
@@ -353,7 +372,7 @@ function heartStr(v){const n=Math.round(v/20);return '<span class="hearts" aria-
 $('#h-stat').addEventListener('click',()=>{
   let h='<h3>'+esc(G.name)+'的狀態</h3><p class="soft">店的名聲 '+G.rep+'，菜單 '+G.menu.length+' 樣</p>';
   h+=Object.keys(STATS).map(k=>'<div class="kv"><span>'+STATS[k]+'</span><i><s style="width:'+G.stats[k]+'%"></s></i><b>'+G.stats[k]+'</b></div>').join('');
-  const met=ORDER_IDS.filter(c=>G.met[c]);
+  const met=ids().filter(c=>G.met[c]);
   h+='<p class="sect" style="margin-top:14px">認識的人</p>'+(met.length?met.map(c=>{const C=CHARS[c];return '<div class="ppl"><span class="pt">'+portrait(C.look,'normal')+'</span><span class="tx"><b>'+C.n+'</b>　'+heartStr(G.aff[c])+(G.partner===c?'　交往中':'')+'<span>'+C.job+'，晚上常在'+C.eve.place+'（週'+C.eve.days.map(d=>WEEK[d]).join('、')+'）</span></span></div>';}).join(''):'<p class="soft">還沒認識任何人，先開店看看吧。</p>');
   const gi=Object.keys(G.gifts).filter(k=>G.gifts[k]>0);
   h+='<p class="sect" style="margin-top:14px">禮物</p><p class="soft">'+(gi.length?gi.map(k=>GIFTS[k].n+' ×'+G.gifts[k]).join('、'):'沒有禮物')+'</p>';
@@ -369,13 +388,13 @@ function goHub(){
   const opts=$('#h-opts');let h='';
   if(G.phase==='morning'){
     $('#h-view').innerHTML=BG.cafe('day')+'<span class="cap">早上・咖啡館</span>';
-    const vis=ORDER_IDS.filter(c=>CHARS[c].visit.includes(wd())&&G.met[c]);
+    const vis=ids().filter(c=>CHARS[c].visit.includes(wd())&&G.met[c]);
     $('#h-msg').textContent=(G.day===1?'第一天開店，有點緊張。':pick(['陽光照進窗戶，是開店的好天氣。','磨豆機轉起來，店裡慢慢有了香味。','門口的風鈴輕輕響著。']))+(vis.length?'今天'+vis.map(c=>CHARS[c].short).join('、')+'可能會來。':'');
     h='<button class="opt big" type="button" id="o-open"><span class="tx"><b>開店營業</b><span>招呼客人，記住常客喜歡什麼。精神 −20，店租與材料 $300</span></span></button>';
   }else{
     $('#h-view').innerHTML=BG.street('')+'<span class="cap">晚上・巷口</span>';
     $('#h-msg').textContent=G.energy<25?'今天好累，也許該早點休息。':'打烊了。今晚要做什麼呢？';
-    const met=ORDER_IDS.filter(c=>G.met[c]);
+    const met=ids().filter(c=>G.met[c]);
     if(met.length){h+='<p class="sect">去找人</p>';met.forEach(c=>{const C=CHARS[c],here=C.eve.days.includes(wd());
       h+='<button class="opt" type="button" data-meet="'+c+'"'+(!here||G.energy<20?' disabled':'')+'><span class="pt">'+portrait(C.look,here?'smile':'closed')+'</span><span class="tx"><b>'+C.n+'　'+heartStr(G.aff[c])+'</b><span>'+(here?'今晚在'+C.eve.place+'。精神 −20':'今晚不在，週'+C.eve.days.map(d=>WEEK[d]).join('、')+'會在'+C.eve.place)+'</span></span></button>';});}
     h+='<p class="sect">提升自己</p>';
@@ -401,7 +420,7 @@ $('#h-opts').addEventListener('click',e=>{
 async function cafeDay(){
   show('scene');const bar=()=>'今日 '+fmt(earn);let earn=0,repD=0;
   setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
-  const vis=ORDER_IDS.filter(c=>CHARS[c].visit.includes(wd()));
+  const vis=ids().filter(c=>CHARS[c].visit.includes(wd())&&(!S2.includes(c)||G.day>=5));
   const nGen=2+Math.floor(G.rep/25);const queue=[];
   for(let i=0;i<nGen;i++)queue.push({gen:true});
   vis.forEach(c=>queue.splice(Math.floor(Math.random()*(queue.length+1)),0,{c}));
@@ -438,6 +457,8 @@ async function introScene(c){
     yuan:[['','門鈴響起，一位穿深色襯衫、戴著眼鏡的男人走進來，盯著菜單看了很久。','normal'],['？？？','有單品嗎？淺焙的。','normal'],['','你說目前還沒有，他沉默了一下。','normal'],['？？？','……那美式也可以。我叫林予安，就在附近的事務所上班。','normal']],
     qing:[['','一個戴著紅色貝雷帽的女生推門進來，背上揹著一大本畫冊。','surprised'],['？？？','哇，這間店好可愛！我可以在這裡畫畫嗎？','smile'],['？？？','啊，我叫陳曉晴，是畫插畫的！有沒有甜甜的、有奶泡的咖啡？','smile']],
     kai:[['','一個高大的男人帶著淡淡的煙味走進來，看起來剛值完夜班。','normal'],['？？？','老闆！有沒有吃的？我快餓扁了！','surprised'],['？？？','喔對，我是周凱，在隔壁那條街的消防分隊。叫我阿凱就好！','smile']],
+    yichen:[['','一個穿著淺綠色上衣的男人推門進來，褲腳沾著幾根狗毛，手裡還牽著一條繩子。','normal'],['？？？','不好意思，可以讓牠在門口等嗎？牠很乖，只是年紀大了，走不動。','normal'],['？？？','我叫江亦辰，在對面街開動物醫院。給我一杯拿鐵就好，謝謝。','smile']],
+    ruolan:[['','一股淡淡的花香先飄進來，接著是一位抱著大束洋桔梗的女生。','surprised'],['？？？','這束花送你，剛好多了一把。……擺在吧台上，會很好看。','smile'],['？？？','我是白若蘭，花店就在轉角。可以給我一杯茶嗎？要熱的。','normal']],
     lin:[['','窗外下著細雨。一位長髮的女人收起傘，琴盒上還沾著雨珠。','normal'],['？？？','這裡放的音樂，選得很好。','smile'],['？？？','我是沈若琳，在樂團拉小提琴。可以給我一杯溫的茶嗎？','normal']]
   }[c];
   for(const[n,t,f] of S)await say(n,t,C.look,f);
@@ -581,6 +602,42 @@ const EVENTS={
       await say('','深夜打烊後，若琳打開琴盒。「借你的店一下。」琴聲在空蕩的店裡迴盪。',L,'closed');
       await pickAff('lin',[{t:'安靜地坐著聆聽',d:7,r:[['-一曲結束，她說：「這首，只拉給你聽過。」']]},{t:'為她泡一杯伯爵茶',d:8,r:[['-她接過茶杯，指尖碰到你的手，沒有馬上移開。']]}]);},
     async()=>{setScene(BG.street('rain'),'雨夜的巷口');await confession('lin',['-雨夜，若琳撐著傘站在店門口。','試奏通過了。可是在去之前，我想先知道一件事。','{n}，如果我回來，你還會在這裡等我嗎？……我喜歡你。'],['-她收起傘，走進你的屋簷下。','那我一定會回來。帶著一首寫給你的曲子。'],['-她輕輕點頭，雨聲蓋過了一聲嘆息。','我明白。你永遠是我最重要的朋友。'])}
+  ],
+  yichen:[
+    async()=>{const L=CHARS.yichen.look;setScene(BG.cafe('night'),'咖啡館');
+      await say('','打烊前，亦辰牽著一隻老柴犬站在門口。狗狗盯著玻璃櫃裡的肉桂捲，怎麼拉都不肯走。',L,'smile');
+      await say('江亦辰','牠叫麻糬，十六歲了。每次經過，都要坐在這裡看一下。',L,'smile');
+      await pickAff('yichen',[{t:'「讓牠進來吧，沒關係。」',d:6,r:[['真的嗎？牠一定很開心。'],['-麻糬慢慢走進來，趴在你的腳邊。']]},{t:'拿一小塊水煮雞肉給麻糬',d:8,r:[['-麻糬吃得尾巴搖個不停。'],['你沒問就知道牠能吃什麼。……謝謝。']]},{t:'「店裡不能帶寵物耶……」',d:-3,r:[['說得也是，抱歉。'],['-他牽著麻糬離開，背影有點落寞。']]}]);},
+    async()=>{const L=CHARS.yichen.look;setScene(BG.clinic('night'),'動物醫院');
+      await say('','深夜，動物醫院的燈還亮著。亦辰抱著一隻渾身濕透的流浪小貓，眼下有深深的黑眼圈。',L,'sad');
+      await say('江亦辰','今天第三隻了。總覺得，我救不完。',L,'sad');
+      await pickAff('yichen',[{t:'幫忙按住小貓，讓他打針',d:8,r:[['-小貓在你手裡抖了一下，漸漸安靜下來。'],['你的手很穩。謝謝你。']]},{t:'「你已經救了很多了。」',d:5,r:[['……嗯。我知道，只是偶爾會很累。']]},{t:'「好可怕，我不敢看。」',d:-2,r:[['沒關係，你去外面等吧。'],['-他低下頭，繼續工作。']]}]);},
+    async()=>{const L=CHARS.yichen.look;setScene(BG.park(''),'黃昏的公園');
+      await say('','黃昏的公園裡，亦辰陪著麻糬慢慢散步。老狗走幾步就要停下來喘氣。',L,'sad');
+      await say('江亦辰','我是獸醫，卻最怕這個。牠能陪我的日子，大概不多了。',L,'sad');
+      await pickAff('yichen',[{t:'蹲下來，摸摸麻糬',d:8,r:[['-麻糬舔了舔你的手。'],['牠很少讓陌生人摸，牠喜歡你。']]},{t:'「你們一起走過這麼久，很幸福。」',d:6,r:[['……是啊。謝謝你這樣說。']]},{t:'「狗狗都會老的啦。」',d:-4,r:[['……我知道。'],['-他沒再說話，牽著麻糬往回走。']]}]);},
+    async()=>{const L=CHARS.yichen.look;setScene(BG.street('rain'),'雨夜');
+      await say('','下著大雨，亦辰抱著麻糬站在騎樓下。老狗走不動了，他沒有傘。',L,'surprised');
+      await pickAff('yichen',[{t:'拿傘和毛巾跑出去接他們',d:9,r:[['-你幫麻糬擦乾，牠舒服地嘆了一口氣。'],['謝謝。有你在，我今天不那麼慌。']]},{t:'叫他們進店裡躲雨，幫牠倒杯溫水',d:6,r:[['麻糬很喜歡這裡的地板。']]},{t:'「這麼大的雨還出門？」',d:-3,r:[['……牠想出來聞聞雨的味道。'],['-他的語氣有點冷。']]}]);},
+    async()=>{setScene(BG.cafe('night'),'咖啡館');await confession('yichen',['-亦辰遞給你一個小盒子，裡面是一枚刻著店名的狗牌。','麻糬說，這裡是牠最喜歡的地方。','{n}，我也是。我想每天都回到這裡，你願意嗎？'],['-他笑了，眼角彎出細細的紋路。','那以後，換我每天來接你下班。'],['-他深呼吸，點了點頭。','我明白了。不過，我跟麻糬還是會常來的。'])}
+  ],
+  ruolan:[
+    async()=>{const L=CHARS.ruolan.look;setScene(BG.flower(''),'轉角花店');
+      await say('','清晨，你路過轉角的花店。若蘭正在修剪玫瑰的刺，抬頭對你笑了一下。',L,'smile');
+      await say('白若蘭','來得正好。你覺得，咖啡館吧台適合放什麼花？',L,'smile');
+      await pickAff('ruolan',[{t:'「簡單的白色小花，不要搶走咖啡的香氣。」',d:7,r:[['-她眼睛一亮。'],['你懂。大部分人都只想要最大朵的。']]},{t:'「你覺得合適的就好，我相信你。」',d:5,r:[['這句話，我記住了。']]},{t:'「越多越好，看起來比較熱鬧。」',d:-3,r:[['……這樣啊。'],['-她笑著點頭，但眼神有點無奈。']]}]);},
+    async()=>{const L=CHARS.ruolan.look;setScene(BG.cafe('night'),'咖啡館');
+      await say('','打烊後，若蘭看著吧台上那束有點垂頭的花，輕輕嘆了一口氣。',L,'sad');
+      await say('白若蘭','花會謝，這是它們的本分。可是我每次都還是捨不得。',L,'sad');
+      await pickAff('ruolan',[{t:'「那我們把它做成乾燥花吧。」',d:8,r:[['-她眼睛慢慢亮起來。'],['乾燥花會把這個季節的樣子留下來。好主意。']]},{t:'泡一杯抹茶給她',d:G.menu.includes('matcha')?9:5,r:[['-她捧著杯子，熱氣暖了她的指尖。'],['謝謝。今天的我，需要這個。']]},{t:'「謝了就丟掉吧，再買新的。」',d:-4,r:[['……說得也是。'],['-她安靜地把花收進袋子裡。']]}]);},
+    async()=>{const L=CHARS.ruolan.look;setScene(BG.flower('night'),'夜晚的花市');
+      await say('','夜裡的花市還亮著燈。若蘭正在搬一箱剛運到的百合，額頭上都是汗。',L,'smile');
+      await say('白若蘭','我一直想開一間自己的店，可是又怕……做不起來。',L,'sad');
+      await pickAff('ruolan',[{t:'幫她搬花，邊搬邊聽她說',d:8,r:[['-你們搬了一整晚的花。'],['有人陪著，感覺好像沒那麼可怕了。']]},{t:'「你的花已經讓很多人開心了。」',d:6,r:[['……謝謝。我會再想一想。']]},{t:'「開店風險很高耶。」',d:-4,r:[['我知道。……只是想找人說說話。'],['-她安靜地繼續搬花。']]}]);},
+    async()=>{const L=CHARS.ruolan.look;setScene(BG.street('rain'),'雨夜');
+      await say('','下著大雨，若蘭抱著一大桶花站在騎樓下，花瓣都被雨打濕了。',L,'surprised');
+      await pickAff('ruolan',[{t:'拿傘過去，幫她護住花',d:9,r:[['-你們的肩膀都濕了，花卻一朵也沒有掉。'],['你這樣，我會捨不得讓你走。']]},{t:'邀她到店裡，用吹風機吹乾花瓣',d:7,r:[['-花瓣在暖風裡慢慢舒展開來。']]},{t:'「花都濕了，不如丟掉吧。」',d:-4,r:[['……不行。每一朵都是命。'],['-她抱緊了花桶。']]}]);},
+    async()=>{setScene(BG.cafe('night'),'咖啡館');await confession('ruolan',['-若蘭把一朵小小的乾燥花別在你的圍裙上。','這是我們第一次一起做的那束。我一直收著。','{n}，我想把我的店，開在離你最近的地方。你願意嗎？'],['-她的眼眶有點紅，卻笑得很開心。','那我的第一束花，就送給你。'],['-她輕輕點頭，把花放進你手裡。','我懂了。這束花，還是請你收下吧，當作朋友的祝福。'])}
   ]
 };
 
@@ -594,6 +651,10 @@ const ENDINGS=[
   {id:'friend-qing',n:'最佳拍檔',who:'qing',t:'曉晴成了咖啡館的專屬插畫家，你們一起辦了好幾次小市集。她說，你是她遇過最好的拍檔。'},
   {id:'friend-kai',n:'可靠的鄰居',who:'kai',t:'阿凱成了店裡最可靠的鄰居。颱風、停電、搬貨，只要一通電話，他總是第一個趕到。'},
   {id:'friend-lin',n:'遠方的明信片',who:'lin',t:'若琳出國後，常寄明信片回來。每一張的背面都寫著：「等我回去，要喝你泡的伯爵茶。」'},
+  {id:'love-yichen',n:'麻糬的位子',who:'yichen',t:'麻糬在店門口有了專屬的軟墊，每天下午，牠都會趴在那裡曬太陽。\n亦辰下班後，總是先接你下班，才牽著牠一起走回家。他說，這是這輩子最幸運的順路。'},
+  {id:'love-ruolan',n:'轉角的兩間店',who:'ruolan',t:'若蘭的花店搬到了咖啡館隔壁，兩間店的門口，常常分不清哪裡是咖啡香、哪裡是花香。\n每個星期一早上，吧台上都會多出一束新的花，卡片上只寫著：「給最愛的你。」'},
+  {id:'friend-yichen',n:'牽著狗的鄰居',who:'yichen',t:'亦辰還是每週來喝幾次咖啡，有時麻糬跟著，有時是他自己。你們成了能聊動物、也能不說話的朋友。'},
+  {id:'friend-ruolan',n:'吧台上的花',who:'ruolan',t:'若蘭每週都會送一束花來，擺在吧台上。她說，這是給咖啡館的見面禮，也是給你的。'},
   {id:'cafe-top',n:'巷口人氣名店',t:'三十天後，咖啡館門口排起了隊。雜誌來採訪，問你成功的秘訣。\n你想起外婆的信：「只要讓來的人都能喝到一杯暖暖的就好。」你笑著說，秘訣大概就是這個。'},
   {id:'cafe-warm',n:'溫暖的日常',t:'咖啡館不算大紅大紫，但每天都有熟悉的面孔推門進來。你漸漸覺得，這樣的日子也很好。外婆一定也會這麼想。'},
   {id:'cafe-next',n:'下一章',t:'三十天過去，咖啡館還在努力中。帳本上的數字不太好看，但你學會了好多事。你決定再給自己一次機會，故事才正要開始。'}
@@ -601,11 +662,11 @@ const ENDINGS=[
 async function finale(){
   let id;
   if(G.partner)id='love-'+G.partner;
-  else{const best=ORDER_IDS.slice().sort((a,b)=>G.aff[b]-G.aff[a])[0];
-    if(G.aff[best]>=60)id='friend-'+best;
+  else{const best=ids().slice().sort((a,b)=>(G.aff[b]||0)-(G.aff[a]||0))[0];
+    if((G.aff[best]||0)>=60)id='friend-'+best;
     else if(G.money>=25000&&G.rep>=60)id='cafe-top';
     else if(G.money>=8000)id='cafe-warm';else id='cafe-next';}
-  const E=ENDINGS.find(e=>e.id===id);addGal(id);try{GCStore.removeItem(KEY);}catch(e){}
+  const E=ENDINGS.find(e=>e.id===id);addGal(id);try{GCStore.setItem('cornercafe-inherit',JSON.stringify({stats:G.stats,menu:G.menu,money:Math.round(G.money),rep:G.rep}));}catch(e){}try{GCStore.removeItem(KEY);}catch(e){}
   show('scene');setScene(E.who?BG[CHARS[E.who].eve.bg]('night'):BG.cafe('day'),'第三十天');showWho(E.who?CHARS[E.who].look:null,'smile');
   await say('','三十天，就這樣過去了。');
   show('ending');

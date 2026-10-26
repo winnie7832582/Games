@@ -121,6 +121,7 @@ html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;t
 input,textarea{-webkit-user-select:text;user-select:text}
 @media (prefers-reduced-motion:reduce){.btn,.toast{transition:none}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app" style="position:relative">
@@ -384,8 +385,8 @@ function starsOf(s){return s>=85?3:s>=70?2:s>=50?1:0;}
 /* ---------- storage ---------- */
 const KEY='latteart-v1';
 let D={stars:{},best:{},gallery:[]};
-try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&v.stars)D=Object.assign(D,v);}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(D));}catch(e){try{D.gallery=D.gallery.slice(0,6);localStorage.setItem(KEY,JSON.stringify(D));}catch(_){}}}
+try{const v=JSON.parse(GCStore.getItem(KEY)||'null');if(v&&v.stars)D=Object.assign(D,v);}catch(e){}
+function save(){try{GCStore.setItem(KEY,JSON.stringify(D));}catch(e){try{D.gallery=D.gallery.slice(0,6);GCStore.setItem(KEY,JSON.stringify(D));}catch(_){}}}
 
 /* ---------- screens ---------- */
 let screen='title';
@@ -546,6 +547,7 @@ function showResult(){
   let nb='';
   if(level&&MODE==='level'){const prev=D.best[level.id];if(prev==null||r.total>prev){D.best[level.id]=r.total;if(prev!=null)nb='新紀錄！';}
     const prevS=D.stars[level.id]||0;if(st>prevS){D.stars[level.id]=st;if(prevS===0&&levelIdx<LEVELS.length-1)nb=(nb?nb+'　':'')+'解鎖下一課：'+LEVELS[levelIdx+1].name;}save();}
+  try{if(window.GC){var o={score:r.total};if(level){o['s_'+level.id]=r.total;if(st>=3)o.stars3=1;}else o.free=1;GC.report('latte-art',o);var ts=0;for(var k in D.stars)ts+=D.stars[k]||0;GC.max('latte-art',{totalStars:ts});}}catch(e){}
   $('#r-new').textContent=nb;
   const rows=[];if(r.shape!=null)rows.push(['形狀',r.shape]);if(r.sym!=null)rows.push(['對稱',r.sym]);rows.push(['置中',r.center],['對比',r.contrast]);
   $('#r-bk').innerHTML=rows.map(([k,v])=>'<div><span>'+k+'</span><i><s style="width:'+v+'%;background:'+(v>=75?'var(--good)':v>=50?'var(--gold)':'var(--bad)')+'"></s></i><b>'+v+'</b></div>').join('');

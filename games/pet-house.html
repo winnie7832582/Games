@@ -103,6 +103,7 @@ button,input{font:inherit;color:inherit}
 @media (max-height:690px){.room{min-height:190px}.act svg{width:24px;height:24px}.needs{gap:4px 12px}}
 @media (prefers-reduced-motion:reduce){.btn,.toast,.need .bar i{transition:none}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -215,8 +216,9 @@ const SPOTS={head:'頭',chin:'下巴',back:'背'};
 /* ---------- state ---------- */
 const KEY='pethouse-v1';
 let P=null;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(P));}catch(e){}}
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
+function save(){try{GCStore.setItem(KEY,JSON.stringify(P));}catch(e){}
+  try{if(window.GC&&P){var tr=0;for(var k in P.tricks)if(P.tricks[k]>=5)tr++;var o={adopted:1,bond:bondLv(),tricks:tr,days:Math.floor(ageDays())+1,items:Object.keys(P.owned).length,room:P.room||0};o['sp_'+P.species]=1;GC.max('pet-house',o);}}catch(e){}}
+function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
 function bondLv(){let l=1;for(let i=0;i<BOND.length;i++)if(P.bond>=BOND[i])l=i+1;return l;}
 function ageDays(){return (Date.now()-P.born)/86400000;}
 function stage(){const d=ageDays();return d<2?['幼年',.78]:d<6?['少年',.9]:['成年',1.03];}
@@ -370,14 +372,14 @@ function openShow(){
       sheetHTML('<h3>展覽結果</h3><p class="soft">'+(rank===1?'冠軍！全場都在看'+esc(P.name)+'。':rank<=3?'拿到前三名，表現很棒。':'這次沒有進前三名，多學把戲、把牠照顧好再來挑戰。')+'</p>'+board.map((x,i)=>'<div class="row"><div class="tx"><b>'+(i+1)+'. '+esc(x.n)+(x.me?'（你）':'')+'</b></div><span>'+x.sc+' 分</span></div>').join('')+'<p class="soft" style="margin-top:8px">獎金 '+prize+' 金幣'+(rank===1?'，親密度 +10':'')+'。</p><button class="btn main close" type="button" data-close>好</button>');});});
 }
 const FARMFOOD={cabbage:{n:'小白菜',h:28,m:8},radish:{n:'白蘿蔔',h:22,m:12},strawberry:{n:'草莓',h:12,m:18},corn:{n:'玉米',h:24,m:6}};
-function farmData(){try{const f=JSON.parse(localStorage.getItem('farm-v1')||'null');return f&&f.stock?f:null;}catch(e){return null;}}
+function farmData(){try{const f=JSON.parse(GCStore.getItem('farm-v1')||'null');return f&&f.stock?f:null;}catch(e){return null;}}
 function farmRows(){
   if(!(P.species==='rabbit'||P.species==='hamster'))return'';const f=farmData();if(!f)return'';
   const ks=Object.keys(FARMFOOD).filter(k=>(f.stock[k]||0)>0);if(!ks.length)return'';
   return '<p class="soft" style="margin-top:10px">來自小菜園（收成的菜）</p>'+ks.map(k=>{const F=FARMFOOD[k];return '<div class="row"><div class="tx"><b>'+F.n+'</b><span>飽足 +'+F.h+'、心情 +'+F.m+'，菜園裡有 '+f.stock[k]+' 個</span></div><button class="btn" type="button" data-farm="'+k+'">餵牠</button></div>';}).join('');
 }
 function feedFarm(k){
-  const f=farmData();if(!f||!(f.stock[k]>0))return;f.stock[k]--;try{localStorage.setItem('farm-v1',JSON.stringify(f));}catch(e){}
+  const f=farmData();if(!f||!(f.stock[k]>0))return;f.stock[k]--;try{GCStore.setItem('farm-v1',JSON.stringify(f));}catch(e){}
   const F=FARMFOOD[k],full=P.hunger>92;P.hunger=clamp(P.hunger+F.h,0,100);
   let m=F.m*(P.pers==='glutton'?1.5:1);if(full){m=-6;toast(P.name+'吃太撐了…');}else toast(P.name+'吃得好開心，菜園的菜真新鮮');
   P.mood=clamp(P.mood+m,0,100);P.bond+=1;pet.anim='eat';pet.animT=0;pet.target=22;fx.food={k:'hay',t:0};buzz(15);
@@ -385,6 +387,7 @@ function feedFarm(k){
 }
 function feed(k){
   const F=FOODS[k];if(!(P.inv[k]>0))return;P.inv[k]--;
+  try{window.GC&&GC.add('pet-house','fed',1);}catch(e){}
   const full=P.hunger>92;P.hunger=clamp(P.hunger+F.h,0,100);
   let m=F.m*(P.pers==='glutton'?1.5:1);if(full){m=-6;toast(P.name+'吃太撐了…');}else toast(P.name+'吃得好開心');
   P.mood=clamp(P.mood+m,0,100);if(F.fav&&!full)P.bond+=2;P.bond+=1;
@@ -482,7 +485,7 @@ function openInfo(){
   const d=ageDays(),learned=TRICKS[P.species].filter(t=>(P.tricks[t[0]]||0)>=5).map(t=>t[1]);
   sheetHTML('<h3>關於'+esc(P.name)+'</h3><div class="row"><div class="tx"><b>'+SPECIES[P.species].coats[P.coat][0]+'，'+stage()[0]+'</b><span>來到小屋第 '+(Math.floor(d)+1)+' 天</span></div></div><div class="row"><div class="tx"><b>個性：'+PERS[P.pers].n+'</b><span>'+PERS[P.pers].d+'</span></div></div><div class="row"><div class="tx"><b>最喜歡被摸的地方</b><span>'+(P.liked?SPOTS[P.like]:'還不知道，多摸摸看頭、下巴和背')+'</span></div></div><div class="row"><div class="tx"><b>會的把戲</b><span>'+(learned.join('、')||'還沒學會')+'</span></div></div><div class="row"><div class="tx"><b>健康</b><span>'+Math.round(P.health)+(P.sick?'，生病中':'')+'</span></div></div>'+
     '<button class="btn close" type="button" id="i-reset">送養，重新開始</button><button class="btn close" type="button" data-close>關閉</button>',box=>{
-    box.querySelector('#i-reset').addEventListener('click',()=>{sheetHTML('<h3>確定要重新開始嗎？</h3><p class="soft">'+esc(P.name)+'會被好心的家庭領養，你可以重新選一隻毛孩，所有金幣和物品都會清空。</p><div class="grid2"><button class="btn" type="button" data-close>再想想</button><button class="btn main" type="button" id="i-yes">重新開始</button></div>',b2=>b2.querySelector('#i-yes').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}P=null;closeSheet();AD={sp:'cat',col:0,name:''};showAdopt();}));});});
+    box.querySelector('#i-reset').addEventListener('click',()=>{sheetHTML('<h3>確定要重新開始嗎？</h3><p class="soft">'+esc(P.name)+'會被好心的家庭領養，你可以重新選一隻毛孩，所有金幣和物品都會清空。</p><div class="grid2"><button class="btn" type="button" data-close>再想想</button><button class="btn main" type="button" id="i-yes">重新開始</button></div>',b2=>b2.querySelector('#i-yes').addEventListener('click',()=>{try{GCStore.removeItem(KEY);}catch(e){}P=null;closeSheet();AD={sp:'cat',col:0,name:''};showAdopt();}));});});
 }
 
 /* ---------- canvas & pet ---------- */
@@ -789,6 +792,7 @@ function updateGameHud(){
 $('#g-end').addEventListener('click',()=>endGame());
 function endGame(){
   if(!game)return;const g=game;game=null;$('#ghud').hidden=true;
+  try{if(window.GC){var ok=g.type==='clean'?g.spots.some(function(s){return s.done;}):(g.type==='toy'?g.hits>0:g.score>0)||g.time>=8;if(ok)GC.add('pet-house',g.type==='clean'?'cleaned':'played',1);}}catch(e){}
   const toyOwned=has(TOYOF[P.species]);
   if(g.type==='clean'){const frac=g.spots.filter(s=>s.done).length/g.spots.length;P.clean=clamp(Math.max(P.clean,P.clean+(100-P.clean)*frac),0,100);if(frac>=1)P.clean=100;
     let m=P.species==='dog'?3:P.species==='gecko'?4:5;if(P.pers==='neat')m+=6;P.mood=clamp(P.mood+m*frac,0,100);P.bond+=Math.round(3*frac);

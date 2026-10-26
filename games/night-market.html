@@ -39,6 +39,9 @@ button{font:inherit;color:inherit}
 .btn{border:2px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 16px;font-weight:700;font-size:1rem;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .05s}
 .btn:active{transform:translateY(2px)}
 .btn.main{background:var(--red);border-color:var(--red);color:var(--on-red);font-weight:900;font-size:1.15rem}
+.opt.on{border-color:var(--red);background:var(--chip)}
+.opt{display:flex;align-items:center;gap:12px;text-align:left;width:100%;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;color:inherit;font:inherit}
+.opt .tx b{display:block;font-size:1.05rem}.opt .tx span{display:block;color:var(--soft);font-size:.88rem;line-height:1.5;margin-top:2px}
 .btn:disabled{opacity:.4;cursor:default;transform:none}
 .btn:focus-visible,.seg button:focus-visible,.step button:focus-visible,.tog:focus-visible,.slot:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
 
@@ -153,6 +156,7 @@ button{font:inherit;color:inherit}
 .chart{display:block;width:100%;height:150px}
 @media (prefers-reduced-motion:reduce){.btn,.toast{transition:none}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -166,6 +170,12 @@ button{font:inherit;color:inherit}
       <button class="btn" id="b-new" type="button">開新攤位</button>
     </div>
     <p class="best" id="best"></p>
+  </section>
+
+  <section class="screen" id="pick" aria-label="選擇攤位類型">
+    <header class="bar"><button class="btn" id="pick-back" type="button" style="padding:6px 12px">‹ 返回</button><span class="day">選擇攤位類型</span></header>
+    <div class="scroll"><p class="soft" style="margin:4px 2px 12px">每種攤位有不同的起始菜色和優勢，之後都可以研發其他菜。</p><div id="pick-list" style="display:flex;flex-direction:column;gap:10px"></div></div>
+    <footer class="dock"><div class="btns"><button class="btn main" id="pick-go" type="button">開張</button></div></footer>
   </section>
 
   <section class="screen" id="prep" aria-label="開攤準備">
@@ -236,7 +246,8 @@ const AFF={fried:{sun:1,hot:.9,cloud:1,rain:1.1,cold:1.15},cold:{sun:1.1,hot:1.6
 const WEEK=['一','二','三','四','五','六','日'],WMUL=[.75,.8,.85,.9,1.25,1.5,1.2];
 const weekday=d=>(d+3)%7;
 const PRICE=[{name:'便宜',mul:.8,demand:1.3,rep:1.4},{name:'一般',mul:1,demand:1,rep:1},{name:'高價',mul:1.25,demand:.7,rep:.6}];
-const LOCS=[{name:'巷尾',rent:200,traffic:1,rep:0},{name:'夜市中段',rent:700,traffic:1.8,rep:30},{name:'夜市入口',rent:1500,traffic:2.7,rep:60}];
+const LOCS=[{name:'巷尾',rent:200,traffic:1,rep:0},{name:'夜市中段',rent:700,traffic:1.8,rep:30},{name:'夜市入口',rent:1500,traffic:2.7,rep:60},
+  {name:'學校旁',rent:450,traffic:1.35,rep:15,wd:1.2,we:.6,note:'平日人多，假日冷清'},{name:'廟口廣場',rent:1000,traffic:2.1,rep:45,wd:.9,we:1.25,note:'假日人多'},{name:'觀光夜市',rent:2600,traffic:3.6,rep:80,note:'人潮最多，租金最貴'}];
 const UPG={
   cart:{name:'攤車擴建',cost:[1500,4000],desc:['排隊位置 4 → 6 人，備料上限 60 → 100 份','排隊位置 6 → 8 人，備料上限 100 → 160 份']},
   stove:{name:'加一口爐',cost:[2000,5500],desc:['兩口爐同時出餐','三口爐同時出餐']},
@@ -247,34 +258,46 @@ const CAP=[4,6,8],STORE=[60,100,160],SIGN=[1,1.15,1.35],SLOTS=[2,3,4],STOVES=[1,
 
 /* ---------- state ---------- */
 let S=null;
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
-function load(){try{const v=localStorage.getItem(KEY);if(!v)return null;const o=JSON.parse(v);return o&&o.v===1?o:null;}catch(e){return null;}}
-function clearSave(){try{localStorage.removeItem(KEY);}catch(e){}}
+function save(){try{GCStore.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function load(){try{const v=GCStore.getItem(KEY);if(!v)return null;const o=JSON.parse(v);return o&&o.v===1?o:null;}catch(e){return null;}}
+function clearSave(){try{GCStore.removeItem(KEY);}catch(e){}}
 function rollWeather(){return wpick(WKEYS,(k)=>WW[WKEYS.indexOf(k)]);}
 function forecastOf(w){return Math.random()<.75?w:pick(WKEYS);}
-function newGame(){
-  S={v:1,day:1,cash:3000,rep:10,unlocked:['chicken','tea'],upg:{cart:0,stove:0,sign:0,slots:0},helper:false,
+const STALLS={
+  fry:{n:'炸物攤',d:'雞排和地瓜球一開始就有，炸物和小點心成本 −15%。',start:['chicken','ball'],cost:{fried:.85,snack:.85}},
+  drink:{n:'飲料攤',d:'珍珠奶茶和豆花一開始就有，冷飲出餐快 20%，大熱天人潮多 12%。',start:['tea','douhua'],cook:{cold:.8,ice:.8}},
+  snack:{n:'小吃攤',d:'雞排和臭豆腐一開始就有，客人比較有耐心（多等 12%）。',start:['chicken','tofu'],pat:1.12},
+  sweet:{n:'甜品攤',d:'豆花和芒果冰一開始就有，冷飲冰品售價 +10%，但寒流天生意差 15%。',start:['douhua','mango'],price:{cold:1.1,ice:1.1}}
+};
+function stl(){return (S&&STALLS[S.stall])||{};}
+function infl(){return S&&S.endless&&S.day>30?1+.08*(Math.floor((S.day-31)/7)+1):1;}
+function newGame(stall){
+  const ST=STALLS[stall]||null;
+  S={v:1,day:1,cash:3000,rep:10,unlocked:ST?ST.start.slice():['chicken','tea'],stall:ST?stall:null,upg:{cart:0,stove:0,sign:0,slots:0},helper:false,
     plan:{loc:0,d:{}},weather:'sun',nextWeather:rollWeather(),forecast:null,event:null,buffs:[],loans:[],notices:[],history:[],skip:false,ended:false};
   S.forecast=forecastOf(S.nextWeather);
   S.unlocked.forEach((d,i)=>ensurePlan(d,i<2));
+  try{if(window.GC&&ST){const o={};o['stall_'+stall]=1;GC.max('night-market',o);}}catch(e){}
   rollEvent();save();
 }
 function ensurePlan(d,on){if(!S.plan.d[d])S.plan.d[d]={on:!!on,price:1,qty:25};}
 function addBuff(kind,mul,days,dish){S.buffs.push({kind,mul,days,dish:dish||null});}
 function buffMul(kind,dish){return S.buffs.reduce((m,b)=>b.kind===kind&&b.days>0&&(!b.dish||b.dish===dish)?m*b.mul:m,1);}
 function hasHelper(){return S.helper||S.buffs.some(b=>b.kind==='helper'&&b.days>0);}
-function priceOf(d){return Math.round(DISHES[d].price*PRICE[S.plan.d[d].price].mul/5)*5;}
-function costOf(d){return Math.round(DISHES[d].cost*buffMul('cost',d)*10)/10;}
+function priceOf(d){const D=DISHES[d];return Math.round(D.price*PRICE[S.plan.d[d].price].mul*((stl().price&&stl().price[D.tag])||1)*buffMul('price')/5)*5;}
+function costOf(d){const D=DISHES[d];return Math.round(D.cost*buffMul('cost',d)*((stl().cost&&stl().cost[D.tag])||1)*infl()*10)/10;}
+function cookOf(d){const D=DISHES[d];return D.cook*((stl().cook&&stl().cook[D.tag])||1);}
 function menuOn(){return S.unlocked.filter(d=>S.plan.d[d]&&S.plan.d[d].on);}
 function weightOf(d){const D=DISHES[d];return D.pop*AFF[D.tag][S.weather]*PRICE[S.plan.d[d].price].demand;}
-function baseRate(){return .75*LOCS[S.plan.loc].traffic*WMUL[weekday(S.day)]*WEATHER[S.weather].traffic*(.55+S.rep/100*.9)*SIGN[S.upg.sign]*buffMul('traffic');}
+function baseRate(){const L=LOCS[S.plan.loc],we=weekday(S.day)>=5;return .75*L.traffic*(L.wd&&!we?L.wd:1)*(L.we&&we?L.we:1)*(S.stall==='drink'&&S.weather==='hot'?1.12:1)*(S.stall==='sweet'&&S.weather==='cold'?.85:1)*WMUL[weekday(S.day)]*WEATHER[S.weather].traffic*(.55+S.rep/100*.9)*SIGN[S.upg.sign]*buffMul('traffic');}
 function estimate(){const total=baseRate()*NIGHT*1.18;const on=menuOn();const ws=on.map(weightOf),sum=ws.reduce((a,b)=>a+b,0)||1;const per={};on.forEach((d,i)=>per[d]=total*ws[i]/sum);
   const avgCook=on.length?on.reduce((a,d,i)=>a+DISHES[d].cook*ws[i],0)/sum:1.2;const cap=STOVES[S.upg.stove]*NIGHT*(hasHelper()?1.35:1)/avgCook;return{total,per,cap};}
-function prepCost(){let ing=0;menuOn().forEach(d=>{ing+=costOf(d)*S.plan.d[d].qty;});const rent=LOCS[S.plan.loc].rent,wage=S.helper?WAGE:0;return{ing:Math.round(ing),rent,wage,total:Math.round(ing)+rent+wage};}
+function prepCost(){let ing=0;menuOn().forEach(d=>{ing+=costOf(d)*S.plan.d[d].qty;});const rent=Math.round(LOCS[S.plan.loc].rent*infl()),wage=S.helper?WAGE:0;return{ing:Math.round(ing),rent,wage,total:Math.round(ing)+rent+wage};}
 function totalQty(){return menuOn().reduce((a,d)=>a+S.plan.d[d].qty,0);}
 
 /* ---------- events ---------- */
 const MORNING=[
+  {id:'rival',w:1.1,when:()=>S.day>=6&&S.day<=DAYS+40&&!(S.buffs||[]).some(b=>b.kind==='rival'&&b.days>0),text:()=>'對面新開了一攤，賣的東西跟你很像，不少客人被拉過去了。',opts:[{label:'打價格戰：接下來 6 天售價打九折',fx:()=>{addBuff('traffic',.95,6);addBuff('price',.9,6);addBuff('rival',1,6);try{window.GC&&GC.max('night-market',{rival:1});}catch(e){}return '人潮只少了 5%，但這 6 天售價都打九折。';}},{label:'花 $600 做宣傳',cost:600,fx:()=>{S.cash-=600;addBuff('traffic',1.05,6);addBuff('rival',1,6);S.rep=clamp(S.rep+2,0,100);try{window.GC&&GC.max('night-market',{rival:1});}catch(e){}return '宣傳很成功，這 6 天人潮反而多了 5%，聲望 +2。';}},{label:'不理他，做好自己的',fx:()=>{addBuff('traffic',.8,6);addBuff('rival',1,6);try{window.GC&&GC.max('night-market',{rival:1});}catch(e){}return '接下來 6 天人潮少了兩成，但你的熟客還是會來。';}}]},
   {id:'sale',w:1,when:()=>true,make:()=>({d:pick(S.unlocked)}),text:e=>'食材行老闆說，今天'+DISHES[e.d].name+'的原料打七折。',opts:[{label:'太好了',fx:e=>{addBuff('cost',.7,1,e.d);return DISHES[e.d].name+'今天食材成本打七折，可以多備一點。';}}]},
   {id:'badreview',w:1,when:()=>S.day>2,text:()=>'有人在網路上說你家東西不新鮮，留言越來越多。',opts:[{label:'公開道歉，送優惠券（$300）',cost:300,fx:()=>{S.cash-=300;S.rep=clamp(S.rep+3,0,100);return '大家覺得你很有誠意，聲望 +3。';}},{label:'不理它',fx:()=>{if(Math.random()<.5){S.rep=clamp(S.rep-6,0,100);return '負評越傳越廣，聲望 −6。';}return '過兩天大家就忘了。';}}]},
   {id:'inspect',w:1,when:()=>S.day>3,text:()=>'聽說衛生局今天會來稽查。',opts:[{label:'花 $400 大掃除',cost:400,fx:()=>{S.cash-=400;return '攤位乾乾淨淨，稽查順利通過。';}},{label:'碰碰運氣',fx:()=>{if(Math.random()<.35){S.cash-=1500;S.rep=clamp(S.rep-8,0,100);return '被開罰 $1,500，聲望 −8。';}return '稽查員沒走到你這攤。';}}]},
@@ -296,11 +319,18 @@ function eventDef(){return S.event?MORNING.find(e=>e.id===S.event.id):null;}
 
 /* ---------- screens ---------- */
 let screen='title';
-function show(n){screen=n;['title','prep','night','result','shop','end'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='night')requestAnimationFrame(resize);}
+function show(n){screen=n;['title','pick','prep','night','result','shop','end'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='night')requestAnimationFrame(resize);}
 function titleInit(){const sv=load();$('#b-cont').hidden=!(sv&&!sv.ended);
-  let b=null;try{b=JSON.parse(localStorage.getItem(BEST)||'null');}catch(e){}
+  let b=null;try{b=JSON.parse(GCStore.getItem(BEST)||'null');}catch(e){}
   $('#best').textContent=b&&typeof b.cash==='number'?'最佳紀錄 '+money(b.cash)+'，'+b.title:'';}
-$('#b-new').addEventListener('click',()=>{newGame();goPrep();});
+$('#b-new').addEventListener('click',()=>{renderPick();show('pick');});
+let PICK='snack';
+function renderPick(){
+  $('#pick-list').innerHTML=Object.keys(STALLS).map(k=>'<button class="opt'+(PICK===k?' on':'')+'" type="button" data-stall="'+k+'" aria-pressed="'+(PICK===k)+'"><span class="tx"><b>'+STALLS[k].n+'</b><span>'+STALLS[k].d+'</span></span></button>').join('');
+}
+$('#pick-list').addEventListener('click',e=>{const b=e.target.closest('[data-stall]');if(!b)return;PICK=b.dataset.stall;renderPick();});
+$('#pick-go').addEventListener('click',()=>{newGame(PICK);goPrep();});
+$('#pick-back').addEventListener('click',()=>show('title'));
 $('#b-cont').addEventListener('click',()=>{S=load();if(!S){newGame();}goPrep();});
 
 /* ---------- prep ---------- */
@@ -313,14 +343,14 @@ const WICON={
 };
 function goPrep(){
   if(S.cash<LOCS[0].rent+60&&!S.event){bankrupt();return;}
-  S.plan.loc=Math.min(S.plan.loc,LOCS.reduce((m,l,i)=>S.rep>=l.rep?i:m,0));
+  if(S.rep<LOCS[S.plan.loc].rep)S.plan.loc=0;
   S.unlocked.forEach(d=>ensurePlan(d,false));
   let on=menuOn();while(on.length>SLOTS[S.upg.slots]){S.plan.d[on.pop()].on=false;}
   renderPrep();show('prep');
 }
 function renderPrep(){
   const wd=weekday(S.day),W=WEATHER[S.weather],est=estimate();
-  $('#p-day').innerHTML='第 '+S.day+' 天<small>／'+DAYS+'，週'+WEEK[wd]+'</small>';
+  $('#p-day').innerHTML='第 '+S.day+' 天<small>／'+(S.endless?'∞':DAYS)+'，週'+WEEK[wd]+'</small>';
   $('#p-rep').textContent=Math.round(S.rep);$('#p-cash').textContent=money(S.cash);
   let h='';
   S.notices.forEach(n=>{h+='<div class="card notice"><p>'+esc(n)+'</p></div>';});
@@ -329,7 +359,7 @@ function renderPrep(){
     if(!e.done){h+='<div class="opts">'+ev.opts.map((o,i)=>'<button class="btn" data-ev="'+i+'" type="button"'+(o.cost&&o.cost>S.cash?' disabled':'')+'>'+esc(o.label)+'</button>').join('')+'</div>';}
     else h+='<p class="res">'+esc(e.result)+'</p>';h+='</div>';}
   h+='<div class="card"><div class="weather">'+WICON[S.weather]+'<div><h3>今天'+W.name+'，'+W.temp+'°C</h3><p class="soft">'+W.hint+'。週'+WEEK[wd]+(WMUL[wd]>1.1?'，人潮比平常多。':WMUL[wd]<.86?'，人潮比較少。':'。')+'</p></div></div></div>';
-  h+='<div class="card"><h3>擺攤地點</h3><div class="locs">'+LOCS.map((l,i)=>{const lock=S.rep<l.rep;return '<button class="loc" type="button" data-loc="'+i+'" aria-pressed="'+(S.plan.loc===i)+'"'+(lock?' disabled':'')+'><b>'+l.name+'</b><span>'+(lock?'聲望 '+l.rep+' 解鎖':'租金 '+money(l.rent))+'</span><span>人潮 ×'+l.traffic+'</span></button>';}).join('')+'</div></div>';
+  h+='<div class="card"><h3>擺攤地點</h3><div class="locs">'+LOCS.map((l,i)=>{const lock=S.rep<l.rep;return '<button class="loc" type="button" data-loc="'+i+'" aria-pressed="'+(S.plan.loc===i)+'"'+(lock?' disabled':'')+'><b>'+l.name+'</b><span>'+(lock?'聲望 '+l.rep+' 解鎖':'租金 '+money(l.rent))+'</span><span>人潮 ×'+l.traffic+(l.note&&!lock?'<br>'+l.note:'')+'</span></button>';}).join('')+'</div></div>';
   const slots=SLOTS[S.upg.slots],onN=menuOn().length;
   h+='<p class="sect">今天的菜單（最多 '+slots+' 道，已選 '+onN+' 道）</p>';
   S.unlocked.forEach(d=>{const D=DISHES[d],p=S.plan.d[d],on=p.on,e=est.per[d]||0;
@@ -417,7 +447,7 @@ function spot(i){return i<6?{x:40+i*9,y:63}:{x:40+(i-6)*9+4.5,y:69};}
 function spawnCustomer(){
   const menu=N.menu.filter(d=>N.stock[d]>0);
   let d=wpick(N.menu,weightOf);
-  const fromL=Math.random()<.5,c={id:++N.id,x:fromL?-6:106,y:rnd(60,64),dish:d,wait:0,pat:N.helper?12:10.5,cooking:false,prog:0,look:look(),bubble:''};
+  const fromL=Math.random()<.5,c={id:++N.id,x:fromL?-6:106,y:rnd(60,64),dish:d,wait:0,pat:(N.helper?12:10.5)*(stl().pat||1),cooking:false,prog:0,look:look(),bubble:''};
   if(N.stock[d]<=0){
     if(menu.length&&Math.random()<.5){d=wpick(menu,weightOf);c.dish=d;}
     else{N.lostSold++;N.repDelta-=.4;leave(c,'賣完了…','bad');return;}
@@ -442,7 +472,7 @@ function stepNight(dt){
   const speed=N.helper?1.35:1;
   let cooking=N.queue.filter(c=>c.cooking).length;
   for(const c of N.queue){if(cooking>=N.slots)break;if(!c.cooking){c.cooking=true;c.prog=0;cooking++;renderSlots(false);}}
-  if(N.pauseCook<=0){for(const c of N.queue){if(c.cooking)c.prog+=dt*speed/DISHES[c.dish].cook;}}
+  if(N.pauseCook<=0){for(const c of N.queue){if(c.cooking)c.prog+=dt*speed/cookOf(c.dish);}}
   for(let i=N.queue.length-1;i>=0;i--){const c=N.queue[i];
     if(c.cooking&&c.prog>=1){N.queue.splice(i,1);serve(c);continue;}
     if(!c.cooking){c.wait+=dt;if(c.wait>c.pat){N.queue.splice(i,1);N.stock[c.dish]++;N.lostWait++;N.repDelta-=1;leave(c,'太慢了','bad');renderStock();}}}
@@ -474,6 +504,7 @@ function endNight(){
   S.cash+=N.revenue-N.extraCost;
   const profit=N.revenue-N.cost.total-N.extraCost;
   const rec={day:S.day,profit:Math.round(profit),served:N.served,weather:S.weather,revenue:N.revenue};
+  try{window.GC&&GC.report('night-market',{dayProfit:rec.profit,served:rec.served,day:rec.day});}catch(e){}
   S.history.push(rec);
   lastDay={rec,cost:N.cost,extra:N.extraCost,left,waste:Math.round(waste),sold:N.sold,start:N.start,lostSold:N.lostSold,lostWait:N.lostWait,lostFull:N.lostFull,soldOut:N.soldOut,repBefore,repAfter:S.rep,loc:S.plan.loc,weather:S.weather,menu:N.menu.slice(),reviews:makeReviews()};
   advanceDay();save();
@@ -485,7 +516,8 @@ function advanceDay(){
   S.day++;S.weather=S.nextWeather;S.nextWeather=rollWeather();S.forecast=forecastOf(S.nextWeather);
   S.notices=[];
   S.loans=S.loans.filter(l=>{if(l.day===S.day){if(l.ok){S.cash+=l.amt;S.notices.push('朋友守信用，還了你 '+money(l.amt)+'。');}else S.notices.push('借錢的朋友說手頭緊，錢還不出來了。');return false;}return true;});
-  if(S.day>DAYS){S.ended=true;}else rollEvent();
+  if(S.endless){try{window.GC&&GC.max('night-market',{endlessDay:S.day});}catch(e){}}
+  if(S.day>DAYS&&!S.endless){S.ended=true;}else rollEvent();
 }
 function makeReviews(){
   const out=[],menu=N.menu;
@@ -654,23 +686,27 @@ const TITLES=[[100000,'夜市之王','觀光客專程來朝聖，你的攤位成
 function bankrupt(){S.ended=true;S.bankrupt=true;save();showEnd();}
 function showEnd(){
   const t=TITLES.find(x=>S.cash>=x[0]);
+  try{window.GC&&GC.max('night-market',{cash:Math.round(S.cash),finished:S.bankrupt?0:1});}catch(e){}
   const days=S.history.filter(r=>!r.rest);const best=days.reduce((m,r)=>r.profit>m.profit?r:m,{profit:-1e9,day:0});
   const served=days.reduce((a,r)=>a+r.served,0);
-  let prev=null;try{prev=JSON.parse(localStorage.getItem(BEST)||'null');}catch(e){}
-  let nb='';if(!prev||S.cash>prev.cash){try{localStorage.setItem(BEST,JSON.stringify({cash:Math.round(S.cash),title:t[1]}));}catch(e){}nb=prev?'新紀錄！':'';}
-  $('#end-body').innerHTML='<div class="card" style="text-align:center"><p class="soft">'+(S.bankrupt?'第 '+S.day+' 天，資金周轉不靈':'三十天經營結束')+'</p><h2 style="margin:6px 0 2px;font-size:2rem;font-weight:900;color:var(--red)">'+t[1]+'</h2><p class="soft" style="margin-bottom:10px">'+t[2]+'</p><p class="big">'+money(S.cash)+'</p><p class="soft">最後的現金'+(nb?'，<b style="color:var(--teal)">'+nb+'</b>':'')+'</p></div>'+
+  let prev=null;try{prev=JSON.parse(GCStore.getItem(BEST)||'null');}catch(e){}
+  let nb='';if(!prev||S.cash>prev.cash){try{GCStore.setItem(BEST,JSON.stringify({cash:Math.round(S.cash),title:t[1]}));}catch(e){}nb=prev?'新紀錄！':'';}
+  $('#end-body').innerHTML='<div class="card" style="text-align:center"><p class="soft">'+(S.bankrupt?'第 '+S.day+' 天，資金周轉不靈':S.endless?'無限模式結束，撐到第 '+S.day+' 天':'三十天經營結束')+'</p><h2 style="margin:6px 0 2px;font-size:2rem;font-weight:900;color:var(--red)">'+t[1]+'</h2><p class="soft" style="margin-bottom:10px">'+t[2]+'</p><p class="big">'+money(S.cash)+'</p><p class="soft">最後的現金'+(nb?'，<b style="color:var(--teal)">'+nb+'</b>':'')+'</p></div>'+
     '<div class="card"><h3>每天淨利</h3><canvas class="chart" id="chart"></canvas></div>'+
     '<div class="card"><div class="kv"><span>總共服務客人</span><b>'+served+' 位</b></div><div class="kv"><span>最好的一天</span><b>'+(best.day?'第 '+best.day+' 天，'+money(best.profit):'—')+'</b></div><div class="kv"><span>研發菜色</span><b>'+S.unlocked.length+' 道</b></div><div class="kv"><span>最後聲望</span><b>'+Math.round(S.rep)+'</b></div></div>'+
+    (!S.bankrupt&&!S.endless?'<div class="card" style="text-align:center"><p class="soft" style="margin-bottom:8px">三十天完成了，但夜市還沒打烊。要不要繼續經營？物價會慢慢上漲，看你能撐到第幾天。</p><button class="btn" id="b-endless" type="button" style="width:100%">繼續經營（無限模式）</button></div>':'')+
     '<button class="btn main" id="b-again" type="button" style="width:100%">再開一攤</button>';
   clearSave();show('end');
-  $('#b-again').addEventListener('click',()=>{newGame();goPrep();});
+  {const eb=$('#b-endless');if(eb)eb.addEventListener('click',()=>{S.endless=true;S.ended=false;save();goPrep();});}
+  if(S.endless){try{const pe=parseInt(GCStore.getItem('nightmarket-endless')||'0',10);if(S.day>pe)GCStore.setItem('nightmarket-endless',String(S.day));}catch(e){}}
+  $('#b-again').addEventListener('click',()=>{renderPick();show('pick');});
   requestAnimationFrame(()=>drawChart(days));
 }
 function drawChart(days){
   const cvs=$('#chart');if(!cvs)return;const r=cvs.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2.5);cvs.width=r.width*dpr;cvs.height=r.height*dpr;const c=cvs.getContext('2d');c.scale(dpr,dpr);
   const cs=getComputedStyle(document.documentElement),ink=cs.getPropertyValue('--soft').trim(),pos=cs.getPropertyValue('--teal').trim(),neg=cs.getPropertyValue('--red').trim();
   if(!days.length)return;const mx=Math.max(1,...days.map(d=>Math.abs(d.profit)));const w=r.width,h=r.height,zero=days.some(d=>d.profit<0)?h*.6:h-14;
-  const bw=w/DAYS;days.forEach(d=>{const bh=(Math.abs(d.profit)/mx)*(zero-6);c.fillStyle=d.profit>=0?pos:neg;c.fillRect((d.day-1)*bw+1,d.profit>=0?zero-bh:zero,bw-2,bh);});
+  const bw=w/Math.max(DAYS,...days.map(d=>d.day));days.forEach(d=>{const bh=(Math.abs(d.profit)/mx)*(zero-6);c.fillStyle=d.profit>=0?pos:neg;c.fillRect((d.day-1)*bw+1,d.profit>=0?zero-bh:zero,bw-2,bh);});
   c.strokeStyle=ink;c.beginPath();c.moveTo(0,zero+.5);c.lineTo(w,zero+.5);c.stroke();
   c.fillStyle=ink;c.font='11px '+FONT;c.textAlign='left';c.fillText('第 1 天',0,h-2);c.textAlign='right';c.fillText('第 30 天',w,h-2);
 }

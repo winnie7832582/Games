@@ -107,6 +107,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 .sheet .btn{width:100%;margin-top:6px}
 @media (prefers-reduced-motion:reduce){.toast,.btn{transition:none}}
 </style>
+<script src="../gc.js"></script>
 </head>
 <body>
 <div class="app">
@@ -915,6 +916,7 @@ function finishStage(){
 function showCup(){
   const latte=R.order.type==='latte';const res=latte?evaluateLatte():evaluate();
   RESULTS.push({name:latte?'拿鐵，'+R.order.artName+'拉花':R.bean.name,roast:latte?'拿鐵':R.bean.roast,...res});
+  try{window.GC&&GC.report('cafe',(function(){var o={cup:res.score};o[latte?'latte':'pour']=res.score;return o;})());}catch(e){}
   $('#c-k').textContent='第 '+(R.i+1)+' 杯，'+(latte?'拿鐵':R.bean.roast+'手沖');$('#c-name').textContent=latte?R.order.artName+'拉花拿鐵':R.bean.name;
   $('#c-score').textContent=res.score;$('#c-taste').textContent=res.taste;
   $('#c-quote').textContent=(R.order.who?R.order.who.n:'客人')+'說：「'+QUOTES.find(q=>res.score>=q[0])[1]+'」';
@@ -924,12 +926,13 @@ function showCup(){
 }
 $('#next').addEventListener('click',()=>{if(R.i<ORDERS.length-1){newRound(R.i+1);show('game');goStage(0);}else showFinal();});
 const TITLES=[[90,'冠軍咖啡師','每一杯都穩，客人會為了你再來。'],[75,'精品咖啡店主理人','風味很清楚，再精準一點就是冠軍等級。'],[55,'居家手沖玩家','已經沖得不錯，看看哪一步最常失分。'],[35,'咖啡見習生','先把研磨和水溫照建議做，味道會差很多。'],[0,'今天的豆子不太配合','手沖很看細節，再來一輪會更順。']];
-function loadBest(){try{const v=localStorage.getItem('cafe-best');return v?JSON.parse(v):null;}catch(e){return null;}}
-function saveBest(o){try{localStorage.setItem('cafe-best',JSON.stringify(o));}catch(e){}}
+function loadBest(){try{const v=GCStore.getItem('cafe-best');return v?JSON.parse(v):null;}catch(e){return null;}}
+function saveBest(o){try{GCStore.setItem('cafe-best',JSON.stringify(o));}catch(e){}}
 function showBest(){try{const bb=loadBest();$('#contest').disabled=!(bb&&bb.score>=70);}catch(e){}const b=loadBest();$('#best').textContent=b&&typeof b.score==='number'?'最佳平均 '+b.score+' 分，'+b.title:'';}
 showBest();
 function showFinal(){
   const avg=Math.round(RESULTS.reduce((a,r)=>a+r.score,0)/RESULTS.length);const t=TITLES.find(x=>avg>=x[0]);
+  try{window.GC&&GC.max('cafe',{avg:avg});}catch(e){}
   $('#f-score').textContent=avg;$('#f-title').textContent=t[1];$('#f-desc').textContent=t[2];
   $('#f-rows').innerHTML=RESULTS.map(r=>'<div class="row"><div>'+esc(r.name)+'<small>'+r.roast+'，'+esc(r.taste)+'</small></div><b>'+r.score+'</b></div>').join('');
   const best=loadBest();
@@ -942,8 +945,8 @@ function showFinal(){
     const T2=[null,['咖啡大賽冠軍','全場的目光都在你的杯子上。'],['咖啡大賽亞軍','只差一點點就是冠軍。'],['咖啡大賽季軍','站上頒獎台，實力得到肯定。']][rank]||['入圍選手','這次沒進前三名，下次再挑戰。'];
     $('#f-score').textContent=total;$('#f-title').textContent=T2[0];$('#f-desc').textContent=T2[1];
     $('#f-rows').innerHTML=board.map((x,i)=>'<div class="row"><div>'+(i+1)+'. '+esc(x.n)+(x.me?'（你）':'')+'</div><b>'+x.t+'</b></div>').join('');
-    let prev=null;try{prev=JSON.parse(localStorage.getItem('cafe-contest')||'null');}catch(e){}
-    if(!prev||rank<prev.rank||(rank===prev.rank&&total>prev.total)){try{localStorage.setItem('cafe-contest',JSON.stringify({rank,total}));}catch(e){}$('#f-best').textContent=prev?'大賽新紀錄！':'第一次參賽，成績已記下';}else $('#f-best').textContent='大賽最佳：第 '+prev.rank+' 名，'+prev.total+' 分';
+    let prev=null;try{prev=JSON.parse(GCStore.getItem('cafe-contest')||'null');}catch(e){}
+    if(!prev||rank<prev.rank||(rank===prev.rank&&total>prev.total)){try{GCStore.setItem('cafe-contest',JSON.stringify({rank,total}));}catch(e){}$('#f-best').textContent=prev?'大賽新紀錄！':'第一次參賽，成績已記下';}else $('#f-best').textContent='大賽最佳：第 '+prev.rank+' 名，'+prev.total+' 分';
     try{window.GC&&GC.max('cafe',{contestDone:1,contestWin:rank===1?1:0,contestPodium:rank<=3?1:0});}catch(e){}
     $('#again').textContent='再參賽一次';document.querySelector('#final .k').textContent='三杯合計';show('final');$('#final .scroll').scrollTop=0;return;
   }
