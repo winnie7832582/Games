@@ -512,7 +512,18 @@ function drawOA(cx, cy, R, q, strokes) {
   oaLayers(cx, cy, r, { rf: q.rf, crisp: q.crisp, oys: q.oys, eggs: q.eggs, greens: q.greens, broken: q.broken });
   drawStrokes(cx, cy, R, strokes === undefined ? zigStrokes() : strokes, 'sauce');
 }
+function hmix(a, b, t) { const x = hex2rgb(a), y = hex2rgb(b); t = clamp(t, 0, 1); return '#' + [0, 1, 2].map(i => Math.round(lerp(x[i], y[i], t)).toString(16).padStart(2, '0')).join(''); }
+function drawFriedRice(cx, cy, R, q) {
+  plate(cx, cy, R);
+  const gold = clamp(((q.toss == null ? 100 : q.toss) + (q.egg == null ? 100 : q.egg)) / 200, 0, 1), burn = clamp((q.burn || 0) + (1 - gold) * .4, 0, 1);
+  const base = hmix(hmix('#f1e3b4', '#e9c46a', gold), '#9a6a2b', burn * .5), light = hmix(base, '#fff6d4', .35);
+  softShadow(cx, cy + R * .08, R * .62, R * .62, .2);
+  for (let i = 0; i < 26; i++) { const a = i * 2.399, d = Math.sqrt(i / 26) * R * .52; circ(cx + Math.cos(a) * d, cy - R * .05 + Math.sin(a) * d * .62, R * (.15 + (i % 3) * .015), i % 3 === 0 ? light : base, 'rgba(120,80,20,.18)', 1); }
+  for (let i = 0; i < 14; i++) { const a = i * 1.7 + 1, d = Math.sqrt((i + 3) / 17) * R * .48, x = cx + Math.cos(a) * d, y = cy - R * .08 + Math.sin(a) * d * .6; ctx.fillStyle = i % 3 === 0 ? '#ffd84a' : i % 3 === 1 ? '#5fae52' : '#e98a8a'; ctx.fillRect(x - R * .03, y - R * .02, R * .07, R * .045); }
+}
 function drawDish(id, cx, cy, size, q, extra) {
+  id = id.replace('+', '');
+  if (id === 'friedrice') { drawFriedRice(cx, cy, size * .48, q); return; }
   if (id === 'souffle') { const w = size * .5; drawSouffle(cx, cy + size * .36, w, q.rise * (extra ? extra.wob : 1), q.bake, { sugar: true, drip: q.drip }); }
   else if (id === 'omurice') drawOmurice(cx, cy, size * .48, q, q.strokes);
   else drawOA(cx, cy, size * .48, q, q.strokes);
@@ -520,11 +531,26 @@ function drawDish(id, cx, cy, size, q, extra) {
 const PERFECT_Q = {
   souffle: { rise: .92, bake: .7 },
   omurice: { egg: 100, wrap: 100, burn: 0, strokes: undefined },
-  oajian: { rf: .95, crisp: 1, oys: [.82, .85, .8, .86, .83, .84], eggs: [100, 100], greens: 24, broken: false, strokes: undefined }
+  oajian: { rf: .95, crisp: 1, oys: [.82, .85, .8, .86, .83, .84], eggs: [100, 100], greens: 24, broken: false, strokes: undefined },
+  friedrice: { egg: 100, toss: 100, burn: 0 }
 };
 
 /* ---------- dishes & steps ---------- */
 const DISHES = {
+  friedrice: {
+    name: '蛋炒飯', tag: '中式家常',
+    steps: [
+      { key: 'beat', type: 'tap', scene: 'beat', title: '打蛋液', btn: '狂點打蛋！', time: 5, per: .05, meter: '均勻度', short: '狂點！',
+        hint: '5 秒內狂點按鈕，把蛋黃和蛋白打到完全均勻。' },
+      { key: 'egg', type: 'heat', scene: 'panEgg', title: '炒蛋', btn: '按住加火', zone: [.5, .72], dur: 8, short: '讓鍋溫留在綠區',
+        hint: '按住按鈕火力變大、放開就降溫，鍋溫還會自己飄。讓溫度一直停在綠區，蛋才會又嫩又香。' },
+      { key: 'pick', type: 'pick', scene: 'wok', title: '準備炒飯料', time: 9, short: '挑出 4 種炒飯食材',
+        items: [['🍚', '白飯', 1], ['🥚', '蛋', 1], ['🧅', '青蔥', 1], ['🥓', '火腿', 1], ['🍓', '草莓', 0], ['🍫', '巧克力', 0], ['🍌', '香蕉', 0], ['🍦', '冰淇淋', 0]],
+        hint: '從下面挑出蛋炒飯需要的 4 種食材：白飯、蛋、青蔥、火腿。放錯會扣分，限時 9 秒。' },
+      { key: 'toss', type: 'timing', scene: 'toss', title: '大火快炒', btn: '翻鍋！', count: 4, speed: 1.1, zone: [.41, .59], meter: '翻鍋時機', short: '指針進綠區時翻鍋',
+        hint: '指針到綠區時按「翻鍋！」，讓飯粒粒分明。共 4 次，每次都會更快。' }
+    ]
+  },
   souffle: {
     name: '舒芙蕾', tag: '法式甜點',
     steps: [
@@ -577,6 +603,7 @@ const DISHES = {
   }
 };
 const COMMENTS = {
+  friedrice: ['飯糊成一團，蛋也焦了……下次火候要抓穩。', '能吃，但還不夠粒粒分明，翻鍋再俐落一點。', '飯粒金黃、蛋香濃郁，很有家常餐桌的味道。', '粒粒分明，鍋氣十足，蛋炒飯的最高境界！'],
   souffle: ['這…是蛋糕還是蛋餅？下次蛋白霜要打挺，拌的時候放慢。', '有點塌了，不過蛋香還在。試著拌慢一點、看準烤色。', '蓬鬆柔軟，再膨高一點就完美了。', '膨得又高又穩，輕輕一碰就會晃動！'],
   omurice: ['蛋皮焦了、飯也撒了，但番茄醬很有誠意。', '能吃！蛋皮的火候還能再練練。', '滑嫩蛋皮包著番茄炒飯，很有洋食屋的味道。', '蛋皮金黃滑嫩，番茄醬畫得超有靈魂！'],
   oajian: ['粉漿糊成一團，蚵仔也煎老了…再來一盤吧。', '味道對了，口感還差一點。蚵仔要抓準時機翻。', '蚵仔飽滿、邊緣酥脆，夜市水準！', '外酥內Q、蚵仔鮮嫩，是會大排長龍的那一攤！']
@@ -1013,8 +1040,10 @@ SC.sauce = S => {
 function buildDots() { const d = $('#dots'); d.innerHTML = ''; G.dish.steps.forEach(() => { const e = document.createElement('i'); e.className = 'dot'; d.appendChild(e); }); }
 function updateDots() { [...$('#dots').children].forEach((e, i) => e.className = 'dot' + (i < G.idx ? ' done' : i === G.idx ? ' now' : '')); }
 function startDish(id) {
-  G = { id, dish: DISHES[id], idx: 0, scores: {}, data: {} };
+  COND = rollCond();
+  G = { id, dish: COND.id === 'ok' ? DISHES[id] : resize_(DISHES[id], COND.kw, COND.tw, COND.ts), idx: 0, scores: {}, data: {}, cond: COND };
   $('#dishName').textContent = G.dish.name; buildDots(); show('game'); beginStep();
+  if (COND.id !== 'ok') { const h = $('#hint'); const d = document.createElement('div'); d.style.cssText = 'margin-top:6px;font-weight:700;color:#c2453b'; d.textContent = '今日條件：' + COND.n + '，' + COND.d; h.appendChild(d); $('#ovHint').textContent += '\n今日條件：' + COND.n + '，' + COND.d; }
 }
 function beginStep() {
   const step = G.dish.steps[G.idx];
@@ -1043,6 +1072,8 @@ function endStep(score, msg, delay) {
   setTimeout(() => { if (G !== tok) return; G.idx++; if (G.idx >= G.dish.steps.length) showResult(); else beginStep(); }, d + 1550);
 }
 function dishQ(id) {
+  id = id.replace('+', '');
+  if (id === 'friedrice') return { egg: sc('egg', 85), toss: sc('toss', 85), burn: dat('egg').burn || 0 };
   if (id === 'souffle') { const bv = dat('bake').v == null ? .7 : dat('bake').v; return { rise: souffleRise() * ease(bv / .7) * (bv > .86 ? 1 - (bv - .86) * 1.2 : 1), bake: bv, drip: dat('pour').v > .93 }; }
   if (id === 'omurice') return Object.assign(omuQ(), { strokes: dat('ketchup').strokes || [] });
   return oaQ({ crisp: sc('flip', 80) / 100 * .8 + .2, broken: sc('flip', 80) < 55, strokes: dat('sauce').strokes || [] });
@@ -1054,12 +1085,12 @@ function showResult() {
   const d = G.dish, scores = d.steps.map(s => G.scores[s.key] || 0), total = Math.round(avg(scores));
   const stars = total >= 85 ? 3 : total >= 65 ? 2 : total >= 40 ? 1 : 0;
   const title = total >= 95 ? '神之料理' : ['黑暗料理', '勉強能吃', '家常好味道', '職人水準'][stars];
-  try{window.GC&&GC.report('sanwei-kitchen',(function(){var o={score:total,stars:stars};o['dish_'+G.id]=1;if(stars>=3)o.stars3=1;return o;})());}catch(e){}
+  try{window.GC&&GC.report('sanwei-kitchen',(function(){var b=G.id.replace('+',''),o={score:total,stars:stars};o['dish_'+b]=1;if(G.id.indexOf('+')>0)o.pro=total;if(stars>=3)o.stars3=1;return o;})());}catch(e){}
   const best = loadBest(), prev = best[G.id], isNew = !prev || total > prev.score;
   if (isNew) { best[G.id] = { score: total, stars }; saveBest(best); }
   $('#rStars').innerHTML = starsHTML(stars); $('#rStars').setAttribute('aria-label', `${stars} 顆星`);
   $('#rTitle').textContent = title; $('#rScore').textContent = total; $('#rBest').hidden = !(isNew && prev);
-  $('#rComment').textContent = COMMENTS[G.id][stars];
+  $('#rComment').textContent = COMMENTS[G.id.replace('+', '')][stars];
   const ol = $('#rSteps'); ol.innerHTML = '';
   d.steps.forEach((s, i) => { const li = document.createElement('li'); li.innerHTML = '<span></span><span class="sb"><i></i></span><span class="sv"></span>'; li.children[0].textContent = s.title; li.querySelector('i').style.width = scores[i] + '%'; li.children[2].textContent = scores[i]; ol.appendChild(li); });
   RS = { id: G.id, q: dishQ(G.id), t: 0 }; S = null; show('result'); $('#result').scrollTop = 0; Snd.play(stars >= 2 ? 'fanfare' : 'ok');
@@ -1116,14 +1147,35 @@ try { if (GCStore.getItem('sanwei-sound') === '0') Snd.on = false; } catch (e) {
 function renderHome() {
   const best = loadBest(), list = $('#dishList'); list.innerHTML = '';
   for (const id of Object.keys(DISHES)) {
-    const d = DISHES[id], b = best[id], btn = document.createElement('button'); btn.type = 'button'; btn.className = 'dish';
+    const d = DISHES[id], b = best[id], base = id.replace('+', ''), locked = d.pro && !(best[base] && best[base].stars >= 3), btn = document.createElement('button'); btn.type = 'button'; btn.className = 'dish'; if (locked) { btn.disabled = true; btn.style.opacity = '.55'; }
     btn.innerHTML = `<canvas width="86" height="86" aria-hidden="true"></canvas><div><h2></h2><div class="meta"></div></div><div class="best"></div>`;
     btn.querySelector('h2').textContent = d.name; btn.querySelector('.meta').textContent = `${d.tag}，${d.steps.length} 個步驟`;
-    btn.querySelector('.best').innerHTML = b ? `<div class="stars">${starsHTML(b.stars)}</div>最佳 ${b.score} 分` : '還沒做過';
+    btn.querySelector('.best').innerHTML = locked ? '普通版<br>拿到三顆星解鎖' : b ? `<div class="stars">${starsHTML(b.stars)}</div>最佳 ${b.score} 分` : '還沒做過';
     btn.addEventListener('click', () => startDish(id)); list.appendChild(btn);
-    const cv = btn.querySelector('canvas'); bindCanvas(cv, 86, 86); drawDish(id, 43, 43, 84, PERFECT_Q[id]);
+    const cv = btn.querySelector('canvas'); bindCanvas(cv, 86, 86); drawDish(id, 43, 43, 84, PERFECT_Q[base]);
   }
 }
+
+/* ---------- pro variants & daily conditions ---------- */
+function resize_(d, kw, tw, ts) {
+  const c = JSON.parse(JSON.stringify(d));
+  c.steps.forEach(st => {
+    if (st.zone) { const m = (st.zone[0] + st.zone[1]) / 2, w = (st.zone[1] - st.zone[0]) * kw; st.zone = [m - w / 2, m + w / 2]; }
+    if (st.speed) st.speed *= ts; if (st.time) st.time = Math.max(4, Math.round(st.time * tw));
+  });
+  return c;
+}
+const BASE_IDS = ['souffle', 'omurice', 'oajian', 'friedrice'];
+BASE_IDS.forEach(id => { const c = resize_(DISHES[id], .72, .85, 1.2); c.name = DISHES[id].name + '・職人版'; c.tag = '高難度'; c.pro = true; DISHES[id + '+'] = c; });
+const CONDS = [
+  { id: 'ok', n: '一切正常', d: '今天廚房狀況很好。', w: 3, kw: 1, tw: 1, ts: 1 },
+  { id: 'rush', n: '客人很趕時間', d: '限時的步驟時間縮短。', w: 2, kw: 1, tw: .85, ts: 1 },
+  { id: 'slip', n: '手有點滑', d: '綠區變窄，要抓得更準。', w: 2, kw: .85, tw: 1, ts: 1 },
+  { id: 'fire', n: '瓦斯爐火力很大', d: '指針變快，綠區也變窄。', w: 1, kw: .9, tw: 1, ts: 1.12 },
+  { id: 'kind', n: '客人很好說話', d: '綠區變寬，比較好得分。', w: 2, kw: 1.15, tw: 1, ts: 1 }
+];
+let COND = CONDS[0];
+function rollCond() { const t = CONDS.reduce((a, c) => a + c.w, 0); let r = Math.random() * t; for (const c of CONDS) { r -= c.w; if (r <= 0) return c; } return CONDS[0]; }
 
 /* ---------- loop ---------- */
 let last = performance.now();
