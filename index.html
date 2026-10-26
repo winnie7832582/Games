@@ -124,6 +124,22 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .sbox details[open] summary::after{content:'▴'}
 .sbox summary small{color:var(--soft);font-weight:500}
 .sbox summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.wallet{border:2px solid var(--line);background:transparent;border-radius:999px;padding:2px 10px;font:inherit;font-size:.85rem;font-weight:700;color:#B8860B;cursor:pointer;white-space:nowrap}
+.wallet:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-color-scheme:dark){.wallet{color:#E8C25A}}
+.theme{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 18%,var(--surface)),var(--surface));border:2px solid var(--accent);border-radius:16px;padding:10px 14px;margin:0 0 10px}
+.theme b{font-size:1.02rem}.theme .td{margin-left:8px;color:var(--soft);font-size:.82rem}
+.theme p{margin:4px 0 8px;font-size:.88rem;line-height:1.5;color:var(--soft)}
+.theme .tm{display:flex;flex-wrap:wrap;gap:8px}
+.theme .tm .btn{width:auto;margin:0;flex:1;min-width:140px;padding:8px 10px;font-size:.88rem}
+.srow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.srow:last-child{border-bottom:0}
+.srow .tx{flex:1;min-width:0;line-height:1.45}.srow .tx b{display:block}.srow .tx span{display:block;color:var(--soft);font-size:.84rem}
+.sbox .srow .btn{width:auto;flex:none;margin:0;padding:7px 12px;font-size:.9rem;white-space:nowrap}
+.sbox .srow .soft{flex:none;margin:0}
+.sbox .theme .btn,.theme .tm .btn{width:auto}
+.srow .tx b .lim{display:inline-block;color:var(--on-accent);font-weight:700}
+.srow .lim{background:var(--accent);color:var(--on-accent);border-radius:6px;font-size:.7rem;padding:1px 6px;margin-left:6px;vertical-align:middle}
 .kvr{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.93rem}
 .kvr b.no{color:var(--soft);font-weight:500}
 .kvr b.ok{color:var(--accent)}
@@ -201,8 +217,9 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
   <header><h1 id="ttl"></h1><button class="chip" type="button" id="chip" aria-label="切換玩家"><span class="av" id="chip-av"></span><span id="chip-n"></span></button></header>
   <div class="tipbar" id="tip" hidden><button class="go" type="button" id="tip-go"></button><button class="x" type="button" id="tip-x" aria-label="關閉提示">×</button></div>
   <a class="cont" id="cont" hidden><span class="ic" id="cont-ic"></span><span class="tx"><small>繼續玩</small><b id="cont-n"></b></span><span aria-hidden="true">›</span></a>
+  <section class="theme" id="theme" hidden aria-label="限時活動"></section>
   <section class="prog" id="prog" aria-label="玩家等級與每日挑戰">
-    <div class="lv"><span class="lvn" id="lv-n"></span><span class="lvt" id="lv-t"></span><span class="xpb" role="progressbar" aria-label="經驗值" id="xp-bar"><i id="xp-i"></i></span><span class="xps" id="xp-s"></span></div>
+    <div class="lv"><span class="lvn" id="lv-n"></span><span class="lvt" id="lv-t"></span><span class="xpb" role="progressbar" aria-label="經驗值" id="xp-bar"><i id="xp-i"></i></span><span class="xps" id="xp-s"></span><button class="wallet" type="button" id="wallet" aria-label="共用幣，點開收藏商店"></button></div>
     <button class="qsum" type="button" id="q-sum" aria-expanded="false" aria-controls="q-body"><span class="qc" id="q-c"></span><span class="qn" id="q-next"></span><span class="chev" aria-hidden="true">▾</span></button>
     <div id="q-body" hidden>
       <div class="st" id="q-st"></div>
@@ -271,12 +288,41 @@ function renderProg(){
   $('#q-st').textContent=g.streak>1?'連續玩 '+g.streak+' 天':'';
   $('#ql').innerHTML=g.quests.map(q=>'<li class="'+(q.done?'done':'')+'"><a href="'+esc(gameFile(q.def.game))+'"><span class="ck" aria-hidden="true">'+(q.done?'✓':'')+'</span><span class="tx">'+esc(q.def.text)+'</span><span class="pr">'+(q.done?'完成':(q.pr>0?(q.def.type==='sum'?q.pr:'今天最高 '+q.pr)+' / '+q.def.target:'去挑戰'))+'</span></a></li>').join('');
   $('#b-ach').textContent='成就 '+Object.keys(g.ach).length+' / '+GC.ACH.length;
+  $('#wallet').textContent='● '+g.wallet;
+  renderTheme(g);
   let o=false;try{o=localStorage.getItem('gc:progOpen')==='1';}catch(e){}setProgOpen(o);
 }
 function reportList(){
   const last=(window.GC&&current())?GC.get().last:{};
   return '<div>'+C.games.map(g=>{const t=last[g.id];const d=t?new Date(t):null;const txt=d?(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'還沒收到';return '<div class="kvr"><span>'+esc(g.name)+'</span><b class="'+(d?'ok':'no')+'">'+txt+'</b></div>';}).join('')+'</div>';
 }
+function renderTheme(g){
+  const t=g.theme,el=$('#theme');if(!t){el.hidden=true;return;}
+  el.hidden=false;
+  el.innerHTML='<b>'+esc(t.n)+'</b><span class="td">'+t.from.slice(5).replace('-','/')+' ～ '+t.to.slice(5).replace('-','/')+'</span><p>'+esc(t.d)+'活動期間賺到的幣 ×1.5，限時商品開放購買。</p><div class="tm">'+t.ms.map(m=>{const n=m[0],c=m[1],done=t.claimed[n],can=t.plays>=n&&!done;return '<button class="btn sm" type="button" data-claim="'+n+'"'+(can?'':' disabled')+'>'+(done?'已領取 '+c+' 幣':'完成 '+n+' 局 → '+c+' 幣（'+Math.min(t.plays,n)+'/'+n+'）')+'</button>';}).join('')+'</div>';
+}
+$('#theme').addEventListener('click',e=>{const b=e.target.closest('[data-claim]');if(!b||b.disabled)return;const r=GC.claim(+b.dataset.claim);if(r.ok)toast('領到 '+r.coins+' 幣');renderProg();});
+function storeSheet(){
+  const g=GC.get(),th=GC.theme(),W=g.wallet;
+  const slots=[['glaze','杯緣色（拉一杯花、一杯好咖啡）'],['petacc','毛孩配件（毛孩小屋）'],['farmdeco','農場裝飾（小菜園）'],['title','稱號（顯示在首頁）']];
+  let h='<div class="shead"><h2>收藏商店</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">● '+W+' 幣。玩遊戲、完成成就和每日挑戰都能賺幣。'+(th?'<br>活動「'+esc(th.n)+'」期間，賺到的幣 ×1.5，限時商品開放購買。':'<br>限時商品只會在活動期間出現。')+'</p>';
+  slots.forEach(([slot,label])=>{
+    h+='<p class="achg">'+label+'</p>';
+    GC.COLL.filter(c=>c.slot===slot&&(!c.theme||GC.own(c.id)||(th&&th.id===c.theme))).forEach(c=>{
+      const own=GC.own(c.id),eqd=GC.eq(slot)===c.id,ex=slot==='glaze'||slot==='title';
+      let btn;
+      if(own)btn=ex?'<button class="btn'+(eqd?' main':'')+'" type="button" data-eq="'+slot+':'+(eqd?'':c.id)+'">'+(eqd?'使用中':'使用')+'</button>':'<span class="soft">已擁有</span>';
+      else btn='<button class="btn main" type="button" data-buy="'+c.id+'"'+(W<c.price?' disabled':'')+'>● '+c.price+'</button>';
+      const sw=c.val?'<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+c.val+';margin-right:6px;vertical-align:-1px"></span>':'';
+      h+='<div class="srow"><div class="tx"><b>'+sw+esc(c.n)+(c.theme?'<span class="lim">限時</span>':'')+'</b>'+(c.d?'<span>'+esc(c.d)+'</span>':'')+'</div>'+btn+'</div>';
+    });
+  });
+  sheet(h,b=>{
+    b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const r=GC.buy(x.dataset.buy);toast(r.ok?'購買完成':r.msg);const y=$('#sbox').scrollTop;renderProg();storeSheet();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-eq]').forEach(x=>x.addEventListener('click',()=>{const[sl,id]=x.dataset.eq.split(':');GC.equip(sl,id||null);const y=$('#sbox').scrollTop;renderProg();storeSheet();$('#sbox').scrollTop=y;}));
+  });
+}
+$('#wallet').addEventListener('click',storeSheet);
 function achSheet(){
   const g=GC.get();const groups=C.games.map(x=>x.id).concat(['']);
   let h='<div class="shead"><h2>成就</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">已解鎖 '+Object.keys(g.ach).length+' / '+GC.ACH.length+'。紅色是進階成就，完成可以拿更多經驗值。</p>';
@@ -428,9 +474,10 @@ async function openAbout(){
   let usage='';try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage='這台裝置已用 '+(e.usage/1048576).toFixed(1)+' MB';}}catch(e){}
   let persisted='';try{if(navigator.storage&&navigator.storage.persisted)persisted=(await navigator.storage.persisted())?'，資料已設為長期保存':'';}catch(e){}
   sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
-    '<button class="mrow" type="button" id="ab-log"><span>更新紀錄</span><span aria-hidden="true">›</span></button><button class="mrow" type="button" id="ab-rep"><span>成績回報檢查</span><span aria-hidden="true">›</span></button>'+
+    '<button class="mrow" type="button" id="ab-snd" aria-pressed="'+GC.soundOn()+'"><span>遊戲音效</span><span>'+(GC.soundOn()?'開':'關')+'</span></button>'+'<button class="mrow" type="button" id="ab-log"><span>更新紀錄</span><span aria-hidden="true">›</span></button><button class="mrow" type="button" id="ab-rep"><span>成績回報檢查</span><span aria-hidden="true">›</span></button>'+
     '<h3 class="danger">危險區</h3><p class="soft">以下操作無法復原。</p><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button>',b=>{
     b.querySelector('#ab-log').addEventListener('click',logSheet);
+    b.querySelector('#ab-snd').addEventListener('click',()=>{GC.setSound(!GC.soundOn());openAbout();});
     b.querySelector('#ab-rep').addEventListener('click',reportSheet);
     b.querySelector('#ab-up').addEventListener('click',async()=>{if(!REG){toast('這個瀏覽器不支援自動更新，重新整理頁面即可');return;}toast('檢查中…');try{await REG.update();setTimeout(()=>{if(REG.waiting)showUpdate();else toast('已經是最新版本');},1500);}catch(e){toast('現在沒有網路，稍後再試');}});
     b.querySelector('#ab-clear').addEventListener('click',()=>sheet('<h2>清除所有資料？</h2><p class="soft">所有玩家、所有遊戲的進度都會從這台裝置刪除。建議先匯出備份。</p><div class="row2"><button class="btn" type="button" data-close>取消</button><button class="btn warn" type="button" id="cl">全部清除</button></div>',b2=>b2.querySelector('#cl').addEventListener('click',()=>{

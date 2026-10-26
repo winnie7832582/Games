@@ -27,7 +27,7 @@
      ['sum', 遊戲, 指標, 數值]   該指標累計 >= 數值
      ['plays', 遊戲, 次數]       完成的次數 >= 次數
      ['gamesPlayed', 數]  玩過幾款遊戲   ['streak', 數]  連續遊玩天數   ['questAll', 數]  全勤天數
-     ['count', 數]  已解鎖成就數
+     ['count', 數]  已解鎖成就數   ['own', 數]  收藏商店買過的件數
      條件可以用陣列包起來表示「全部都要符合」 */
   var ACH = [];
   function A(id, game, name, desc, cond, hard) { ACH.push({ id: id, game: game, name: name, desc: desc, c: cond, xp: hard ? 50 : 20, hard: !!hard }); }
@@ -117,6 +117,11 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   A('fm6', 'farm', '農場等級 5', '小菜園升到 Lv5', ['max', 'farm', 'level', 5]);
   A('fm7', 'farm', '什麼都種', '七種作物都收成過', [['max', 'farm', 'k_cabbage', 1], ['max', 'farm', 'k_radish', 1], ['max', 'farm', 'k_tomato', 1], ['max', 'farm', 'k_corn', 1], ['max', 'farm', 'k_strawberry', 1], ['max', 'farm', 'k_pumpkin', 1], ['max', 'farm', 'k_sunflower', 1]], 1);
   A('fm8', 'farm', '小富翁', '賣菜和交貨累計賺到 3000 金幣', ['sum', 'farm', 'earned', 3000]);
+  A('cn10', 'corner-cafe', '店裡的小插曲', '遇到 10 次隨機小事件', ['sum', 'corner-cafe', 'rand', 10]);
+  A('fm9', 'farm', '除草達人', '累計拔掉 20 次雜草', ['sum', 'farm', 'weeds', 20]);
+  A('fm10', 'farm', '捕蟲高手', '累計抓到 10 隻蟲', ['sum', 'farm', 'pests', 10]);
+  A('x8', '', '收藏家', '收藏商店買到 5 件商品', ['own', 5]);
+  A('x9', '', '蒐集控', '收藏商店買到 15 件商品', ['own', 15], 1);
   A('x1', '', '全明星', '十款遊戲都玩過', ['gamesPlayed', 10]);
   A('x2', '', '三天連續', '連續三天都有玩', ['streak', 3]);
   A('x3', '', '每日全勤', '一天完成三個每日挑戰', ['questAll', 1]);
@@ -146,6 +151,104 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   ];
   var QXP = 30, QBONUS = 60;
 
+
+
+  /* ================= 音效 ================= */
+  /* 全部遊戲共用一個開關（存在這台裝置上）。音效都是即時合成，不用另外下載檔案。 */
+  var SKEY = 'gc:sound';
+  function soundOn() { try { return localStorage.getItem(SKEY) !== '0'; } catch (e) { return true; } }
+  var AC = null;
+  function ac() {
+    if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { AC = new C(); } catch (e) { return null; } }
+    if (AC.state === 'suspended') { try { AC.resume(); } catch (e) {} }
+    return AC;
+  }
+  function tone(f, d, type, vol, delay, f2) {
+    var a = ac(); if (!a) return; var t = a.currentTime + (delay || 0);
+    var o = a.createOscillator(), g = a.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.06, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + 0.03);
+  }
+  function noise(d, vol, freq, delay) {
+    var a = ac(); if (!a) return; var t = a.currentTime + (delay || 0);
+    var n = Math.floor(a.sampleRate * d), b = a.createBuffer(1, n, a.sampleRate), ch = b.getChannelData(0);
+    for (var i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    var src = a.createBufferSource(); src.buffer = b; var fl = a.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = freq || 1200; fl.Q.value = 0.8;
+    var g = a.createGain(); g.gain.value = vol || 0.08; src.connect(fl); fl.connect(g); g.connect(a.destination); src.start(t);
+  }
+  var SFX = {
+    tap: function () { tone(620, 0.035, 'triangle', 0.03); },
+    pop: function () { tone(520, 0.07, 'sine', 0.08, 0, 900); },
+    good: function () { tone(660, 0.08, 'triangle', 0.07); tone(880, 0.11, 'triangle', 0.07, 0.07); },
+    great: function () { [660, 880, 1175].forEach(function (f, i) { tone(f, 0.11, 'triangle', 0.07, i * 0.07); }); },
+    bad: function () { tone(330, 0.12, 'sawtooth', 0.035); tone(247, 0.16, 'sawtooth', 0.035, 0.1); },
+    coin: function () { tone(988, 0.06, 'square', 0.025); tone(1319, 0.12, 'square', 0.025, 0.06); },
+    whoosh: function () { noise(0.22, 0.09, 1600); },
+    pour: function () { noise(0.35, 0.05, 700); },
+    drip: function () { tone(1200, 0.06, 'sine', 0.05, 0, 600); },
+    ding: function () { tone(1568, 0.5, 'sine', 0.06); tone(2093, 0.4, 'sine', 0.03, 0.02); },
+    purr: function () { tone(110, 0.25, 'sine', 0.05, 0, 95); },
+    fanfare: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.14, 'triangle', 0.07, i * 0.1); }); },
+    level: function () { [784, 988, 1175, 1568].forEach(function (f, i) { tone(f, 0.1, 'square', 0.03, i * 0.06); }); }
+  };
+  var lastS = {};
+  function sfx(n) { if (!soundOn()) return; var now = Date.now(); if (lastS[n] && now - lastS[n] < 45) return; lastS[n] = now; try { SFX[n] && SFX[n](); } catch (e) {} }
+  document.addEventListener('pointerdown', function () { if (soundOn()) ac(); }, true);
+
+  /* ================= 收藏品與限時活動 ================= */
+  /* slot: glaze 杯緣色、petacc 毛孩配件、farmdeco 農場裝飾、title 稱號。theme 有值的是限時商品，只在活動期間可以買 */
+  var COLL = [
+    { id: 'glaze_rose', slot: 'glaze', n: '玫瑰粉杯緣', price: 60, val: '#D9607F' },
+    { id: 'glaze_mint', slot: 'glaze', n: '薄荷綠杯緣', price: 60, val: '#2FA58A' },
+    { id: 'glaze_black', slot: 'glaze', n: '墨黑杯緣', price: 80, val: '#2B2B33' },
+    { id: 'glaze_gold', slot: 'glaze', n: '金邊杯緣', price: 120, val: '#D4A017' },
+    { id: 'glaze_fire', slot: 'glaze', n: '煙火紅杯緣', price: 90, val: '#E4572E', theme: 'newyear' },
+    { id: 'glaze_sakura', slot: 'glaze', n: '櫻花粉杯緣', price: 90, val: '#F29CB7', theme: 'sakura' },
+    { id: 'glaze_ice', slot: 'glaze', n: '冰藍杯緣', price: 90, val: '#59C3EA', theme: 'summer' },
+    { id: 'pet_crown', slot: 'petacc', n: '小王冠', price: 120, d: '毛孩小屋的配件' },
+    { id: 'pet_wreath', slot: 'petacc', n: '花環', price: 90, d: '毛孩小屋的配件' },
+    { id: 'pet_witch', slot: 'petacc', n: '魔女帽', price: 100, d: '毛孩小屋的配件', theme: 'halloween' },
+    { id: 'pet_santa', slot: 'petacc', n: '聖誕帽', price: 100, d: '毛孩小屋的配件', theme: 'xmas' },
+    { id: 'pet_redhat', slot: 'petacc', n: '福氣帽', price: 100, d: '毛孩小屋的配件', theme: 'cny' },
+    { id: 'farm_windmill', slot: 'farmdeco', n: '風車', price: 150, d: '小菜園的裝飾' },
+    { id: 'farm_pond', slot: 'farmdeco', n: '小池塘', price: 150, d: '小菜園的裝飾' },
+    { id: 'farm_flowers', slot: 'farmdeco', n: '花圃', price: 100, d: '小菜園的裝飾' },
+    { id: 'farm_pumpkin', slot: 'farmdeco', n: '南瓜燈', price: 80, d: '小菜園的裝飾', theme: 'halloween' },
+    { id: 'farm_tree', slot: 'farmdeco', n: '聖誕樹', price: 100, d: '小菜園的裝飾', theme: 'xmas' },
+    { id: 'farm_sakura', slot: 'farmdeco', n: '櫻花樹', price: 100, d: '小菜園的裝飾', theme: 'sakura' },
+    { id: 'farm_lantern', slot: 'farmdeco', n: '紅燈籠', price: 100, d: '小菜園的裝飾', theme: 'cny' },
+    { id: 'farm_moon', slot: 'farmdeco', n: '中秋月亮', price: 100, d: '小菜園的裝飾', theme: 'midautumn' },
+    { id: 'title_chef', slot: 'title', n: '料理小達人', price: 60 },
+    { id: 'title_farmer', slot: 'title', n: '菜園主人', price: 60 },
+    { id: 'title_barista', slot: 'title', n: '拉花職人', price: 60 },
+    { id: 'title_ghost', slot: 'title', n: '萬聖夜遊者', price: 70, theme: 'halloween' },
+    { id: 'title_xmas', slot: 'title', n: '聖誕小幫手', price: 70, theme: 'xmas' },
+    { id: 'title_newyear', slot: 'title', n: '跨年倒數王', price: 70, theme: 'newyear' },
+    { id: 'title_summer', slot: 'title', n: '夏日冰飲王', price: 70, theme: 'summer' },
+    { id: 'title_cny', slot: 'title', n: '團圓大廚', price: 70, theme: 'cny' },
+    { id: 'title_moon', slot: 'title', n: '賞月達人', price: 70, theme: 'midautumn' }
+  ];
+  /* 限時活動：m 是每年固定的 [開始月, 開始日, 結束月, 結束日]；abs 是只有某一年的日期（農曆節日）。
+     活動期間：所有獲得的幣 ×1.5；累計完成 10 局、25 局可領獎勵；限時商品可以購買。 */
+  var THEMES = [
+    { id: 'halloween', n: '萬聖夜祭', m: [10, 24, 11, 1], d: '南瓜、魔女和糖果的夜晚。小菜園的南瓜賣得更貴。', farm: { pumpkin: 1.5 } },
+    { id: 'xmas', n: '聖誕市集', m: [12, 18, 12, 28], d: '冬天的市集亮起來了。小菜園的草莓賣得更貴。', farm: { strawberry: 1.4 } },
+    { id: 'newyear', n: '跨年煙火', m: [12, 29, 1, 3], d: '倒數完，新的一年開始。' },
+    { id: 'cny', n: '春節團圓', abs: ['2027-02-03', '2027-02-14'], d: '紅燈籠掛起來，大家回家團圓。小菜園的玉米賣得更貴。', farm: { corn: 1.4 } },
+    { id: 'sakura', n: '櫻花祭', m: [3, 20, 3, 31], d: '花瓣飄進咖啡杯裡。' },
+    { id: 'summer', n: '夏日冰飲祭', m: [7, 15, 8, 15], d: '冰涼的飲料最受歡迎。' },
+    { id: 'midautumn', n: '中秋賞月', abs: ['2027-09-10', '2027-09-18'], d: '月亮很圓，適合在菜園賞月。' }
+  ];
+  function themeSpan(t, y) { if (t.abs) return [t.abs[0], t.abs[1]]; var a = y + '-' + ('0' + t.m[0]).slice(-2) + '-' + ('0' + t.m[1]).slice(-2), ey = t.m[2] < t.m[0] ? y + 1 : y, b = ey + '-' + ('0' + t.m[2]).slice(-2) + '-' + ('0' + t.m[3]).slice(-2); return [a, b]; }
+  function activeTheme() {
+    var now = new Date(), t0 = today();
+    for (var i = 0; i < THEMES.length; i++) { var t = THEMES[i]; var ys = t.abs ? [0] : [now.getFullYear() - 1, now.getFullYear()]; for (var j = 0; j < ys.length; j++) { var sp = themeSpan(t, ys[j]); if (t0 >= sp[0] && t0 <= sp[1]) return { t: t, from: sp[0], to: sp[1] }; } }
+    return null;
+  }
+  function collDef(id) { for (var i = 0; i < COLL.length; i++) if (COLL[i].id === id) return COLL[i]; return null; }
+  var TH_MS = [[10, 100], [25, 200]];
+
   /* ================= 等級 ================= */
   var TITLES = [[1, '新手店員'], [2, '見習廚師'], [3, '小店老闆'], [4, '街頭人氣王'], [5, '人氣主廚'], [6, '美食達人'], [8, '名店店長'], [10, '傳說店長']];
   function levelOf(xp) { return 1 + Math.floor(Math.sqrt(xp / 40)); }
@@ -163,11 +266,12 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     for (var k = 0; k < pool.length && out.length < 3; k++) { if (!used[pool[k].game]) { used[pool[k].game] = 1; out.push(pool[k]); } }
     return out;
   }
-  function blank() { return { v: 1, s: {}, ach: {}, xp: 0, last: '', streak: 0, qday: '', q: [], qall: 0 }; }
+  function blank() { return { v: 1, s: {}, ach: {}, xp: 0, last: '', streak: 0, qday: '', q: [], qall: 0, wallet: 0, own: {}, eq: {}, th: null, dc: { day: '', n: 0 } }; }
   function load() {
     var p; try { p = JSON.parse(lsGet('__prog') || 'null'); } catch (e) { p = null; }
     if (!p || p.v !== 1) p = blank();
     p.s = p.s || {}; p.ach = p.ach || {}; p.q = p.q || [];
+    p.wallet = p.wallet || 0; p.own = p.own || {}; p.eq = p.eq || {}; p.dc = p.dc || { day: '', n: 0 };
     return p;
   }
   function save(p) { lsSet('__prog', JSON.stringify(p)); }
@@ -194,6 +298,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     if (t === 'streak') return (p.streak || 0) >= c[1];
     if (t === 'questAll') return (p.qall || 0) >= c[1];
     if (t === 'count') return Object.keys(p.ach).length >= c[1];
+    if (t === 'own') return Object.keys(p.own || {}).length >= c[1];
     return false;
   }
 
@@ -221,6 +326,10 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   }
 
   /* ================= 對外函式 ================= */
+  function earn(p, n) {
+    var th = activeTheme(); if (th) n = Math.round(n * 1.5);
+    p.wallet = (p.wallet || 0) + n; return n;
+  }
   function addXp(p, n, lines) {
     var before = levelOf(p.xp); p.xp += n; var after = levelOf(p.xp);
     if (after > before) lines.push('<b>升級！</b> Lv' + after + ' ' + esc(titleOf(after)));
@@ -232,7 +341,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       for (var i = 0; i < ACH.length; i++) {
         var a = ACH[i];
         if (p.ach[a.id]) continue;
-        if (checkOne(p, a.c)) { p.ach[a.id] = Date.now(); addXp(p, a.xp, lines); lines.push('<b>成就解鎖</b>：' + esc(a.name) + '<small>' + esc(a.desc) + '　+' + a.xp + ' XP</small>'); again = true; }
+        if (checkOne(p, a.c)) { p.ach[a.id] = Date.now(); addXp(p, a.xp, lines); var cn = earn(p, a.hard ? 40 : 15); lines.push('<b>成就解鎖</b>：' + esc(a.name) + '<small>' + esc(a.desc) + '　+' + a.xp + ' XP　+' + cn + ' 幣</small>'); again = true; }
       }
     }
   }
@@ -247,9 +356,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       else { if (!useSum) continue; q.pr += v; }
       if (q.pr >= d.target) {
         q.done = true; addXp(p, QXP, lines);
-        lines.push('<b>每日挑戰完成</b>：' + esc(d.text) + '<small>+' + QXP + ' XP</small>');
+        var qc = earn(p, 20); lines.push('<b>每日挑戰完成</b>：' + esc(d.text) + '<small>+' + QXP + ' XP　+' + qc + ' 幣</small>');
         var all = true; for (var k = 0; k < p.q.length; k++) if (!p.q[k].done) all = false;
-        if (all) { p.qall = (p.qall || 0) + 1; addXp(p, QBONUS, lines); lines.push('<b>今日三個挑戰全部完成！</b><small>額外 +' + QBONUS + ' XP</small>'); }
+        if (all) { p.qall = (p.qall || 0) + 1; addXp(p, QBONUS, lines); var bc = earn(p, 40); lines.push('<b>今日三個挑戰全部完成！</b><small>額外 +' + QBONUS + ' XP　+' + bc + ' 幣</small>'); }
       }
     }
   }
@@ -260,7 +369,12 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       touchDay(p); ensureQuests(p);
       var s = gs(p, game), k;
       s.last = Date.now();
-      if (mode === 'report') s.plays = (s.plays || 0) + 1;
+      if (mode === 'report') {
+        s.plays = (s.plays || 0) + 1;
+        var tday = today(); if (p.dc.day !== tday) p.dc = { day: tday, n: 0 };
+        if (p.dc.n < 30) { var tc = Math.min(2, 30 - p.dc.n); p.dc.n += tc; earn(p, tc); }
+        var at = activeTheme(); if (at) { if (!p.th || p.th.id !== at.t.id || p.th.from !== at.from) p.th = { id: at.t.id, from: at.from, plays: 0, claimed: {} }; p.th.plays++; }
+      }
       for (k in metrics) {
         var v = metrics[k]; if (typeof v !== 'number' || isNaN(v)) continue;
         if (mode !== 'add') s.max[k] = Math.max(s.max[k] || 0, v);
@@ -269,6 +383,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       applyQuests(p, game, metrics, mode !== 'add', mode !== 'max', lines);
       evalAchs(p, lines);
       save(p);
+      if (lines.length) sfx(lines.join('').indexOf('升級') >= 0 ? 'level' : 'great'); else if (mode === 'report') sfx('fanfare');
       for (var i = 0; i < lines.length; i++) notify(lines[i]);
     } catch (e) {}
   }
@@ -280,14 +395,39 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     max: function (game, metrics) { record(game, metrics, 'max'); },
     /* 累加某個數量，例如餵食次數 */
     add: function (game, metric, n) { var m = {}; m[metric] = typeof n === 'number' ? n : 1; record(game, m, 'add'); },
-    ACH: ACH, QUESTS: QUESTS,
+    ACH: ACH, QUESTS: QUESTS, COLL: COLL, THEMES: THEMES,
+    sfx: sfx, soundOn: soundOn,
+    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
+    own: function (id) { return !!load().own[id]; },
+    eq: function (slot) { var p = load(), id = p.eq[slot]; return id && p.own[id] ? id : null; },
+    val: function (slot) { var id = this.eq(slot), d = id && collDef(id); return d ? d.val : null; },
+    ownedIn: function (slot) { var p = load(); return COLL.filter(function (c) { return c.slot === slot && p.own[c.id]; }).map(function (c) { return c.id; }); },
+    theme: function () { var a = activeTheme(); if (!a) return null; return { id: a.t.id, n: a.t.n, d: a.t.d, from: a.from, to: a.to, farm: a.t.farm || {} }; },
+    earn: function (n) { var p = load(); var g = earn(p, n); save(p); return g; },
+    wallet: function () { return load().wallet || 0; },
+    buy: function (id) {
+      var p = load(), d = collDef(id); if (!d) return { ok: false, msg: '找不到這個商品' };
+      if (p.own[id]) return { ok: false, msg: '已經擁有了' };
+      var a = activeTheme(); if (d.theme && !(a && a.t.id === d.theme)) return { ok: false, msg: '這是限時商品，活動期間才能買' };
+      if ((p.wallet || 0) < d.price) return { ok: false, msg: '幣不夠' };
+      p.wallet -= d.price; p.own[id] = 1; if (d.slot === 'glaze' || d.slot === 'title') p.eq[d.slot] = id; save(p); return { ok: true };
+    },
+    equip: function (slot, id) { var p = load(); if (id && !p.own[id]) return; if (id) p.eq[slot] = id; else delete p.eq[slot]; save(p); },
+    claim: function (n) {
+      var p = load(), a = activeTheme(); if (!a || !p.th || p.th.id !== a.t.id) return { ok: false };
+      var ms = null; for (var i = 0; i < TH_MS.length; i++) if (TH_MS[i][0] === n) ms = TH_MS[i];
+      if (!ms || p.th.plays < n || p.th.claimed[n]) return { ok: false };
+      p.th.claimed[n] = 1; var g = earn(p, ms[1]); save(p); return { ok: true, coins: g };
+    },
     /* 給首頁使用：取得目前玩家的進度 */
     get: function () {
       var p = load(); touchDay(p); ensureQuests(p); save(p);
       var lv = levelOf(p.xp), cur = xpAt(lv), nxt = xpAt(lv + 1);
       var qs = p.q.map(function (q) { var d = questDef(q.id); return d ? { def: d, pr: Math.min(q.pr, d.target), done: q.done } : null; }).filter(Boolean);
       var last = {}; for (var g in p.s) last[g] = p.s[g].last || 0;
-      return { level: lv, title: titleOf(lv), xp: p.xp, xpIn: p.xp - cur, xpNeed: nxt - cur, streak: p.streak || 0, quests: qs, ach: p.ach, qall: p.qall || 0, last: last };
+      var th = activeTheme(), tid = p.eq.title && p.own[p.eq.title] ? collDef(p.eq.title) : null, tinfo = null;
+      if (th) { var ths = p.th && p.th.id === th.t.id && p.th.from === th.from ? p.th : { plays: 0, claimed: {} }; tinfo = { id: th.t.id, n: th.t.n, d: th.t.d, from: th.from, to: th.to, plays: ths.plays, claimed: ths.claimed, ms: TH_MS }; }
+      return { wallet: p.wallet || 0, theme: tinfo, level: lv, title: tid ? tid.n : titleOf(lv), xp: p.xp, xpIn: p.xp - cur, xpNeed: nxt - cur, streak: p.streak || 0, quests: qs, ach: p.ach, qall: p.qall || 0, last: last };
     }
   };
 
@@ -311,7 +451,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     'font:500 14px/1 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;background:rgba(250,250,252,.92);color:#1F2A37;border-bottom:1px solid rgba(0,0,0,.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}' +
     '#gc-bar a{color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;padding:8px 6px;border-radius:8px}' +
     '#gc-bar a:focus-visible{outline:2px solid #3B6EF5}' +
-    '#gc-bar .who{margin-left:auto;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}' +
+    '#gc-bar .snd{display:flex;align-items:center;gap:4px;margin-left:auto;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;opacity:.8}' +
+    '#gc-bar .snd:focus-visible{outline:2px solid #3B6EF5}' +
+    '#gc-bar .who{margin-left:4px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}' +
     '@media (prefers-color-scheme:dark){#gc-bar{background:rgba(22,26,34,.92);color:#E8EDF4;border-bottom-color:rgba(255,255,255,.08)}}' +
     'html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}input,textarea{-webkit-user-select:text;user-select:text}';
   var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
@@ -322,7 +464,18 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     var b = document.createElement('div'); b.id = 'gc-bar';
     var a = document.createElement('a'); a.href = '../index.html'; a.textContent = '‹ 遊戲合集';
     var w = document.createElement('span'); w.className = 'who'; w.textContent = '玩家：' + name;
-    b.appendChild(a); b.appendChild(w); document.body.appendChild(b);
+    var sp = document.createElement('button'); sp.type = 'button'; sp.className = 'snd';
+    var paint = function () { var on = soundOn(); sp.setAttribute('aria-label', on ? '音效開著，點一下關閉' : '音效關著，點一下打開'); sp.setAttribute('aria-pressed', String(on));
+      sp.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>' + (on ? '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6M22 9l-5 6"/>') + '</svg><span>' + (on ? '音效' : '靜音') + '</span>'; };
+    paint(); sp.addEventListener('click', function () { window.GC.setSound(!soundOn()); });
+    window.addEventListener('gc-sound', paint);
+    b.appendChild(a); b.appendChild(sp); b.appendChild(w); document.body.appendChild(b);
+    // automatic sounds: tapping buttons, and good / bad messages
+    document.addEventListener('click', function (e) { if (window.GC_OWN_SFX) return; var t = e.target.closest && e.target.closest('button'); if (!t || t.disabled || t.closest('#gc-bar')) return; sfx('tap'); }, true);
+    var watched = document.querySelectorAll('#toast, .toast');
+    for (var k = 0; k < watched.length; k++) (function (el) {
+      new MutationObserver(function () { if (window.GC_OWN_SFX) return; var c = ' ' + el.className + ' '; if (c.indexOf(' show ') < 0 && c.indexOf(' on ') < 0) return; if (c.indexOf(' good ') >= 0) sfx('good'); else if (c.indexOf(' bad ') >= 0) sfx('bad'); }).observe(el, { attributes: true, attributeFilter: ['class'], childList: true, characterData: true, subtree: true });
+    })(watched[k]);
   }
   if (document.body) addBar(); else document.addEventListener('DOMContentLoaded', addBar);
 })();
