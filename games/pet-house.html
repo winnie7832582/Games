@@ -368,8 +368,17 @@ function openShow(){
       board.sort((a,b)=>b.sc-a.sc);const rank=board.findIndex(x=>x.me)+1;const prize=[0,150,90,50][rank]||15;P.coins+=prize;if(rank===1)P.bond+=10;else if(rank<=3)P.bond+=4;else P.bond+=1;
       diary('參加寵物展覽，拿到第 '+rank+' 名，獎金 '+prize+' 金幣。');
       try{if(window.GC){GC.add('pet-house','shows',1);GC.max('pet-house',{showRank:5-Math.min(rank,4),champion:rank===1?1:0});}}catch(e){}
-      buzz(rank===1?[20,40,20,40]:[15]);save();updateUI();
-      sheetHTML('<h3>展覽結果</h3><p class="soft">'+(rank===1?'冠軍！全場都在看'+esc(P.name)+'。':rank<=3?'拿到前三名，表現很棒。':'這次沒有進前三名，多學把戲、把牠照顧好再來挑戰。')+'</p>'+board.map((x,i)=>'<div class="row"><div class="tx"><b>'+(i+1)+'. '+esc(x.n)+(x.me?'（你）':'')+'</b></div><span>'+x.sc+' 分</span></div>').join('')+'<p class="soft" style="margin-top:8px">獎金 '+prize+' 金幣'+(rank===1?'，親密度 +10':'')+'。</p><button class="btn main close" type="button" data-close>好</button>');});});
+      save();updateUI();
+      const showRes=()=>{buzz(rank===1?[20,40,20,40]:[15]);sheetHTML('<h3>展覽結果</h3><p class="soft">'+(rank===1?'冠軍！全場都在看'+esc(P.name)+'。':rank<=3?'拿到前三名，表現很棒。':'這次沒有進前三名，多學把戲、把牠照顧好再來挑戰。')+'</p>'+board.map((x,i)=>'<div class="row"><div class="tx"><b>'+(i+1)+'. '+esc(x.n)+(x.me?'（你）':'')+'</b></div><span>'+x.sc+' 分</span></div>').join('')+'<p class="soft" style="margin-top:8px">獎金 '+prize+' 金幣'+(rank===1?'，親密度 +10':'')+'。</p><button class="btn main close" type="button" data-close>好</button>');};
+      perform(showRes);});});
+}
+function perform(done){
+  closeSheet();clearTimeout(trickT);
+  const seq=TRICKS[P.species].filter(t=>(P.tricks[t[0]]||0)>=5).slice(0,3);
+  const steps=seq.length?seq.map((t,i)=>()=>{pet.anim='trick';pet.trick=t[0];pet.animT=0;pet.target=50;toast('第 '+(i+1)+' 個表演：「'+t[1]+'」');}):[()=>{pet.anim='trick';pet.trick=TRICKS[P.species][0][0];pet.animT=0;pet.target=50;toast(P.name+'站上舞台，向評審打招呼');}];
+  toast(P.name+'上台了！');let i=0;
+  const next=()=>{if(i<steps.length){steps[i++]();setTimeout(next,2400);}else setTimeout(done,500);};
+  setTimeout(next,1200);
 }
 const FARMFOOD={cabbage:{n:'小白菜',h:28,m:8},radish:{n:'白蘿蔔',h:22,m:12},strawberry:{n:'草莓',h:12,m:18},corn:{n:'玉米',h:24,m:6}};
 function farmData(){try{const f=JSON.parse(GCStore.getItem('farm-v1')||'null');return f&&f.stock?f:null;}catch(e){return null;}}
@@ -446,11 +455,12 @@ function openDress(){
   sheetHTML('<h3>穿搭</h3>'+(accs.length?'':'<p class="soft">還沒有配件，可以到商店買。</p>')+accs.map(k=>'<div class="row"><div class="tx"><b>'+ITEMS[k].n+'</b></div><button class="btn" type="button" data-wear="'+k+'">'+(P.acc===k?'脫下':'戴上')+'</button></div>').join('')+'<button class="btn close" type="button" data-close>關閉</button>',box=>{
     box.querySelectorAll('[data-wear]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.wear;P.acc=P.acc===k?null:k;save();openDress();}));});
 }
+let trickT=0;
 function openTricks(){
   const lv=bondLv(),list=TRICKS[P.species];
   sheetHTML('<h3>教把戲</h3><p class="soft">親密度越高能學越多。每次練習會花一點精力，心情好、精力夠的時候比較容易成功，成功 5 次就學會。</p>'+list.map(([k,n,need])=>{const pr=P.tricks[k]||0,learned=pr>=5,locked=lv<need;
     return '<div class="row"><div class="tx"><b>'+n+'</b><span>'+(locked?'親密度 Lv'+need+' 解鎖':learned?'已經學會':'進度 '+pr+' / 5')+'</span></div><button class="btn" type="button" data-trick="'+k+'"'+(locked||P.sleeping||P.sick?' disabled':'')+'>'+(learned?'表演':'練習')+'</button></div>';}).join('')+'<button class="btn close" type="button" data-close>關閉</button>',box=>{
-    box.querySelectorAll('[data-trick]').forEach(b=>b.addEventListener('click',()=>{trick(b.dataset.trick);const y=$('#sbox').scrollTop;openTricks();$('#sbox').scrollTop=y;}));});
+    box.querySelectorAll('[data-trick]').forEach(b=>b.addEventListener('click',()=>{trick(b.dataset.trick);closeSheet();clearTimeout(trickT);trickT=setTimeout(()=>{if($('#sheet').hidden&&!game&&P)openTricks();},2600);}));});
 }
 function trick(k){
   const name=TRICKS[P.species].find(t=>t[0]===k)[1],pr=P.tricks[k]||0;
