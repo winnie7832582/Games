@@ -492,8 +492,9 @@ function stepNight(dt){
   updateNightHud();
 }
 function moveTo(c,tx,ty,dt,v){const dx=tx-c.x,dy=ty-c.y,d=Math.hypot(dx,dy);if(d<.2){c.x=tx;c.y=ty;c.walk=false;return;}const k=Math.min(1,v*dt/d);c.x+=dx*k;c.y+=dy*k;c.walk=true;}
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
 function serve(c){
-  const d=c.dish,pr=priceOf(d);N.revenue+=pr;N.served++;N.sold[d]=(N.sold[d]||0)+1;
+  const d=c.dish,pr=priceOf(d);N.revenue+=pr;N.served++;gsfx('coin');N.sold[d]=(N.sold[d]||0)+1;
   N.repDelta+=.12*PRICE[S.plan.d[d].price].rep*(1-clamp(S.rep+N.repDelta,0,100)/130);
   leave(c,'+'+pr,'good');renderSlots(false);buzz(6);
 }

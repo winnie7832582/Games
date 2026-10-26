@@ -104,10 +104,41 @@ button{font:inherit;color:inherit}
 .toast.good{background:var(--jade);color:#FFFFFF}
 
 /* controls */
-.pad{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;padding:10px 10px 14px}
-.pad .btn{grid-column:span 3;padding:11px 4px;font-size:1rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:6px;min-height:50px}
-.pad .tea{grid-column:span 4;touch-action:none}
-.pad .wide{grid-column:span 6}
+.pad{display:grid;grid-template-columns:5fr 6fr;gap:8px;padding:8px 10px 12px}
+.pad .zone{position:relative;display:grid;gap:6px;padding:20px 6px 6px;border:2px dashed var(--ink);border-radius:14px;background:var(--panel)}
+.pad .zone .zl{position:absolute;left:10px;top:2px;font-size:.72rem;font-weight:900;color:var(--ink-soft)}
+.pad .zt{grid-template-columns:1fr;grid-auto-rows:minmax(44px,1fr)}
+.pad .zp{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(48px,1fr)}
+.pad .za{grid-column:1/-1;grid-template-columns:1fr 1fr 1.5fr;padding-top:6px;border-style:solid;border-width:2px}
+.pad .za .seal{font-size:1.1rem}
+.pad .top{background:var(--surface)}
+@media (max-height:720px){
+  .cust{min-height:118px;padding:4px 5px 6px}
+  .ticket{font-size:.84rem;margin-top:4px;padding-top:4px}
+  .pad{gap:6px;padding:6px 8px 8px}
+  .pad .zone{padding:17px 5px 5px;gap:5px}
+  .pad .zt{grid-auto-rows:minmax(34px,1fr)}
+  .pad .zp{grid-auto-rows:minmax(38px,1fr)}
+  #pad .btn{min-height:34px;padding:5px 4px;font-size:.95rem}
+  .pad .za{padding-top:5px}
+}
+@media (max-height:620px){
+  .hud{padding:5px 12px 3px}.hud .time{font-size:1.05rem}
+  .queue{padding:2px 8px 5px;gap:6px}
+  .cust{min-height:92px;padding:3px 4px 5px}
+  .ticket{font-size:.78rem;line-height:1.25}
+  .work{min-height:100px}
+  .pad{gap:5px;padding:5px 8px 6px}
+  .pad .zone{padding:5px;gap:4px}
+  .pad .zone .zl{display:none}
+  #pad .zt{grid-auto-rows:32px}#pad .zp{grid-auto-rows:49px}
+  #pad .za .btn{height:38px}
+  #pad .btn{min-height:0;height:100%;padding:2px 4px;font-size:.88rem;box-shadow:0 2px 0 var(--shadow)}
+  .pad .za{padding:5px}
+}
+#game{overflow-y:auto}
+.pad .btn{padding:11px 4px;font-size:1rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:6px;min-height:50px}
+.pad .tea{touch-action:none}
 .pad .seal{background:var(--ink);color:var(--bg)}
 .dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);flex:none}
 .pad .btn.held{background:var(--bg)}
@@ -156,16 +187,25 @@ button{font:inherit;color:inherit}
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </div>
     <div class="pad" id="pad">
-      <button class="btn tea" data-tea="black" type="button"><span class="dot" style="background:#B4532A"></span>紅茶</button>
-      <button class="btn tea" data-tea="green" type="button"><span class="dot" style="background:#C4B94E"></span>綠茶</button>
-      <button class="btn tea" data-tea="milk" type="button"><span class="dot" style="background:#C99A6C"></span>奶茶</button>
-      <button class="btn" id="b-sugar" type="button">加糖</button>
-      <button class="btn" id="b-ice" type="button">加冰</button>
-      <button class="btn" id="b-pearl" type="button">珍珠</button>
-      <button class="btn" id="b-coco" type="button">椰果</button>
-      <button class="btn" id="b-cook" type="button">煮珍珠</button>
-      <button class="btn" id="b-trash" type="button">倒掉重做</button>
-      <button class="btn wide seal" id="b-seal" type="button">封膜</button>
+      <div class="zone zt" role="group" aria-label="茶底">
+        <span class="zl">茶底（按住倒茶）</span>
+        <button class="btn tea" data-tea="black" type="button"><span class="dot" style="background:#B4532A"></span>紅茶</button>
+        <button class="btn tea" data-tea="green" type="button"><span class="dot" style="background:#C4B94E"></span>綠茶</button>
+        <button class="btn tea" data-tea="milk" type="button"><span class="dot" style="background:#C99A6C"></span>奶茶</button>
+      </div>
+      <div class="zone zp" role="group" aria-label="加料">
+        <span class="zl">加料</span>
+        <button class="btn top" id="b-sugar" type="button">加糖</button>
+        <button class="btn top" id="b-ice" type="button">加冰</button>
+        <button class="btn top" id="b-pearl" type="button">珍珠</button>
+        <button class="btn top" id="b-coco" type="button">椰果</button>
+      </div>
+      <div class="zone za" role="group" aria-label="動作">
+        <button class="btn" id="b-cook" type="button">煮珍珠</button>
+        <button class="btn" id="b-trash" type="button">倒掉重做</button>
+        <button class="btn seal" id="b-seal" type="button">封膜出餐</button>
+      </div>
+    </div>
     </div>
   </section>
 
@@ -224,7 +264,7 @@ let G=null,screen='title';
 function newCup(){return{base:null,mixed:false,fill:0,sugar:0,ice:0,tops:new Set(),hard:false,sealed:false};}
 function newGame(){
   applyShop();
-  G={t:0,money:0,hearts:LIVES,maxHearts:LIVES,served:0,perfect:0,angry:0,custN:0,slots:[null,null,null],nextSpawn:.8,
+  G={rush:false,t:0,money:0,hearts:LIVES,maxHearts:LIVES,served:0,perfect:0,angry:0,custN:0,slots:[null,null,null],nextSpawn:.8,
     cup:newCup(),pot:{state:'empty',t:0,stock:0,fresh:0},pouring:null,over:false,
     mistakes:{base:0,fill:0,sugar:0,ice:0,top:0,late:0,hard:0}};
 }
@@ -283,9 +323,10 @@ function loseHeart(){
 /* ---------- actions ---------- */
 let toastTimer=0;
 function toast(m,k){const t=$('#toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',1200);}
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
 function live(){return G&&!G.over&&screen==='game';}
 function startPour(tea){
-  if(!live())return false;const cup=G.cup;
+  if(!live())return false;const cup=G.cup;if(!cup.sealed&&cup.fill<100)gsfx('pour');
   if(cup.sealed){toast('已經封膜了，倒掉重做或先出餐');return false;}
   if(cup.fill>=100){toast('杯子滿了');return false;}
   if(cup.base&&cup.base!==tea)cup.mixed=true;
@@ -341,8 +382,8 @@ function serve(i){
   const frac=cu.pat/cu.max;
   const last=cu.left<=1;const tip=last?Math.round(frac*15)*(cu.vip?2:1):0;
   if(cup.hard){const pay=Math.round(cu.price/2);G.money+=pay;G.served++;G.mistakes.hard++;toast('珍珠硬掉了，只收一半','bad');floatText(i,'+$'+pay,P.ink);}
-  else{G.money+=cu.price+tip;G.served++;G.perfect++;toast(cu.vip?'VIP 客人很滿意':tip>=10?'完美，客人很開心':'完美','good');floatText(i,'+$'+(cu.price+tip),P.jade);buzz(20);}
-  if(!last){cu.left--;toast('還要 '+cu.left+' 杯','good');renderSlot(i);updateHud();return;}
+  else{G.money+=cu.price+tip;G.served++;G.perfect++;toast(cu.vip?'VIP 客人很滿意':tip>=10?'完美，客人很開心':'完美','good');floatText(i,'+$'+(cu.price+tip),P.jade);gsfx('coin');buzz(20);}
+  if(!last){cu.left--;cu.pat=cu.max;toast('還要 '+cu.left+' 杯，客人會再等你','good');renderSlot(i);updateHud();return;}
   if(cu.vip)G.vipN=(G.vipN||0)+1;if(cu.qty>1)G.multiN=(G.multiN||0)+1;
   leave(i);updateHud();
 }
@@ -406,7 +447,7 @@ function update(dt){
 const cv=$('#cv'),ctx=cv.getContext('2d'),work=$('#work');
 let W=0,H=0,DPR=1,SC={s:1,ox:0,oy:0};
 function resize(){const r=work.getBoundingClientRect();DPR=Math.min(window.devicePixelRatio||1,2.5);W=r.width;H=r.height;
-  cv.width=Math.max(1,Math.round(W*DPR));cv.height=Math.max(1,Math.round(H*DPR));const s=Math.min(W/100,H/70);SC={s,ox:(W-100*s)/2,oy:(H-70*s)/2};}
+  cv.width=Math.max(1,Math.round(W*DPR));cv.height=Math.max(1,Math.round(H*DPR));const s=Math.min(W/100,H/64);SC={s,ox:(W-100*s)/2,oy:(H-64*s)/2-7*s};}
 try{new ResizeObserver(resize).observe(work);}catch(e){addEventListener('resize',resize);}
 function txt(c,s,x,y,size,color,align,weight){const m=c.getTransform();c.save();c.setTransform(1,0,0,1,0,0);
   c.font=(weight||900)+' '+(size*m.a).toFixed(2)+'px '+FONT;c.fillStyle=color;c.textAlign=align||'center';c.textBaseline='middle';
@@ -448,7 +489,7 @@ function drawCup(c){
   if(G.pouring){const col=BASES[G.pouring].color;c.fillStyle=col;c.fillRect(cx-1.1,-2,2.2,ly+2);}
   // target line
   const ty=fy(80);c.setLineDash([1.2,1]);c.beginPath();c.moveTo(xAt(ty,-1)-2,ty);c.lineTo(xAt(ty,1)+2,ty);c.lineWidth=.45;c.strokeStyle=P.ink;c.stroke();c.setLineDash([]);
-  txt(c,'八分滿',xAt(ty,-1)-3,ty,2.9,P.ink,'right');
+  txt(c,'八分滿',xAt(ty,-1)-2.5,ty,3.8,P.ink,'right');
   // cup outline and shine
   cupPath();c.lineWidth=.8;c.lineJoin='round';c.strokeStyle='#1D1A16';c.stroke();
   c.beginPath();c.moveTo(cx-tw+2.4,top+3);c.lineTo(cx-bw+1.8,bot-4);c.lineWidth=.8;c.strokeStyle='rgba(255,255,255,.7)';c.stroke();
@@ -463,13 +504,14 @@ function drawCup(c){
 }
 function drawCounters(c){
   const cup=G.cup;
-  txt(c,'糖',5,38,3.4,P.ink,'left');
-  for(let i=0;i<3;i++){c.beginPath();c.arc(12.5+i*4.4,38,1.5,0,Math.PI*2);c.lineWidth=.45;c.strokeStyle=P.ink;if(i<cup.sugar){c.fillStyle=i===2?P.red:P.ink;c.fill();}c.stroke();}
-  txt(c,'冰',5,46,3.4,P.ink,'left');
-  for(let i=0;i<3;i++){rr(c,11+i*4.4,44.5,3,3,.6);c.lineWidth=.45;c.strokeStyle=P.ink;if(i<cup.ice){c.fillStyle=i===2?P.red:'#9FD3F2';c.fill();}c.stroke();}
-  txt(c,'料',5,54,3.4,P.ink,'left');
-  const tops=[...cup.tops].map(k=>k==='pearl'?'珍珠':'椰果').join('＋')||'無';
-  txt(c,tops,11,54,3,P.soft,'left',500);
+  txt(c,'糖',3,30,5,P.ink,'left');
+  for(let i=0;i<3;i++){c.beginPath();c.arc(12.5+i*5.4,30,2.2,0,Math.PI*2);c.lineWidth=.6;c.strokeStyle=P.ink;if(i<cup.sugar){c.fillStyle=i===2?P.red:P.ink;c.fill();}c.stroke();}
+  txt(c,'冰',3,40,5,P.ink,'left');
+  for(let i=0;i<3;i++){rr(c,10.3+i*5.4,37.8,4.4,4.4,.8);c.lineWidth=.6;c.strokeStyle=P.ink;if(i<cup.ice){c.fillStyle=i===2?P.red:'#9FD3F2';c.fill();}c.stroke();}
+  txt(c,'料',3,50,5,P.ink,'left');
+  const tops=[...cup.tops].map(k=>k==='pearl'?'珍珠':'椰果');
+  if(!tops.length)txt(c,'無',10.5,50,4.2,P.soft,'left',500);
+  tops.forEach((t,i)=>txt(c,t,10.5,50+i*5.6,4.2,P.ink,'left',700));
 }
 function drawPot(c){
   const p=G.pot,cx=82,top=42;
@@ -495,9 +537,9 @@ function drawPot(c){
   else if(p.state==='hard'){f=1;col=P.red;label='變硬了';}
   else label='鍋是空的';
   if(f>0){c.beginPath();c.arc(cx,ry,4.2,-Math.PI/2,-Math.PI/2+Math.PI*2*f);c.strokeStyle=col;c.stroke();}
-  txt(c,p.state==='cooking'?Math.ceil(COOK-p.t)+'':p.state==='ready'?Math.ceil(p.fresh)+'':p.state==='hard'?'!':'–',cx,ry,3,col);
-  txt(c,label,cx,66.5,3,p.state==='hard'?P.red:P.ink);
-  txt(c,'珍珠鍋',cx,23.5,2.9,P.soft,'center',500);
+  txt(c,p.state==='cooking'?Math.ceil(COOK-p.t)+'':p.state==='ready'?Math.ceil(p.fresh)+'':p.state==='hard'?'!':'–',cx,ry,4,col);
+  txt(c,label,cx,66.5,4,p.state==='hard'?P.red:P.ink);
+  txt(c,'珍珠鍋',cx,23,3.8,P.soft,'center',700);
 }
 function render(){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);

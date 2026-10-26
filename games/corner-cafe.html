@@ -340,7 +340,8 @@ function choose(opts,grid,prompt){
 $('#s-box').addEventListener('click',()=>{if(advance)advance();});
 $('#s-box').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&advance){e.preventDefault();advance();}});
 function pop(text,color){const p=document.createElement('span');p.className='pop';p.textContent=text;p.style.color=color||'var(--rose)';$('#scene').appendChild(p);setTimeout(()=>p.remove(),1150);}
-function affPop(v){if(!v)return;pop((v>0?'♥ +':'♥ ')+v,v>0?'var(--rose)':'var(--soft)');}
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
+function affPop(v){if(!v)return;gsfx(v>0?'good':'bad');pop((v>0?'♥ +':'♥ ')+v,v>0?'var(--rose)':'var(--soft)');}
 function show(n){['title','hub','scene','ending'].forEach(x=>$('#'+x).classList.toggle('on',x===n));}
 
 /* ================= TITLE ================= */
@@ -417,9 +418,101 @@ $('#h-opts').addEventListener('click',e=>{
 });
 
 /* ================= CAFE ================= */
+
+/* ---------- 隨機小事件：每天開店前有機會遇到，內容和結果都不固定 ---------- */
+const lim=(v,a,b)=>Math.max(a,Math.min(b,v));
+function bump(k,n){G.stats[k]=lim(G.stats[k]+n,0,100);}
+function repAdd(n){G.rep=lim(G.rep+n,0,100);}
+function cash(n){G.money=Math.max(0,G.money+n);}
+const RAND=[
+  {id:'rain',w:2,run:async()=>{setScene(BG.street('rain'),'巷口');const L=genericLook();
+    await say('','下午突然下起大雨，幾位路人縮在你的屋簷下，不好意思地看著店裡。',L,'normal');
+    const i=await choose([{t:'請大家進來，送每人一杯熱茶'},{t:'讓大家進來，但照常營業'},{t:'借幾把傘給他們'}],false);
+    if(i===0){cash(-100);repAdd(3);await say('','（金錢 −$100，名聲 +3）大家都很感動，有人說下次一定會再來。');}
+    else if(i===1){const g=Math.random()<.6?150:0;cash(g);await say('',g?'（金錢 +$150）有幾位客人順便點了飲料。':'雨停了，大家道了謝就離開了。');}
+    else{repAdd(1);await say('','（名聲 +1）傘有幾把沒還回來，但大家都記得你的好意。');}}},
+  {id:'machine',w:2,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','咖啡機發出奇怪的聲音，水一直滴不出來。');
+    const i=await choose([{t:'自己拆開來檢查'},{t:'打給師傅來修（$300）'},{t:'先擱著，今天改用手沖'}],false);
+    if(i===0){if(Math.random()<.5){bump('cook',2);await say('','（廚藝 +2）居然被你修好了，還順便清了水垢。');}else{cash(-150);await say('','（金錢 −$150）越修越糟，最後還是花錢換了零件。');}}
+    else if(i===1){cash(-300);await say('','（金錢 −$300）師傅一下就修好了，順便教了你保養的小技巧。');bump('taste',1);}
+    else{bump('talk',1);await say('','（談吐 +1）手沖比較慢，但客人看你沖咖啡，聊了很多。');}}},
+  {id:'kid',w:2,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');const L=genericLook();
+    await say('小朋友','姐姐，我畫了一張咖啡館給你！',L,'smile');
+    const i=await choose([{t:'貼在牆上'},{t:'好好收起來'},{t:'請他喝一杯可可（$30）'}],false);
+    if(i===0){repAdd(2);await say('','（名聲 +2）客人看到都說這間店好溫馨。');}
+    else if(i===1){bump('charm',1);await say('','（魅力 +1）你把畫夾進了菜單裡，心情變得很好。');}
+    else{cash(-30);repAdd(1);await say('','（金錢 −$30，名聲 +1）他喝完可可，笑得像一朵小花。');}}},
+  {id:'cat',w:2,run:async()=>{setScene(BG.street(''),'店門口');
+    await say('','店門口蹲著一隻瘦瘦的流浪貓，一直盯著你看。');
+    const i=await choose([{t:'倒一碟牛奶給牠（$20）'},{t:'悄悄放一點雞肉'},{t:'不要打擾牠'}],false);
+    if(i===0){cash(-20);repAdd(1);await say('','（金錢 −$20，名聲 +1）牠舔完牛奶，在門口睡著了，路人都停下來拍照。');}
+    else if(i===1){bump('charm',1);await say('','（魅力 +1）牠吃完就跑掉了，但隔天又來了。');}
+    else await say('','牠看了你一眼，慢慢走進巷子裡。');}},
+  {id:'blogger',w:1,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');const L=genericLook();
+    await say('美食部落客','我在寫一篇巷弄咖啡館的介紹，可以拍幾張照嗎？',L,'smile');
+    const i=await choose([{t:'當然，還送一份招牌點心'},{t:'可以，照常營業就好'},{t:'不好意思，我比較害羞'}],false);
+    if(i===0){cash(-80);repAdd(G.stats.cook>=30?5:3);await say('','（金錢 −$80，名聲 +'+(G.stats.cook>=30?5:3)+'）文章寫得很棒，隔天來了不少新客人。');}
+    else if(i===1){repAdd(1);await say('','（名聲 +1）他拍了幾張照片，說會再來。');}
+    else{await say('','他笑著說沒關係，只留下一張名片。');}}},
+  {id:'wallet',w:1,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','你在座位下面撿到一個舊皮夾，裡面有證件和一些現金。');
+    const i=await choose([{t:'送去派出所'},{t:'在店裡等失主回來'},{t:'貼在店門口找失主'}],false);
+    if(i===0){repAdd(2);await say('','（名聲 +2）警察稱讚你，這件事在鄰里傳開了。');}
+    else if(i===1){if(Math.random()<.7){cash(100);repAdd(2);await say('','（金錢 +$100，名聲 +2）失主半小時後衝進來，感動地塞了謝禮給你。');}else await say('','等到打烊都沒人來，你只好隔天送去派出所。');}
+    else{repAdd(1);bump('talk',1);await say('','（名聲 +1，談吐 +1）一位老先生看到告示，說這是他的皮夾，聊了好久。');}}},
+  {id:'ice',w:1,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','冰塊用完了，今天卻是大熱天。');
+    const i=await choose([{t:'立刻跑去買（$50，會累）'},{t:'改推熱飲和常溫的特調'},{t:'誠實跟客人說抱歉'}],false);
+    if(i===0){cash(-50);G.energy=lim(G.energy-10,0,100);await say('','（金錢 −$50，體力 −10）跑了一趟，但生意沒有受影響。');}
+    else if(i===1){bump('taste',1);await say('','（品味 +1）意外發現常溫特調很受歡迎。');}
+    else{repAdd(-1);await say('','（名聲 −1）客人有點失望，但也都很體諒。');}}},
+  {id:'fruit',w:1,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','隔壁水果攤老闆送來一大箱水蜜桃：「太熟了，賣不完，送你。」');
+    const i=await choose([{t:'試做一份水蜜桃甜點'},{t:'請客人試吃'},{t:'自己先吃掉一顆'}],false);
+    if(i===0){bump('taste',2);await say('','（品味 +2）做出了新配方，味道清爽。');}
+    else if(i===1){repAdd(1);bump('talk',1);await say('','（名聲 +1，談吐 +1）客人邊吃邊聊，店裡氣氛很好。');}
+    else{G.energy=lim(G.energy+10,0,100);await say('','（體力 +10）水蜜桃又甜又多汁，精神都來了。');}}},
+  {id:'story',w:1,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');const L=genericLook();
+    await say('老顧客','這間店以前是我年輕時常來的書店，你知道嗎？',L,'smile');
+    const i=await choose([{t:'坐下來聽他說'},{t:'邊做咖啡邊聽'},{t:'「您有什麼回憶嗎？」'}],false);
+    if(i===0){bump('talk',2);await say('','（談吐 +2）他講了好久，你學到很多巷子裡的老故事。');}
+    else if(i===1){bump('talk',1);bump('cook',1);await say('','（談吐 +1，廚藝 +1）你一邊沖咖啡一邊點頭，沒有失手。');}
+    else{bump('charm',1);repAdd(1);await say('','（魅力 +1，名聲 +1）他眼睛亮起來，說你是個很會聽的人。');}}},
+  {id:'music',w:1,run:async()=>{setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','你翻到抽屜裡一張舊黑膠，不知道是誰留下的。');
+    const i=await choose([{t:'放來聽聽看'},{t:'當作店裡的裝飾'},{t:'問問客人認不認得'}],false);
+    if(i===0){bump('charm',1);repAdd(1);await say('','（魅力 +1，名聲 +1）輕柔的爵士樂讓整間店都慢了下來。');}
+    else if(i===1){bump('taste',1);await say('','（品味 +1）掛在牆上，意外很搭。');}
+    else{bump('talk',1);await say('','（談吐 +1）一位客人認出是他最愛的歌手，聊個不停。');}}},
+  {id:'gift',w:3,when:()=>ids().some(c=>G.met[c]),run:async()=>{
+    const m=ids().filter(c=>G.met[c]);const c=m[Math.floor(Math.random()*m.length)],C=CHARS[c];setScene(BG.cafe('day'),'巷口咖啡館');
+    const things=['一小包自己挑的茶葉','路邊買的鬆餅','一張剛畫好的小卡片','一顆很漂亮的石頭','一束小花'];const t=things[Math.floor(Math.random()*things.length)];
+    await say('',C.short+'一進門，就把'+t+'放到吧台上。',C.look,'smile');
+    await say(C.n,'路過看到，就想到你。不用特別回禮。',C.look,'smile');
+    const i=await choose([{t:'開心地收下，說聲謝謝'},{t:'回送一杯他喜歡的飲料'},{t:'「這太貴重了，我不能收。」'}],false);
+    if(i===0){addAff(c,3);showWho(C.look,'smile');affPop(3);await say('','你把它收在櫃檯下，心裡暖暖的。');}
+    else if(i===1){addAff(c,5);showWho(C.look,'blush');affPop(5);await say(C.n,'……你記得我喜歡這個？',C.look,'blush');}
+    else{addAff(c,-1);showWho(C.look,'sad');affPop(-1);await say(C.n,'抱歉，是我太冒失了。',C.look,'sad');}}},
+  {id:'chat',w:2,when:()=>ids().some(c=>G.met[c]),run:async()=>{
+    const m=ids().filter(c=>G.met[c]);const c=m[Math.floor(Math.random()*m.length)],C=CHARS[c];setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('',C.short+'坐在窗邊發呆，看起來有點心事。',C.look,'normal');
+    const i=await choose([{t:'端一杯飲料過去，陪他坐一下'},{t:'隨口問「今天還好嗎？」'},{t:'不打擾，讓他靜一靜'}],false);
+    if(i===0){addAff(c,4);showWho(C.look,'smile');affPop(4);await say(C.n,'謝謝。有人陪著，感覺好多了。',C.look,'smile');}
+    else if(i===1){addAff(c,2);affPop(2);await say(C.n,'還好啦，只是有點累。',C.look,'normal');}
+    else{await say('','他過了一會兒自己離開了，給了你一個淡淡的微笑。');}}}
+];
+async function randomEvent(){
+  if(G.day<3||Math.random()>.55)return;
+  const pool=RAND.filter(e=>(!e.when||e.when())&&e.id!==G.lastRand);if(!pool.length)return;
+  const tot=pool.reduce((a,e)=>a+e.w,0);let r=Math.random()*tot,ev=pool[0];for(const e of pool){r-=e.w;if(r<=0){ev=e;break;}}
+  G.lastRand=ev.id;try{window.GC&&GC.add('corner-cafe','rand',1);}catch(e){}
+  await ev.run();save();setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
+}
 async function cafeDay(){
   show('scene');const bar=()=>'今日 '+fmt(earn);let earn=0,repD=0;
   setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
+  await randomEvent();
   const vis=ids().filter(c=>CHARS[c].visit.includes(wd())&&(!S2.includes(c)||G.day>=5));
   const nGen=2+Math.floor(G.rep/25);const queue=[];
   for(let i=0;i<nGen;i++)queue.push({gen:true});

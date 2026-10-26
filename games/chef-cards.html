@@ -510,7 +510,9 @@ function popAt(el,text,color){if(!text.trim())return;const p=$('#plate'),r=el.ge
 async function countUp(el,to,warn){if(warn){el.textContent='0 分';flashPlate(warn);return;}if(reduceMotion){el.textContent=fmt(to)+' 分';return;}const n=18;for(let i=1;i<=n;i++){el.textContent=fmt(to*i/n)+' 分';await sleep(25);}}
 
 /* ---------- win / lose ---------- */
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
 function winRound(){
+  gsfx('great');
   const base=[3,4,6][run.stage],left=R.serves,interest=Math.min(5,Math.floor(run.money/5)),cat=(has('cat')?3:0)+(has('sponsor')?4:0);
   const total=base+left+interest+cat;run.money+=total;
   const r=rec();const reached=roundIdx()+1;if(reached>r.best){r.best=reached;saveRec(r);}
@@ -529,6 +531,7 @@ $('#b-tomarket').addEventListener('click',goMarket);
 function loseRun(){finishRun(false);}
 const RETRIES=3;
 function finishRun(won){
+  gsfx(won?'fanfare':'bad');
   const r=rec();if(won){r.wins=(r.wins||0)+1;r.best=12;if(!run.daily)r.asc=Math.max(r.asc||0,Math.min(4,(run.asc||0)+1));try{window.GC&&GC.max('chef-cards',{ascWin:run.daily?0:(run.asc||0)+1});}catch(e){}}saveRec(r);
   try{window.GC&&GC.max('chef-cards',{dish:run.bestDish||0,win:won?1:0});}catch(e){}
   if(run.retries==null)run.retries=RETRIES;

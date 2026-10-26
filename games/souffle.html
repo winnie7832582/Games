@@ -130,6 +130,7 @@ h1 span:nth-child(3){animation-delay:1.74s}
   h1 span{animation:none}
   .toast,.act{transition:none}
 }
+#restart{white-space:nowrap;flex:none}
 </style>
 <script src="../gc.js"></script>
 </head>
@@ -302,8 +303,8 @@ function drawSouffle(c,cx,rimY,rx,rise,ct,o){
   if(ct>.5){c.strokeStyle=crust(ct+.3);c.lineWidth=.5;
     c.beginPath();c.moveTo(tx-w*.55,top-domeH*.3);c.quadraticCurveTo(tx-w*.2,top-domeH*.75,tx+w*.15,top-domeH*.55);c.stroke();
     c.beginPath();c.moveTo(tx+w*.05,top-domeH*.2);c.quadraticCurveTo(tx+w*.35,top-domeH*.5,tx+w*.6,top-domeH*.35);c.stroke();}
-  if(o.sugar){c.fillStyle='rgba(255,255,255,.95)';
-    for(let i=0;i<SUGAR.length;i+=2){const u=(SUGAR[i]-.5)*2*.88,v=SUGAR[i+1];const x=tx+u*w,y=top-v*domeH*Math.sqrt(Math.max(0,1-u*u))*.92+ry*.3*(1-v);c.beginPath();c.arc(x,y,.38,0,Math.PI*2);c.fill();}}
+  if(o.sugar){c.fillStyle='rgba(255,255,255,.95)';const sn=Math.floor(SUGAR.length/2*(o.sugar===true?1:o.sugar))*2;
+    for(let i=0;i<sn;i+=2){const u=(SUGAR[i]-.5)*2*.88,v=SUGAR[i+1];const x=tx+u*w,y=top-v*domeH*Math.sqrt(Math.max(0,1-u*u))*.92+ry*.3*(1-v);c.beginPath();c.arc(x,y,.38,0,Math.PI*2);c.fill();}}
   c.restore();
 }
 
@@ -727,13 +728,17 @@ const bake={
       if(st.s>7&&running)this.serve();
     }
   },
+  down(x,y){const st=this.st;if(st.phase==='serve'){st.lp={x,y};st.fp={x,y};}},
+  move(x,y){const st=this.st;if(st.phase!=='serve'||!st.lp)return;const d=Math.hypot(x-st.lp.x,y-st.lp.y);st.lp={x,y};st.fp={x,y};if(y<75){st.dust+=d;if(Math.random()<.25)buzz(3);}if(st.dust>=40)this.serve();},
+  up(){const st=this.st;st.lp=null;st.fp=null;},
   takeOut(){
     const st=this.st;if(!running||st.phase!=='bake')return;
-    st.phase='serve';st.s=0;st.set=smooth(6,11,st.tb);
+    st.phase='serve';st.s=0;gsfx('ding');st.set=smooth(6,11,st.tb);
     const cs=colorScore(st.c);st.bakeScore=cs*.6+(st.h/st.Hmax)*100*.4;
     {const w=FLV().win;st.bakeNote=st.c<w[0]-.05?'太早出爐，表面還很白，中間沒定型':st.c<w[0]?'再多烤一下顏色會更好':st.c<=w[1]?'烤色剛好，出爐時機對了（'+FLV().n+'）':st.c<=w[1]+.25?'烤得偏久，表面有點乾':'烤焦了';}
-    renderControls([{label:'上桌！',onTap:()=>this.serve()}]);setControlsEnabled(true);buzz(20);
-    $('#stage-hint').textContent='它很快就會塌，馬上上桌';
+    st.dust=0;st.lp=null;st.fp=null;
+    renderControls([{label:'不撒糖，直接上桌',onTap:()=>this.serve()}]);setControlsEnabled(true);buzz(20);
+    $('#stage-hint').textContent='用手指在舒芙蕾上方左右刷兩下撒糖粉，撒好就會上桌。它很快會塌，要快！';
   },
   serve(){
     const st=this.st;if(!running||st.phase!=='serve')return;
@@ -747,7 +752,8 @@ const bake={
   draw(c){
     const st=this.st;
     if(st.phase!=='bake'){
-      drawPlate(c,st.h*.56,st.c,{tilt:st.tilt,sugar:st.phase==='served',steam:true});
+      drawPlate(c,st.h*.56,st.c,{tilt:st.tilt,sugar:st.phase==='served'?1:st.phase==='serve'?clamp(st.dust/40,0,1):0,steam:true});
+      if(st.phase==='serve'&&st.fp){const f=st.fp;ell(c,f.x,f.y,6,6,'rgba(255,255,255,.35)',OUT,.6);for(let k=-4;k<=4;k+=2){c.beginPath();c.moveTo(f.x+k,f.y-Math.sqrt(36-k*k)*.9);c.lineTo(f.x+k,f.y+Math.sqrt(36-k*k)*.9);c.lineWidth=.25;c.strokeStyle=OUT;c.stroke();}c.beginPath();c.moveTo(f.x+6,f.y);c.lineTo(f.x+14,f.y-3);c.lineWidth=1.4;c.strokeStyle='#8A5A3B';c.stroke();for(let k=0;k<6;k++){const ph=(NOW*2+k/6)%1;ell(c,f.x-4+k*1.6,f.y+6+ph*10,.45,.45,'rgba(255,255,255,'+(1-ph)+')');}}
       if(st.phase==='serve'){const grace=.9+st.set*1.1,t=clamp(1-st.s/grace,0,1);bar(c,30,93,40,3,t,t>.3?P.good:P.bad);}
       return;
     }
@@ -815,6 +821,7 @@ function drawResultHero(){const c=fitHero($('#res-hero'));drawPlate(c,S.finalH*.
 
 /* ---------- UI flow ---------- */
 let screen='title',cur=null,curIdx=0,running=false,finishing=false;
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
 function show(name){screen=name;if(name==='title'&&typeof renderFlavs==='function')renderFlavs();['title','game','result'].forEach(n=>$('#'+n).classList.toggle('on',n===name));if(name==='game')requestAnimationFrame(resize);}
 let toastTimer=0;
 function toast(msg,kind){const t=$('#toast');t.textContent=msg;t.className='toast show'+(kind?' '+kind:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='toast';},1300);}

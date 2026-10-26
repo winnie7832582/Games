@@ -64,6 +64,17 @@ button:focus-visible{outline:3px solid var(--yolk);outline-offset:3px}
 .dish h2{font-family:var(--f-display);font-weight:400;font-size:26px;line-height:1.15}
 .dish .meta{font-size:13px;color:var(--ink-soft);margin-top:3px}
 .dish .best{text-align:right;font-size:12px;color:var(--ink-soft);line-height:1.5}
+.dishc{grid-template-columns:86px 1fr;cursor:default}
+.dishc:active{transform:none;box-shadow:0 5px 0 var(--ink)}
+.dishc canvas{cursor:pointer}
+.lvls{grid-column:1/-1;display:flex;gap:8px}
+.lvb{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 6px;border:2px solid var(--ink);border-radius:14px;background:var(--porcelain);color:var(--ink);font:inherit;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.lvb:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.lvb b{font-size:16px}.lvb > span{font-size:12px;color:var(--ink-soft)}
+.lvb.pro{background:var(--yolk-deep,#E8A31C);color:#2B1D0E}.lvb.pro > span{color:#4A3418}
+.lvb.pro .stars{color:#5A2E00}.lvb.pro .stars .off{color:rgba(0,0,0,.22)}
+.lvb:disabled{opacity:.5;cursor:default;box-shadow:none}
+.lvb:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .stars{color:var(--yolk-deep);font-size:16px;letter-spacing:1px}
 .stars .off{color:var(--tile-line)}
 .homefoot{display:flex;justify-content:center;margin-top:20px}
@@ -540,8 +551,8 @@ const DISHES = {
   friedrice: {
     name: '蛋炒飯', tag: '中式家常',
     steps: [
-      { key: 'beat', type: 'tap', scene: 'beat', title: '打蛋液', btn: '狂點打蛋！', time: 5, per: .05, meter: '均勻度', short: '狂點！',
-        hint: '5 秒內狂點按鈕，把蛋黃和蛋白打到完全均勻。' },
+      { key: 'beat', type: 'tap', scene: 'beat', title: '打蛋液', btn: '或點這裡打蛋', time: 5, per: .05, meter: '均勻度', short: '畫圈！',
+        hint: '5 秒內用手指在碗裡畫圈攪拌，把蛋黃和蛋白打勻。' },
       { key: 'egg', type: 'heat', scene: 'panEgg', title: '炒蛋', btn: '按住加火', zone: [.5, .72], dur: 8, short: '讓鍋溫留在綠區',
         hint: '按住按鈕火力變大、放開就降溫，鍋溫還會自己飄。讓溫度一直停在綠區，蛋才會又嫩又香。' },
       { key: 'pick', type: 'pick', scene: 'wok', title: '準備炒飯料', time: 9, short: '挑出 4 種炒飯食材',
@@ -574,8 +585,8 @@ const DISHES = {
         hint: '從下面挑出番茄炒飯需要的 4 種食材放進鍋裡。放錯會扣分，限時 9 秒。' },
       { key: 'toss', type: 'timing', scene: 'toss', title: '甩鍋拌炒', btn: '甩鍋！', count: 3, speed: 1, zone: [.4, .6], meter: '甩鍋時機', short: '指針進綠區時甩鍋',
         hint: '指針到綠區時按「甩鍋！」，讓每粒飯都裹上番茄醬。共 3 次，每次都會更快。' },
-      { key: 'beat', type: 'tap', scene: 'beat', title: '打蛋液', btn: '狂點打蛋！', time: 5, per: .05, meter: '均勻度', short: '狂點！',
-        hint: '5 秒內狂點按鈕，把蛋黃和蛋白打到完全均勻。' },
+      { key: 'beat', type: 'tap', scene: 'beat', title: '打蛋液', btn: '或點這裡打蛋', time: 5, per: .05, meter: '均勻度', short: '畫圈！',
+        hint: '5 秒內用手指在碗裡畫圈攪拌，把蛋黃和蛋白打勻。' },
       { key: 'egg', type: 'heat', scene: 'panEgg', title: '煎蛋皮', btn: '按住加火', zone: [.5, .72], dur: 8, short: '讓鍋溫留在綠區',
         hint: '按住按鈕火力變大、放開就降溫，鍋溫還會自己飄。讓溫度一直停在綠區，蛋皮才會滑嫩不焦。' },
       { key: 'wrap', type: 'timing', scene: 'wrap', title: '包起蛋包', btn: '翻折！', count: 1, speed: 1.25, zone: [.43, .57], meter: '翻折時機', short: '只有一次機會',
@@ -593,8 +604,8 @@ const DISHES = {
         hint: '按住淋上粉漿，粉漿會往外擴散。邊緣鋪到兩圈虛線之間就放開。' },
       { key: 'eggs', type: 'timing', scene: 'ojEgg', title: '打蛋', btn: '打蛋！', count: 2, speed: .95, zone: [.4, .6], meter: '打蛋時機', short: '指針進綠區時打蛋',
         hint: '指針到綠區時把蛋打進鍋裡，共 2 顆。時機不對會混進蛋殼。' },
-      { key: 'greens', type: 'tap', scene: 'greens', title: '放上小白菜', btn: '狂點撒菜！', time: 4, per: .06, meter: '青菜量', short: '狂點！',
-        hint: '4 秒內狂點，把小白菜鋪滿整片蚵仔煎！' },
+      { key: 'greens', type: 'tap', scene: 'greens', title: '放上小白菜', btn: '或點這裡撒菜', time: 4, per: .06, meter: '青菜量', short: '畫圈！',
+        hint: '4 秒內用手指在煎餅上來回撒菜，鋪滿整片。' },
       { key: 'flip', type: 'timing', scene: 'flip', title: '翻面', btn: '翻面！', count: 1, speed: 1.3, zone: [.44, .56], meter: '翻面時機', short: '一次定勝負',
         hint: '最關鍵的一翻！指針到綠區時按「翻面！」，時機不對整片會裂開。' },
       { key: 'sauce', type: 'draw', scene: 'sauce', title: '淋海山醬', time: 12, need: 2.8, ink: 6, meter: '海山醬', shape: 'oa', short: '均勻淋上醬汁',
@@ -702,7 +713,17 @@ T.hold = {
 T.tap = {
   hud: st => [{ label: st.meter }],
   init(S) { S.v = 0; S.tl = S.step.time; bar(0, { right: sec(S.tl) }); },
-  controls(S) { return [primary(S.step.btn, () => { if (!S.running) return; S.v = Math.min(1, S.v + S.step.per); S.hitT = S.at; S.hitN++; Snd.play('tap'); buzz(5); if (S.v >= 1) { S.out = { v: 1 }; hitFeedback(100); endStep(100, null, .3); } })]; },
+  controls(S) { return [note(S.step.key === 'greens' ? '用手指在煎餅上左右來回滑，把菜撒滿' : '用手指在碗裡畫圈，把蛋打勻')]; },
+  pdown(S, x, y) { S.lp = { x, y }; },
+  pmove(S, x, y) {
+    if (!S.lp) { S.lp = { x, y }; return; }
+    const d = Math.hypot(x - S.lp.x, y - S.lp.y); S.lp = { x, y };
+    if (d < 1) return;
+    S.v = Math.min(1, S.v + d / ((S.geo ? S.geo.r : 100) * (1 / S.step.per) * (S.step.key === 'greens' ? .42 : .55))); S.hitT = S.at; S.hitN++;
+    if (Math.random() < .25) Snd.play('whisk'); if (Math.random() < .08) buzz(4);
+    if (S.v >= 1) { S.out = { v: 1 }; hitFeedback(100); endStep(100, null, .3); }
+  },
+  pup(S) { S.lp = null; },
   update(S, dt) { S.tl -= dt; bar(0, { fill: S.v, right: sec(S.tl) }); if (S.tl <= 0) { S.out = { v: S.v }; endStep(S.v * 100, '時間到！'); } }
 };
 T.heat = {
@@ -1140,19 +1161,30 @@ $('#rHome').addEventListener('click', () => { renderHome(); show('home'); });
 const SPK_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const SPK_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M17 9l5 6M22 9l-5 6"/></svg>';
 function syncSound() { $('#sndBtn').innerHTML = Snd.on ? SPK_ON : SPK_OFF; $('#sndBtn').setAttribute('aria-pressed', String(!Snd.on)); $('#sndHome').textContent = '音效：' + (Snd.on ? '開' : '關'); }
-function toggleSound() { Snd.on = !Snd.on; if (!Snd.on) Snd.sizzle(0); else Snd.play('tap'); syncSound(); try { GCStore.setItem('sanwei-sound', Snd.on ? '1' : '0'); } catch (e) { } }
+function toggleSound() { Snd.on = !Snd.on; try { window.GC && GC.setSound(Snd.on); } catch (e) { } if (!Snd.on) Snd.sizzle(0); else Snd.play('tap'); syncSound(); try { GCStore.setItem('sanwei-sound', Snd.on ? '1' : '0'); } catch (e) { } }
 $('#sndBtn').addEventListener('click', toggleSound); $('#sndHome').addEventListener('click', toggleSound);
 try { if (GCStore.getItem('sanwei-sound') === '0') Snd.on = false; } catch (e) { }
+window.GC_OWN_SFX = true;
+try { if (window.GC) { Snd.on = GC.soundOn(); syncSound(); window.addEventListener('gc-sound', e => { Snd.on = e.detail; if (!Snd.on) Snd.sizzle(0); syncSound(); }); } } catch (e) { }
 
 function renderHome() {
   const best = loadBest(), list = $('#dishList'); list.innerHTML = '';
   for (const id of Object.keys(DISHES)) {
-    const d = DISHES[id], b = best[id], base = id.replace('+', ''), locked = d.pro && !(best[base] && best[base].stars >= 3), btn = document.createElement('button'); btn.type = 'button'; btn.className = 'dish'; if (locked) { btn.disabled = true; btn.style.opacity = '.55'; }
-    btn.innerHTML = `<canvas width="86" height="86" aria-hidden="true"></canvas><div><h2></h2><div class="meta"></div></div><div class="best"></div>`;
-    btn.querySelector('h2').textContent = d.name; btn.querySelector('.meta').textContent = `${d.tag}，${d.steps.length} 個步驟`;
-    btn.querySelector('.best').innerHTML = locked ? '普通版<br>拿到三顆星解鎖' : b ? `<div class="stars">${starsHTML(b.stars)}</div>最佳 ${b.score} 分` : '還沒做過';
-    btn.addEventListener('click', () => startDish(id)); list.appendChild(btn);
-    const cv = btn.querySelector('canvas'); bindCanvas(cv, 86, 86); drawDish(id, 43, 43, 84, PERFECT_Q[base]);
+    if (id.indexOf('+') > 0) continue;
+    const d = DISHES[id], b = best[id], pb = best[id + '+'], unlocked = !!(b && b.stars >= 3);
+    const card = document.createElement('div'); card.className = 'dish dishc';
+    card.innerHTML = `<canvas width="86" height="86" aria-hidden="true"></canvas><div><h2></h2><div class="meta"></div></div><div class="lvls"><button type="button" class="lvb" data-lv=""></button><button type="button" class="lvb pro" data-lv="+"></button></div>`;
+    card.querySelector('h2').textContent = d.name; card.querySelector('.meta').textContent = `${d.tag}，${d.steps.length} 個步驟`;
+    const nb = card.querySelector('[data-lv=""]'), pbtn = card.querySelector('[data-lv="+"]');
+    nb.innerHTML = '<b>普通</b><span>' + (b ? `<span class="stars">${starsHTML(b.stars)}</span> ${b.score} 分` : '還沒做過') + '</span>';
+    nb.setAttribute('aria-label', '開始做' + d.name + '，普通難度');
+    pbtn.innerHTML = '<b>職人</b><span>' + (!unlocked ? '普通版三顆星解鎖' : pb ? `<span class="stars">${starsHTML(pb.stars)}</span> ${pb.score} 分` : '高難度，還沒挑戰') + '</span>';
+    pbtn.setAttribute('aria-label', '開始做' + d.name + '，職人難度' + (unlocked ? '' : '，尚未解鎖'));
+    if (!unlocked) pbtn.disabled = true;
+    nb.addEventListener('click', () => startDish(id)); pbtn.addEventListener('click', () => { if (unlocked) startDish(id + '+'); });
+    card.querySelector('canvas').addEventListener('click', () => startDish(id));
+    list.appendChild(card);
+    const cv = card.querySelector('canvas'); bindCanvas(cv, 86, 86); drawDish(id, 43, 43, 84, PERFECT_Q[id]);
   }
 }
 

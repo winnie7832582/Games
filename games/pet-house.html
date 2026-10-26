@@ -203,8 +203,14 @@ const ITEMS={
   bow:{n:'蝴蝶結',price:40,kind:'acc',d:'戴在頭上'},
   hat:{n:'毛線帽',price:60,kind:'acc',d:'暖呼呼的帽子'},
   scarf:{n:'小圍巾',price:50,kind:'acc',d:'圍在脖子上'},
-  glasses:{n:'圓眼鏡',price:70,kind:'acc',d:'看起來很聰明'}
+  glasses:{n:'圓眼鏡',price:70,kind:'acc',d:'看起來很聰明'},
+  crown:{n:'小王冠',price:0,kind:'acc',d:'收藏商店的商品',shared:'pet_crown'},
+  wreath:{n:'花環',price:0,kind:'acc',d:'收藏商店的商品',shared:'pet_wreath'},
+  witch:{n:'魔女帽',price:0,kind:'acc',d:'限時活動商品',shared:'pet_witch'},
+  santa:{n:'聖誕帽',price:0,kind:'acc',d:'限時活動商品',shared:'pet_santa'},
+  redhat:{n:'福氣帽',price:0,kind:'acc',d:'限時活動商品',shared:'pet_redhat'}
 };
+function syncShared(){if(!P||!window.GC)return;try{Object.keys(ITEMS).forEach(k=>{if(ITEMS[k].shared&&GC.own(ITEMS[k].shared)){P.owned[k]=1;}});}catch(e){}}
 const HOUSE={cat:'貓跳台',dog:'狗屋',rabbit:'兔窩',gecko:'躲避洞穴',hamster:'木頭小屋'};
 const BEDNAME={gecko:'加熱墊'};
 const TOYOF={cat:'wand',dog:'ball',rabbit:'chew',gecko:'branch',hamster:'wheel'};
@@ -307,7 +313,8 @@ function daily(){
   P.streak=P.daily===yk?P.streak+1:1;P.daily=key;const c=25+Math.min(P.streak,7)*5;P.coins+=c;P.bond+=5;P.fedToday=0;
   diary('每日簽到：連續 '+P.streak+' 天，拿到 '+c+' 金幣。');setTimeout(()=>toast('每日簽到 +'+c+' 金幣（連續 '+P.streak+' 天）'),900);
 }
-function updateUI(){
+let lastSync=0;
+function updateUI(){if(Date.now()-lastSync>4000){lastSync=Date.now();syncShared();}
   const st=stage();$('#h-name').textContent=P.name;$('#h-stage').textContent=SPECIES[P.species].coats[P.coat][0]+'・'+st[0]+'・'+PERS[P.pers].n;
   $('#h-coins').textContent='● '+P.coins;
   const lv=bondLv(),cur=BOND[lv-1],nx=BOND[lv]||BOND[lv-1]+200;$('#h-bondl').textContent='親密度 Lv'+lv;$('#h-bond').style.width=clamp((P.bond-cur)/(nx-cur)*100,0,100)+'%';
@@ -380,11 +387,11 @@ function perform(done){
   const next=()=>{if(i<steps.length){steps[i++]();setTimeout(next,2400);}else setTimeout(done,500);};
   setTimeout(next,1200);
 }
-const FARMFOOD={cabbage:{n:'小白菜',h:28,m:8},radish:{n:'白蘿蔔',h:22,m:12},strawberry:{n:'草莓',h:12,m:18},corn:{n:'玉米',h:24,m:6}};
+const FARMFOOD={cabbage:{n:'小白菜',h:28,m:8,sp:['rabbit','hamster']},radish:{n:'白蘿蔔',h:22,m:12,sp:['rabbit','hamster']},strawberry:{n:'草莓',h:12,m:18,sp:['rabbit','hamster']},corn:{n:'玉米',h:24,m:6,sp:['rabbit','hamster']},dandelion:{n:'蒲公英',h:20,m:10,sp:['rabbit','hamster']},cricket:{n:'菜園的蟋蟀',h:38,m:14,sp:['gecko']}};
 function farmData(){try{const f=JSON.parse(GCStore.getItem('farm-v1')||'null');return f&&f.stock?f:null;}catch(e){return null;}}
 function farmRows(){
-  if(!(P.species==='rabbit'||P.species==='hamster'))return'';const f=farmData();if(!f)return'';
-  const ks=Object.keys(FARMFOOD).filter(k=>(f.stock[k]||0)>0);if(!ks.length)return'';
+  const f=farmData();if(!f)return'';
+  const ks=Object.keys(FARMFOOD).filter(k=>FARMFOOD[k].sp.includes(P.species)&&(f.stock[k]||0)>0);if(!ks.length)return'';
   return '<p class="soft" style="margin-top:10px">來自小菜園（收成的菜）</p>'+ks.map(k=>{const F=FARMFOOD[k];return '<div class="row"><div class="tx"><b>'+F.n+'</b><span>飽足 +'+F.h+'、心情 +'+F.m+'，菜園裡有 '+f.stock[k]+' 個</span></div><button class="btn" type="button" data-farm="'+k+'">餵牠</button></div>';}).join('');
 }
 function feedFarm(k){
@@ -400,7 +407,7 @@ function feed(k){
   const full=P.hunger>92;P.hunger=clamp(P.hunger+F.h,0,100);
   let m=F.m*(P.pers==='glutton'?1.5:1);if(full){m=-6;toast(P.name+'吃太撐了…');}else toast(P.name+'吃得好開心');
   P.mood=clamp(P.mood+m,0,100);if(F.fav&&!full)P.bond+=2;P.bond+=1;
-  pet.anim='eat';pet.animT=0;pet.target=22;fx.food={k,t:0};buzz(15);P.fedToday++;save();updateUI();
+  pet.anim='eat';pet.animT=0;pet.target=22;fx.food={k,t:0};buzz(15);gsfx('pop');P.fedToday++;save();updateUI();
 }
 
 /* clean */
@@ -438,10 +445,11 @@ $('#a-more').addEventListener('click',()=>{
 });
 const SHOPTABS=[['food','食物'],['toy','玩具家具'],['acc','配件'],['room','擴建']];
 function openShop(tab){
+  syncShared();
   if(tab==='room'){openRoomShop();return;}
   const tabs=SHOPTABS;
   const items=tab==='food'?Object.keys(FOODS).filter(k=>FOODS[k].sp.includes(P.species)).map(k=>({k,n:FOODS[k].n,price:FOODS[k].price,d:FOODS[k].med?'治好生病':'飽足 +'+FOODS[k].h+(FOODS[k].m?'、心情 +'+FOODS[k].m:''),food:1,own:P.inv[k]||0})):
-    Object.keys(ITEMS).filter(k=>{const I=ITEMS[k];return (tab==='acc'?I.kind==='acc':I.kind!=='acc')&&(!I.sp||I.sp.includes(P.species));}).map(k=>({k,n:itemName(k),price:ITEMS[k].price,d:ITEMS[k].d,owned:has(k)}));
+    Object.keys(ITEMS).filter(k=>{const I=ITEMS[k];return (tab==='acc'?I.kind==='acc':I.kind!=='acc')&&(!I.sp||I.sp.includes(P.species))&&(!I.shared||has(k));}).map(k=>({k,n:itemName(k),price:ITEMS[k].price,d:ITEMS[k].d,owned:has(k)}));
   sheetHTML('<h3>商店</h3><p class="soft">金幣 '+P.coins+'</p><div class="tabs">'+tabs.map(([k,n])=>'<button type="button" data-tab="'+k+'" aria-pressed="'+(tab===k)+'">'+n+'</button>').join('')+'</div>'+
     items.map(it=>'<div class="row"><div class="tx"><b>'+it.n+'</b><span>'+it.d+(it.food?'，有 '+it.own+' 份':'')+'</span></div><button class="btn" type="button" data-buy="'+it.k+'"'+(it.owned||P.coins<it.price?' disabled':'')+'>'+(it.owned?'已擁有':'● '+it.price)+'</button></div>').join('')+'<button class="btn close" type="button" data-close>關閉</button>',box=>{
     box.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>openShop(b.dataset.tab)));
@@ -462,7 +470,9 @@ function openTricks(){
     return '<div class="row"><div class="tx"><b>'+n+'</b><span>'+(locked?'親密度 Lv'+need+' 解鎖':learned?'已經學會':'進度 '+pr+' / 5')+'</span></div><button class="btn" type="button" data-trick="'+k+'"'+(locked||P.sleeping||P.sick?' disabled':'')+'>'+(learned?'表演':'練習')+'</button></div>';}).join('')+'<button class="btn close" type="button" data-close>關閉</button>',box=>{
     box.querySelectorAll('[data-trick]').forEach(b=>b.addEventListener('click',()=>{trick(b.dataset.trick);closeSheet();clearTimeout(trickT);trickT=setTimeout(()=>{if($('#sheet').hidden&&!game&&P)openTricks();},2600);}));});
 }
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
 function trick(k){
+  gsfx('pop');
   const name=TRICKS[P.species].find(t=>t[0]===k)[1],pr=P.tricks[k]||0;
   if(pr>=5){pet.anim='trick';pet.trick=k;pet.animT=0;P.mood=clamp(P.mood+4,0,100);P.energy=clamp(P.energy-2,0,100);toast(P.name+'表演了「'+name+'」');save();updateUI();return;}
   if(P.energy<12){toast(P.name+'太累了，學不動');return;}
@@ -724,6 +734,7 @@ function accessory(c,curled,mode){
   if(mode==='gecko'||mode==='gecko-sleep'){c.save();if(mode==='gecko-sleep'){c.translate(8,-5.6);c.scale(.9,.9);}
     if(a==='bow'){const x=-1.4,y=-4.2;c.beginPath();c.moveTo(x,y);c.lineTo(x-2.2,y-1.4);c.lineTo(x-2.2,y+1.4);c.closePath();fs(c,'#E76F99',OUT,.3);c.beginPath();c.moveTo(x,y);c.lineTo(x+2.2,y-1.4);c.lineTo(x+2.2,y+1.4);c.closePath();fs(c,'#E76F99',OUT,.3);ell(c,x,y,.7,.7,'#C94C7A');}
     if(a==='hat'){c.beginPath();c.moveTo(-3.6,-3.4);c.quadraticCurveTo(0,-10,3.6,-3.4);c.closePath();fs(c,'#E76F51',OUT,.35);rr(c,-4,-4.2,8,1.8,.9);fs(c,'#F7F3EC',OUT,.3);ell(c,0,-8.4,1.1,1.1,'#F7F3EC',OUT,.3);}
+    if(a==='crown'||a==='witch'||a==='santa'||a==='redhat'||a==='wreath'){const col={crown:'#F2C14E',witch:'#3A2A52',santa:'#D9362B',redhat:'#C8312B',wreath:'#F28CA0'}[a];c.beginPath();c.moveTo(-3.6,-3.4);c.lineTo(0,-8.4);c.lineTo(3.6,-3.4);c.closePath();fs(c,col,OUT,.35);}
     if(a==='scarf'&&mode==='gecko'){rr(c,-6,-1.4,2.4,4.2,1);fs(c,'#2A9D8F',OUT,.35);}
     if(a==='glasses'&&mode==='gecko'){c.lineWidth=.4;c.strokeStyle=OUT;c.beginPath();c.arc(2.2,-1,2.1,0,Math.PI*2);c.stroke();c.beginPath();c.moveTo(.1,-1.2);c.lineTo(-1.6,-1.6);c.stroke();}
     c.restore();return;}
@@ -731,6 +742,11 @@ function accessory(c,curled,mode){
   c.save();c.translate(dx,dy);
   if(a==='bow'){const x=-4.5,y=-25;c.beginPath();c.moveTo(x,y);c.lineTo(x-3,y-1.8);c.lineTo(x-3,y+1.8);c.closePath();fs(c,'#E76F99',OUT,.35);c.beginPath();c.moveTo(x,y);c.lineTo(x+3,y-1.8);c.lineTo(x+3,y+1.8);c.closePath();fs(c,'#E76F99',OUT,.35);ell(c,x,y,.9,.9,'#C94C7A');}
   if(a==='hat'){c.beginPath();c.moveTo(-6,-24);c.quadraticCurveTo(0,-34,6,-24);c.closePath();fs(c,'#E76F51',OUT,.4);rr(c,-6.6,-25,13.2,2.4,1.2);fs(c,'#F7F3EC',OUT,.35);ell(c,0,-31.6,1.6,1.6,'#F7F3EC',OUT,.35);}
+  if(a==='crown'){c.beginPath();c.moveTo(-5,-25);c.lineTo(-5,-29.5);c.lineTo(-2.5,-27);c.lineTo(0,-31);c.lineTo(2.5,-27);c.lineTo(5,-29.5);c.lineTo(5,-25);c.closePath();fs(c,'#F2C14E',OUT,.4);ell(c,0,-27.4,.8,.8,'#E5483A');}
+  if(a==='wreath'){for(let k=0;k<7;k++){const ang=Math.PI+k/6*Math.PI,x=Math.cos(ang)*7.4,y=-19+Math.sin(ang)*7.4;ell(c,x,y,1.5,1.5,['#F28CA0','#FFE27A','#9B7FD1','#7BC47F'][k%4],OUT,.3);}}
+  if(a==='witch'){c.beginPath();c.moveTo(-6,-25);c.lineTo(-1,-37);c.lineTo(1.5,-36);c.lineTo(6,-25);c.closePath();fs(c,'#3A2A52',OUT,.4);rr(c,-8,-26,16,2.2,1);fs(c,'#2A1F3D',OUT,.35);rr(c,-4.5,-29,9,1.6,.6);fs(c,'#F2A33A',OUT,.2);}
+  if(a==='santa'){c.beginPath();c.moveTo(-6,-25);c.quadraticCurveTo(-1,-36,6,-30);c.lineTo(6,-25);c.closePath();fs(c,'#D9362B',OUT,.4);rr(c,-6.5,-26,13,2.6,1.3);fs(c,'#FFFFFF',OUT,.35);ell(c,6.2,-30.4,1.7,1.7,'#FFFFFF',OUT,.35);}
+  if(a==='redhat'){rr(c,-5.5,-29.5,11,5,1.5);fs(c,'#C8312B',OUT,.4);rr(c,-6.5,-25.4,13,2,1);fs(c,'#F2C14E',OUT,.35);ell(c,0,-27,1.2,1.2,'#F2C14E');}
   if(a==='scarf'&&!curled){rr(c,-7,-13.4,14,2.8,1.4);fs(c,'#2A9D8F',OUT,.4);rr(c,3,-12,2.6,6,1);fs(c,'#2A9D8F',OUT,.4);}
   if(a==='glasses'&&!curled){c.lineWidth=.45;c.strokeStyle=OUT;c.beginPath();c.arc(-3,-19.6,2.3,0,Math.PI*2);c.stroke();c.beginPath();c.arc(3,-19.6,2.3,0,Math.PI*2);c.stroke();c.beginPath();c.moveTo(-.7,-19.8);c.lineTo(.7,-19.8);c.stroke();}
   c.restore();
@@ -769,6 +785,7 @@ function rubPet(p,d){
   const spot=spotAt(p);let gain=1;if(spot===P.like)gain=2;
   if(P.pers==='clingy')gain*=1.6;if(P.species==='gecko'&&bondLv()<4)gain*=.6;if(P.pers==='shy'&&bondLv()<3)gain*=.4;
   if(spot===P.like&&!P.liked){P.liked=true;toast('原來'+P.name+'最喜歡被摸'+SPOTS[spot]+'！');diary('發現'+P.name+'最喜歡被摸'+SPOTS[spot]+'。');P.bond+=5;}
+  if(Date.now()-(window._purr||0)>1300){window._purr=Date.now();gsfx('purr');}
   if(P.petBudget>0){P.mood=clamp(P.mood+gain,0,100);P.petBudget-=1;if(Math.random()<.4)P.bond+=1;}
   fx.hearts.push({x:p.x+rnd(-2,2),y:p.y,t:0,big:spot===P.like});pet.anim='happy';pet.animT=0;buzz(4);
   if(P.pers==='shy'&&bondLv()<3&&Math.random()<.15)toast(P.name+'有點害羞，躲了一下');
