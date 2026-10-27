@@ -148,6 +148,13 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .kvr{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.93rem}
 .kvr b.no{color:var(--soft);font-weight:500}
 .kvr b.ok{color:var(--accent)}
+.achnav{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 6px}
+.achnav button{border:2px solid var(--line);background:var(--surface);color:inherit;border-radius:999px;padding:6px 10px;font:inherit;font-size:.86rem;cursor:pointer}
+.achnav button small{color:var(--soft)}
+.achnav button.done{border-color:#F2C14E}
+.achnav button:focus-visible,.totop:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.achg{display:flex;align-items:center;gap:8px}
+.totop{margin-left:auto;border:0;background:transparent;color:var(--accent);font:inherit;font-size:.8rem;cursor:pointer;padding:4px}
 .achg{margin:16px 0 6px;font-weight:700;color:var(--soft);font-size:.9rem}
 .achi{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
 .achi:last-child{border-bottom:0}
@@ -373,14 +380,18 @@ function reportSheet2(){
 }
 $('#b-report').addEventListener('click',reportSheet2);
 function achSheet(){
-  const g=GC.get();const groups=C.games.map(x=>x.id).concat(['']);
-  let h='<div class="shead"><h2>成就</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">已解鎖 '+Object.keys(g.ach).length+' / '+GC.ACH.length+'。紅色是進階成就，完成可以拿更多經驗值。</p>';
+  const g=GC.get();const groups=C.games.map(x=>x.id).concat(['']).filter(id=>GC.ACH.some(a=>a.game===id));
+  const gname=id=>id?gameName(id):'綜合';
+  let h='<div class="shead"><h2>成就</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">已解鎖 '+Object.keys(g.ach).length+' / '+GC.ACH.length+'。紅色是進階成就，完成可以拿更多經驗值。點下面的遊戲名稱可以直接跳過去。</p>';
+  h+='<nav class="achnav" aria-label="跳到遊戲">'+groups.map(id=>{const list=GC.ACH.filter(a=>a.game===id),n=list.filter(a=>g.ach[a.id]).length;return '<button type="button" data-jump="'+(id||'all')+'"'+(n===list.length?' class="done"':'')+'>'+esc(gname(id))+' <small>'+n+'/'+list.length+'</small></button>';}).join('')+'</nav>';
   groups.forEach(id=>{
-    const list=GC.ACH.filter(a=>a.game===id);if(!list.length)return;
-    const n=list.filter(a=>g.ach[a.id]).length;
-    h+='<p class="achg">'+(id?esc(gameName(id)):'綜合')+'　'+n+' / '+list.length+'</p>'+list.map(a=>{const on=!!g.ach[a.id];return '<div class="achi '+(on?'on':'off')+(a.hard?' hard':'')+'"><span class="ic" aria-hidden="true">'+(on?'★':'☆')+'</span><span class="tx"><b>'+esc(a.name)+'<span class="sr-only">'+(on?'（已解鎖）':'（未解鎖）')+'</span></b><span>'+esc(a.desc)+'</span></span><span class="xp">+'+a.xp+'</span></div>';}).join('');
+    const list=GC.ACH.filter(a=>a.game===id),n=list.filter(a=>g.ach[a.id]).length;
+    h+='<p class="achg" id="achg-'+(id||'all')+'">'+esc(gname(id))+'　'+n+' / '+list.length+'<button type="button" class="totop" data-top>回到頂端 ↑</button></p>'+list.map(a=>{const on=!!g.ach[a.id];return '<div class="achi '+(on?'on':'off')+(a.hard?' hard':'')+'"><span class="ic" aria-hidden="true">'+(on?'★':'☆')+'</span><span class="tx"><b>'+esc(a.name)+'<span class="sr-only">'+(on?'（已解鎖）':'（未解鎖）')+'</span></b><span>'+esc(a.desc)+'</span></span><span class="xp">+'+a.xp+'</span></div>';}).join('');
   });
-  sheet(h);
+  sheet(h,box=>{
+    box.querySelectorAll('[data-jump]').forEach(x=>x.addEventListener('click',()=>{const t=box.querySelector('#achg-'+x.dataset.jump);if(t){const hd=box.querySelector('.shead').offsetHeight;const top=box.scrollTop+(t.getBoundingClientRect().top-box.getBoundingClientRect().top)-hd-6;box.scrollTo({top:Math.max(0,top),behavior:'smooth'});}}));
+    box.querySelectorAll('[data-top]').forEach(x=>x.addEventListener('click',()=>box.scrollTo({top:0,behavior:'smooth'})));
+  });
 }
 $('#b-ach').addEventListener('click',achSheet);
 window.addEventListener('pageshow',e=>{if(e.persisted)render();});
