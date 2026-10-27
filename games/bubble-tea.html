@@ -158,6 +158,15 @@ button{font:inherit;color:inherit}
 
 @media (max-height:640px){.cust{min-height:136px}.ticket{font-size:.85rem}.pad .btn{min-height:44px;padding:8px 4px}}
 @media (prefers-reduced-motion:reduce){.float{animation-duration:.01s}.toast,.btn,.cust{transition:none}}
+.hud .hl{display:flex;align-items:center;gap:8px}
+.pz{width:36px;height:36px;border-radius:50%;border:3px solid var(--ink);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.pz:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+#game{position:relative}
+.pause{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(29,26,22,.55);padding:20px}
+.pause[hidden]{display:none}
+.pause .pcard{width:100%;max-width:340px;background:var(--surface);border:3px solid var(--ink);border-radius:20px;padding:20px 18px;text-align:center;display:flex;flex-direction:column;gap:10px}
+.pause h2{margin:0;font-weight:900}.pause p{margin:0 0 6px;color:var(--ink-soft)}
+.pause .btn{width:100%}
 </style>
 <script src="../gc.js"></script>
 </head>
@@ -177,9 +186,15 @@ button{font:inherit;color:inherit}
 
   <section class="screen" id="game" aria-label="營業中">
     <div class="hud">
-      <span class="time" id="time">2:00</span>
+      <span class="hl"><button class="pz" id="b-pause" type="button" aria-label="暫停"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg></button><span class="time" id="time">2:00</span></span>
       <span class="hearts" id="hearts" aria-label="剩下 3 次失誤機會">♥♥♥</span>
       <span class="money" id="money">$0</span>
+    </div>
+    <div class="pause" id="pause" hidden role="dialog" aria-modal="true" aria-labelledby="pz-h">
+      <div class="pcard"><h2 id="pz-h">暫停中</h2><p id="pz-t"></p>
+        <button class="btn big" id="pz-go" type="button">繼續營業</button>
+        <button class="btn" id="pz-re" type="button">重新開始</button>
+        <button class="btn" id="pz-home" type="button">回到茶舖門口</button></div>
     </div>
     <div class="queue" id="queue"></div>
     <div class="work" id="work">
@@ -323,7 +338,7 @@ function loseHeart(){
 let toastTimer=0;
 function toast(m,k){const t=$('#toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',1200);}
 function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
-function live(){return G&&!G.over&&screen==='game';}
+function live(){return G&&!G.over&&!G.paused&&screen==='game';}
 function startPour(tea){
   if(!live())return false;const cup=G.cup;if(!cup.sealed&&cup.fill<100)gsfx('pour');
   if(cup.sealed){toast('已經封膜了，倒掉重做或先出餐');return false;}
@@ -601,6 +616,20 @@ function endGame(early){
 }
 
 let last=performance.now();
+function pauseGame(){
+  if(!G||G.over||G.paused||screen!=='game')return;
+  if(G.pouring){try{stopPour();}catch(e){}}
+  G.paused=true;stopAllLoops();
+  const t=Math.max(0,Math.ceil(DUR-G.t));$('#pz-t').textContent='還剩 '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+'，營業額 $'+G.money+'。客人會等你回來。';
+  $('#pause').hidden=false;setTimeout(()=>{try{$('#pz-go').focus();}catch(e){}},30);
+}
+function resumeGame(){if(!G||!G.paused)return;G.paused=false;$('#pause').hidden=true;last=performance.now();gsfx('pop');}
+$('#b-pause').addEventListener('click',pauseGame);
+$('#pz-go').addEventListener('click',resumeGame);
+$('#pz-re').addEventListener('click',()=>{$('#pause').hidden=true;if(G)G.over=true;stopAllLoops();start();});
+$('#pz-home').addEventListener('click',()=>{$('#pause').hidden=true;if(G)G.over=true;stopAllLoops();showBest();show('title');});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
+document.addEventListener('keydown',e=>{if(screen!=='game'||!G||G.over)return;if(e.key==='Escape'||e.key==='p'||e.key==='P'){e.preventDefault();G.paused?resumeGame():pauseGame();}});
 function loop(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;NOW+=dt;
   if(screen==='game'&&G){update(dt);if(W>0&&H>0)render();}
   requestAnimationFrame(loop);}
