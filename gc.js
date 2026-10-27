@@ -190,8 +190,60 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     ding: function () { tone(1568, 0.5, 'sine', 0.06); tone(2093, 0.4, 'sine', 0.03, 0.02); },
     purr: function () { tone(110, 0.25, 'sine', 0.05, 0, 95); },
     fanfare: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.14, 'triangle', 0.07, i * 0.1); }); },
-    level: function () { [784, 988, 1175, 1568].forEach(function (f, i) { tone(f, 0.1, 'square', 0.03, i * 0.06); }); }
+    level: function () { [784, 988, 1175, 1568].forEach(function (f, i) { tone(f, 0.1, 'square', 0.03, i * 0.06); }); },
+    crack: function () { noise(0.05, 0.16, 3000); tone(180, 0.06, 'square', 0.03, 0.01, 90); },
+    splash: function () { noise(0.3, 0.1, 900); tone(300, 0.15, 'sine', 0.04, 0, 120); },
+    plop: function () { tone(260, 0.09, 'sine', 0.09, 0, 520); },
+    bubble: function () { tone(400 + Math.random() * 300, 0.06, 'sine', 0.05, 0, 900); },
+    clink: function () { tone(2400, 0.12, 'sine', 0.04); tone(3100, 0.1, 'sine', 0.03, 0.03); },
+    sprinkle: function () { for (var i = 0; i < 4; i++) noise(0.03, 0.05, 5000 + i * 600, i * 0.03); },
+    sparkle: function () { [1568, 1976, 2349].forEach(function (f, i) { tone(f, 0.12, 'sine', 0.035, i * 0.05); }); },
+    bell: function () { tone(1318, 0.35, 'sine', 0.06); tone(1760, 0.3, 'sine', 0.035, 0.05); },
+    seal: function () { tone(500, 0.06, 'square', 0.03, 0, 250); noise(0.15, 0.06, 2500, 0.04); },
+    swish: function () { noise(0.14, 0.06, 2200); },
+    tick: function () { tone(1400, 0.02, 'square', 0.02); },
+    flip: function () { noise(0.05, 0.08, 3500); },
+    shuffle: function () { for (var i = 0; i < 5; i++) noise(0.04, 0.05, 3000, i * 0.04); },
+    boing: function () { tone(220, 0.18, 'sine', 0.07, 0, 660); },
+    thud: function () { tone(120, 0.1, 'sine', 0.09, 0, 60); noise(0.06, 0.05, 400); },
+    grow: function () { tone(440, 0.18, 'sine', 0.04, 0, 880); },
+    alarm: function () { tone(880, 0.12, 'square', 0.03); tone(660, 0.12, 'square', 0.03, 0.14); tone(880, 0.12, 'square', 0.03, 0.28); },
+    blip: function () { tone(760 + Math.random() * 120, 0.025, 'triangle', 0.018); },
+    door: function () { tone(1046, 0.25, 'sine', 0.05); tone(1318, 0.3, 'sine', 0.04, 0.12); },
+    zzz: function () { tone(220, 0.4, 'sine', 0.03, 0, 180); },
+    munch: function () { for (var i = 0; i < 3; i++) noise(0.05, 0.07, 900, i * 0.11); },
+    meow: function () { tone(700, 0.28, 'sawtooth', 0.025, 0, 480); tone(520, 0.2, 'sine', 0.03, 0.12, 760); },
+    bark: function () { tone(260, 0.09, 'sawtooth', 0.05, 0, 180); noise(0.08, 0.05, 700); tone(240, 0.09, 'sawtooth', 0.045, 0.16, 170); },
+    squeak: function () { tone(1800, 0.06, 'sine', 0.04, 0, 2600); tone(2000, 0.05, 'sine', 0.035, 0.08, 2800); },
+    chirp: function () { tone(1200, 0.07, 'sine', 0.035, 0, 1700); },
+    gong: function () { tone(196, 1.0, 'sine', 0.06); tone(392, 0.8, 'sine', 0.025); },
+    heart: function () { tone(880, 0.07, 'sine', 0.04); tone(1175, 0.09, 'sine', 0.04, 0.06); },
+    cash: function () { tone(1568, 0.05, 'square', 0.025); tone(2093, 0.18, 'square', 0.025, 0.05); noise(0.05, 0.04, 6000, 0.02); }
   };
+  /* 持續音：按住倒茶、煮珍珠、磨豆、蒸奶、烤箱、油鍋等，開始時 GC.loop(名稱, true)、結束時 GC.loop(名稱, false) */
+  var LDEF = {
+    pour: { f: 900, q: 0.8, v: 0.05 }, stream: { f: 1400, q: 0.6, v: 0.035 }, boil: { f: 300, q: 1.5, v: 0.05, tr: 6 },
+    sizzle: { f: 4200, q: 0.4, v: 0.03, tr: 11 }, steam: { f: 2600, q: 0.4, v: 0.05 }, grind: { f: 500, q: 2.2, v: 0.06, tr: 15 },
+    hiss: { f: 1700, q: 0.7, v: 0.04 }, scrub: { f: 2000, q: 1, v: 0.04, tr: 8 }, stir: { f: 700, q: 1.4, v: 0.04, tr: 3 },
+    oven: { f: 160, q: 3, v: 0.05, tr: 0.7 }, rain: { f: 1200, q: 0.4, v: 0.025 }, crowd: { f: 450, q: 0.6, v: 0.02, tr: 0.4 }
+  };
+  var LOOPS = {}, NBUF = null;
+  function loop(id, on) {
+    var L = LOOPS[id];
+    if (!on || !soundOn()) { if (L) { try { var a0 = ac(); L.g.gain.setTargetAtTime(0.0001, a0.currentTime, 0.05); L.src.stop(a0.currentTime + 0.3); } catch (e) {} delete LOOPS[id]; } return; }
+    if (L || !LDEF[id]) return;
+    var a = ac(); if (!a) return; var d = LDEF[id];
+    if (!NBUF) { var n = a.sampleRate * 2; NBUF = a.createBuffer(1, n, a.sampleRate); var ch = NBUF.getChannelData(0); for (var i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1; }
+    var src = a.createBufferSource(); src.buffer = NBUF; src.loop = true;
+    var fl = a.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = d.f; fl.Q.value = d.q;
+    var g = a.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(d.v, a.currentTime, 0.06);
+    src.connect(fl); fl.connect(g);
+    if (d.tr) { var lfo = a.createOscillator(), lg = a.createGain(), mg = a.createGain(); lfo.frequency.value = d.tr; lg.gain.value = 0.5; mg.gain.value = 0.5; lfo.connect(lg); lg.connect(mg.gain); g.connect(mg); mg.connect(a.destination); lfo.start(); }
+    else g.connect(a.destination);
+    src.start(); LOOPS[id] = { src: src, g: g };
+  }
+  function stopLoops() { for (var k in LOOPS) loop(k, false); }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stopLoops(); });
   var lastS = {};
   function sfx(n) { if (!soundOn()) return; var now = Date.now(); if (lastS[n] && now - lastS[n] < 45) return; lastS[n] = now; try { SFX[n] && SFX[n](); } catch (e) {} }
   document.addEventListener('pointerdown', function () { if (soundOn()) ac(); }, true);
@@ -396,8 +448,8 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     /* 累加某個數量，例如餵食次數 */
     add: function (game, metric, n) { var m = {}; m[metric] = typeof n === 'number' ? n : 1; record(game, m, 'add'); },
     ACH: ACH, QUESTS: QUESTS, COLL: COLL, THEMES: THEMES,
-    sfx: sfx, soundOn: soundOn,
-    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
+    sfx: sfx, soundOn: soundOn, loop: loop, stopLoops: stopLoops,
+    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } else stopLoops(); try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
     own: function (id) { return !!load().own[id]; },
     eq: function (slot) { var p = load(), id = p.eq[slot]; return id && p.own[id] ? id : null; },
     val: function (slot) { var id = this.eq(slot), d = id && collDef(id); return d ? d.val : null; },
