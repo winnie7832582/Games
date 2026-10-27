@@ -102,6 +102,16 @@ button,input{font:inherit;color:inherit}
 .close{width:100%;margin-top:10px}
 @media (max-height:690px){.room{min-height:190px}.act svg{width:24px;height:24px}.needs{gap:4px 12px}}
 @media (prefers-reduced-motion:reduce){.btn,.toast,.need .bar i{transition:none}}
+.book{background:var(--surface);border:2px solid var(--line);border-left:8px solid var(--coral);border-radius:10px;padding:10px 12px;margin:6px 0 10px}
+.book .bhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-bottom:2px solid var(--line);padding-bottom:6px;margin-bottom:6px}
+.book .bhead b{font-weight:400;font-size:1.1rem}.book .bhead span{color:var(--soft);font-size:.85rem}
+.bpage p{margin:0;padding:7px 0;line-height:1.6;border-bottom:1px dashed var(--line)}
+.bpage time{color:var(--soft);font-size:.8rem;margin-right:8px;font-variant-numeric:tabular-nums}
+.bnote{display:block;margin-top:10px}.bnote span{display:block;color:var(--soft);font-size:.85rem;margin-bottom:4px}
+.bnote textarea{width:100%;min-height:64px;border:2px solid var(--line);border-radius:10px;padding:8px;font:inherit;background:var(--bg);color:var(--ink);resize:vertical}
+.bnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.bnav .btn{width:auto;flex:none;padding:8px 12px;margin:0}
+#bk-jump{width:100%;margin-top:8px;padding:8px;border:2px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}
 </style>
 <script src="../gc.js"></script>
 </head>
@@ -120,6 +130,7 @@ button,input{font:inherit;color:inherit}
       <p class="lbl">幫牠取名字</p>
       <div class="namebox"><input id="o-name" maxlength="8" autocomplete="off" aria-label="名字"><button class="btn" id="o-rand" type="button">換一個</button></div>
       <button class="btn main" id="o-go" type="button" style="width:100%;margin-top:18px">帶牠回家</button>
+      <button class="btn" id="o-cancel" type="button" style="width:100%;margin-top:10px" hidden>先不要，回到小屋</button>
     </div>
   </section>
 
@@ -232,7 +243,12 @@ function petScale(){return stage()[1]*1.35*(P&&P.species==='gecko'?1.2:P&&P.spec
 function isNight(){const h=new Date().getHours();return h>=23||h<7;}
 function restTime(){const h=new Date().getHours();return P&&(P.species==='gecko'||P.species==='hamster')?(h>=8&&h<18):(h>=23||h<7);}
 function dayPart(){const h=new Date().getHours();return h>=23||h<6?'night':h<8?'dawn':h<17?'day':h<19?'dusk':'evening';}
-function diary(t){P.diary.unshift({t:Date.now(),s:t});P.diary=P.diary.slice(0,40);}
+function dkey(t){const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function bkey(){return 'pethouse-book-'+(P.id||'main');}
+function bookLoad(){try{const b=JSON.parse(GCStore.getItem(bkey())||'null');return b&&b.pages?Object.assign({notes:{}},b):{pages:{},notes:{}};}catch(e){return{pages:{},notes:{}};}}
+function bookSave(b){try{GCStore.setItem(bkey(),JSON.stringify(b));}catch(e){}}
+function diary(t){const now=Date.now();P.diary.unshift({t:now,s:t});P.diary=P.diary.slice(0,40);const b=bookLoad(),k=dkey(now);(b.pages[k]=b.pages[k]||[]).push({t:now,s:t});bookSave(b);}
+function migrateBook(){const b=bookLoad();if(Object.keys(b.pages).length||!P.diary.length)return;P.diary.slice().reverse().forEach(d=>{const k=dkey(d.t);(b.pages[k]=b.pages[k]||[]).push(d);});bookSave(b);}
 function has(id){return !!P.owned[id];}
 const ROOMFX=[0,.08,.16,.25];
 function persMul(kind){const p=P.pers;
@@ -271,6 +287,7 @@ function showAdopt(){
   $('#adopt').classList.add('on');$('#home').classList.remove('on');screen='adopt';
   const so=$('#o-sp');so.innerHTML=Object.keys(SPECIES).map(k=>'<button class="opt" type="button" data-sp="'+k+'" aria-pressed="'+(AD.sp===k)+'">'+SPECIES[k].n+'</button>').join('');
   renderCoats();if(!AD.name)AD.name=pick(SPECIES[AD.sp].names);$('#o-name').value=AD.name;
+  const oc=$('#o-cancel');if(oc)oc.hidden=!ADDING;
 }
 function renderCoats(){const S=SPECIES[AD.sp];$('#o-col').innerHTML=S.coats.map((c,i)=>'<button class="opt" type="button" data-col="'+i+'" aria-pressed="'+(AD.col===i)+'"><span class="sw" style="background:'+(c[3]==='calico'?'conic-gradient(#F2A04B 0 33%,#3A3533 0 50%,#FBF7F0 0)':c[3]==='dutch'?'linear-gradient(90deg,#3A3533 50%,#F7F3EC 0)':c[3]==='spots'||c[3]==='dots'?'radial-gradient(#3A2A1E 24%,transparent 27%) 0 0/8px 8px,'+c[1]:c[1])+'"></span>'+c[0]+'</button>').join('');}
 $('#o-sp').addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(!b)return;AD.sp=b.dataset.sp;AD.col=0;AD.name=pick(SPECIES[AD.sp].names);$('#o-name').value=AD.name;showAdopt();});
@@ -278,14 +295,21 @@ $('#o-col').addEventListener('click',e=>{const b=e.target.closest('[data-col]');
 $('#o-rand').addEventListener('click',()=>{AD.name=pick(SPECIES[AD.sp].names.filter(n=>n!==AD.name));$('#o-name').value=AD.name;});
 $('#o-name').addEventListener('input',e=>{AD.name=e.target.value;});
 $('#o-go').addEventListener('click',()=>{
+  const prev=ADDING&&P?P:null;
   const name=($('#o-name').value||'').trim()||pick(SPECIES[AD.sp].names);
   const pers=pick(Object.keys(PERS));const spots=Object.keys(SPOTS);
   P={v:1,species:AD.sp,coat:AD.col,name,pers,born:Date.now(),last:Date.now(),hunger:70,clean:85,mood:70,energy:80,health:90,bond:0,coins:120,
     inv:{kibble:3,hay:3,treat:2},owned:{},acc:null,tricks:{},like:pick(spots),liked:false,sleeping:false,sick:false,diary:[],daily:'',streak:0,work:null,petBudget:15,petReset:Date.now(),fedToday:0};
   if(AD.sp==='hamster'){P.inv={hseed:4,hpellet:3,peanut:1};}else if(AD.sp==='gecko'){P.inv={mealworm:4,dubia:2,cricket:1};}else P.inv[AD.sp==='rabbit'?'carrot':AD.sp==='cat'?'can':'bone']=1;
+  P.id='p'+Date.now().toString(36);
+  if(ADDING&&prev){const r=roster();prev.awayAt=Date.now();r.others[prev.id]=prev;saveRoster(r);
+    HOUSE_KEYS.forEach(k=>{if(k==='inv'){const m=Object.assign({},prev.inv);Object.keys(P.inv).forEach(f=>m[f]=(m[f]||0)+P.inv[f]);P.inv=m;}else if(prev[k]!=null)P[k]=prev[k];});}
+  const wasAdding=ADDING;ADDING=false;BOOKPG=null;
   diary(name+'來到小屋了，個性有點'+PERS[pers].n+'。');save();
-  enterHome(true);
+  try{window.GC&&GC.max('pet-house',{pets:petCount()});}catch(e){}
+  enterHome(!wasAdding);if(wasAdding){toast('歡迎'+name+'加入這個家！');gsfx('great');}
 });
+$('#o-cancel').addEventListener('click',()=>{ADDING=false;if(P)enterHome(false);});
 
 /* ---------- home ---------- */
 let screen='home';
@@ -432,14 +456,15 @@ $('#a-sleep').addEventListener('click',()=>{
 /* more */
 $('#a-more').addEventListener('click',()=>{
   const w=P.work,working=w&&Date.now()<w.until;
-  sheetHTML('<h3>更多</h3><div class="grid2"><button class="btn" type="button" id="mo-shop">商店</button><button class="btn" type="button" id="mo-trick">教把戲</button><button class="btn" type="button" id="mo-vet">看醫生</button><button class="btn" type="button" id="mo-work">'+(w?working?'打工中':'領打工錢':'去打工')+'</button><button class="btn" type="button" id="mo-dress">穿搭</button><button class="btn" type="button" id="mo-diary">日記</button><button class="btn" type="button" id="mo-room">擴建小屋</button><button class="btn" type="button" id="mo-show">寵物展覽</button></div><button class="btn close" type="button" id="mo-info">關於'+esc(P.name)+'</button><button class="btn close" type="button" data-close>關閉</button>',box=>{
+  sheetHTML('<h3>更多</h3><div class="grid2"><button class="btn" type="button" id="mo-shop">商店</button><button class="btn" type="button" id="mo-trick">教把戲</button><button class="btn" type="button" id="mo-vet">看醫生</button><button class="btn" type="button" id="mo-work">'+(w?working?'打工中':'領打工錢':'去打工')+'</button><button class="btn" type="button" id="mo-dress">穿搭</button><button class="btn" type="button" id="mo-diary">日記本</button><button class="btn" type="button" id="mo-pets">我的毛孩</button><button class="btn" type="button" id="mo-room">擴建小屋</button><button class="btn" type="button" id="mo-show">寵物展覽</button></div><button class="btn close" type="button" id="mo-info">關於'+esc(P.name)+'</button><button class="btn close" type="button" data-close>關閉</button>',box=>{
     box.querySelector('#mo-shop').addEventListener('click',()=>openShop('food'));
     box.querySelector('#mo-trick').addEventListener('click',openTricks);
     box.querySelector('#mo-vet').addEventListener('click',openVet);
     box.querySelector('#mo-work').addEventListener('click',openWork);
     box.querySelector('#mo-dress').addEventListener('click',openDress);
-    box.querySelector('#mo-diary').addEventListener('click',openDiary);
+    box.querySelector('#mo-diary').addEventListener('click',()=>openDiary());
     box.querySelector('#mo-room').addEventListener('click',()=>openShop('room'));
+    box.querySelector('#mo-pets').addEventListener('click',openPets);
     box.querySelector('#mo-show').addEventListener('click',openShow);
     box.querySelector('#mo-info').addEventListener('click',openInfo);});
 });
@@ -498,8 +523,30 @@ function openWork(){
   sheetHTML('<h3>去打工</h3><p class="soft">打工的時間是真實時間。期間'+esc(P.name)+'會比較寂寞，心情掉得快一點，出門前記得先餵飽牠。</p>'+jobs.map(([h,n,pay])=>'<div class="row"><div class="tx"><b>'+n+'</b><span>'+h+' 小時，賺 '+pay+' 金幣</span></div><button class="btn" type="button" data-job="'+h+':'+pay+'">出門</button></div>').join('')+'<button class="btn close" type="button" data-close>關閉</button>',box=>{
     box.querySelectorAll('[data-job]').forEach(b=>b.addEventListener('click',()=>{const[h,pay]=b.dataset.job.split(':').map(Number);P.work={until:Date.now()+h*3600000,pay};diary('出門打工 '+h+' 小時。');toast('出門打工了，'+h+' 小時後回來領錢');save();updateUI();closeSheet();}));});
 }
-function openDiary(){
-  sheetHTML('<h3>日記</h3><div class="diary">'+(P.diary.length?P.diary.map(d=>{const t=new Date(d.t);return '<div class="row"><time>'+(t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+'</time><div class="tx"><span style="color:var(--ink)">'+esc(d.s)+'</span></div></div>';}).join(''):'<p class="soft">還沒有日記。</p>')+'</div><button class="btn close" type="button" data-close>關閉</button>');
+let BOOKPG=null,noteT=0;
+function openDiary(day){
+  migrateBook();const b=bookLoad(),today=dkey(Date.now());
+  const days=Object.keys(b.pages).concat(Object.keys(b.notes)).concat([today]).filter((v,i,a)=>a.indexOf(v)===i).sort();
+  const k=day&&days.includes(day)?day:(BOOKPG&&days.includes(BOOKPG)?BOOKPG:today);BOOKPG=k;
+  const idx=days.indexOf(k),d=new Date(k+'T00:00:00'),bd=new Date(P.born),b0=new Date(bd.getFullYear(),bd.getMonth(),bd.getDate());
+  const dayN=Math.max(1,Math.round((d-b0)/86400000)+1),W='日一二三四五六';
+  const entries=(b.pages[k]||[]).slice().sort((x,y)=>x.t-y.t);
+  const lab=x=>{const q=new Date(x+'T00:00:00');return (q.getMonth()+1)+'/'+q.getDate()+'（週'+W[q.getDay()]+'）'+((b.pages[x]||[]).length?'　'+(b.pages[x]||[]).length+' 則':'')+(b.notes[x]?'　有筆記':'');};
+  sheetHTML('<h3>'+esc(P.name)+'的日記本</h3><div class="book"><div class="bhead"><b>'+(d.getMonth()+1)+' 月 '+d.getDate()+' 日・週'+W[d.getDay()]+'</b><span>在一起的第 '+dayN+' 天</span></div><div class="bpage">'+
+    (entries.length?entries.map(e=>{const t=new Date(e.t);return '<p><time>'+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0')+'</time>'+esc(e.s)+'</p>';}).join(''):'<p class="soft">這一天還沒有記錄。</p>')+
+    '<label class="bnote"><span>我的筆記</span><textarea id="bk-note" maxlength="300" placeholder="寫下今天想記住的事……">'+esc(b.notes[k]||'')+'</textarea></label></div>'+
+    '<div class="bnav"><button class="btn" type="button" id="bk-prev"'+(idx>0?'':' disabled')+'>‹ 前一頁</button><span>'+(idx+1)+' / '+days.length+'</span><button class="btn" type="button" id="bk-next"'+(idx<days.length-1?'':' disabled')+'>下一頁 ›</button></div>'+
+    '<select id="bk-jump" aria-label="跳到某一天">'+days.slice().reverse().map(x=>'<option value="'+x+'"'+(x===k?' selected':'')+'>'+lab(x)+'</option>').join('')+'</select></div>'+
+    '<button class="btn close" type="button" data-close>關閉</button>',box=>{
+    const ta=box.querySelector('#bk-note');
+    const writeNote=v=>{const bb=bookLoad();v=(v||'').trim();if(v)bb.notes[k]=v;else delete bb.notes[k];bookSave(bb);};
+    const saveNote=()=>{clearTimeout(noteT);writeNote(ta.value);};
+    ta.addEventListener('input',()=>{clearTimeout(noteT);const v=ta.value;noteT=setTimeout(()=>writeNote(v),400);});
+    ta.addEventListener('blur',saveNote);
+    box.querySelector('#bk-prev').addEventListener('click',()=>{saveNote();if(idx>0){gsfx('flip');openDiary(days[idx-1]);}});
+    box.querySelector('#bk-next').addEventListener('click',()=>{saveNote();if(idx<days.length-1){gsfx('flip');openDiary(days[idx+1]);}});
+    box.querySelector('#bk-jump').addEventListener('change',e=>{saveNote();gsfx('flip');openDiary(e.target.value);});
+  });
 }
 function openInfo(){
   const d=ageDays(),learned=TRICKS[P.species].filter(t=>(P.tricks[t[0]]||0)>=5).map(t=>t[1]);
@@ -935,8 +982,33 @@ function drawPreview(){
 }
 requestAnimationFrame(loop);
 
+/* ---------- several pets ---------- */
+const RKEY='pethouse-roster',MAXPETS=4,HOUSE_KEYS=['coins','inv','owned','room','daily','streak'];
+let ADDING=false;
+function roster(){try{const r=JSON.parse(GCStore.getItem(RKEY)||'null');return r&&r.others?r:{others:{}};}catch(e){return{others:{}};}}
+function saveRoster(r){try{GCStore.setItem(RKEY,JSON.stringify(r));}catch(e){}}
+function petCount(){return 1+Object.keys(roster().others).length;}
+function switchTo(id){
+  const r=roster(),nx=r.others[id];if(!nx||!P)return;
+  P.awayAt=Date.now();save();r.others[P.id]=JSON.parse(JSON.stringify(P));delete r.others[id];
+  HOUSE_KEYS.forEach(k=>{nx[k]=P[k];});
+  if(nx.awayAt){const el=Date.now()-nx.last;nx.last=Date.now()-el*.5;delete nx.awayAt;}
+  saveRoster(r);P=nx;BOOKPG=null;closeSheet();enterHome(false);catchUp();updateUI();save();
+  gsfx('chirp');toast(P.name+'跑過來了！');
+}
+function openPets(){
+  const r=roster(),list=[P].concat(Object.values(r.others));
+  sheetHTML('<h3>我的毛孩</h3><p class="soft">最多可以養 '+MAXPETS+' 隻。金幣、食物和家具大家共用。不在身邊的毛孩由家人幫忙照顧，肚子餓、心情下降的速度只有一半，還是要常回去看看。</p>'+
+    list.map(x=>{const cur=x===P,warn=x.hunger<30||x.mood<30;return '<div class="row"><div class="tx"><b>'+esc(x.name)+'（'+SPECIES[x.species].n+'）'+(cur?'　在你身邊':'')+'</b><span>'+(cur?'':'上次看到時：')+'飽足 '+Math.round(x.hunger)+'・心情 '+Math.round(x.mood)+'・精力 '+Math.round(x.energy)+(warn?'　<b style="color:var(--coral);font-weight:400">需要照顧</b>':'')+'</span></div>'+(cur?'':'<button class="btn" type="button" data-pet="'+x.id+'">去看牠</button>')+'</div>';}).join('')+
+    (list.length<MAXPETS?'<button class="btn main close" type="button" id="pe-new">領養新的毛孩</button>':'<p class="soft">已經養滿 '+MAXPETS+' 隻了。</p>')+'<button class="btn close" type="button" data-close>關閉</button>',box=>{
+    box.querySelectorAll('[data-pet]').forEach(b=>b.addEventListener('click',()=>switchTo(b.dataset.pet)));
+    const nb=box.querySelector('#pe-new');if(nb)nb.addEventListener('click',()=>{closeSheet();ADDING=true;AD.name='';showAdopt();});
+  });
+}
+
 /* ---------- boot ---------- */
 P=load();
+if(P&&!P.id){P.id='p'+Date.now().toString(36);save();}
 if(P){enterHome(false);}else{showAdopt();}
 document.addEventListener('visibilitychange',()=>{if(!P)return;if(document.hidden)save();else{const back=catchUp();updateUI();if(back&&back.h>1)welcomeBack(back);}});
 })();

@@ -577,7 +577,7 @@ async function meet(c){
 }
 async function chat(c){
   const C=CHARS[c];
-  await say(C.n,pick({yuan:['又見面了。這間書店的建築書區很齊。','你也來看書？'],qing:['{n}！你也來散步嗎？','嘿嘿，我剛好在畫這邊的夕陽。'],kai:['喔！{n}！你也來運動？','來來來，我教你怎麼用這台機器！'],lin:['你來了。今晚的演出，還喜歡嗎？','剛好結束，要不要坐一下？']}[c]),C.look,'smile');
+  await say(C.n,pick({yuan:['又見面了。這間書店的建築書區很齊。','你也來看書？'],qing:['{n}！你也來散步嗎？','嘿嘿，我剛好在畫這邊的夕陽。'],kai:['喔！{n}！你也來運動？','來來來，我教你怎麼用這台機器！'],lin:['你來了。今晚的演出，還喜歡嗎？','剛好結束，要不要坐一下？'],yichen:['剛下班，麻糬在門口等我。','今天醫院好忙……不過看到你，就不累了。'],ruolan:['你來得剛好，這束花是剛到的。','花市快收了，陪我逛一圈？']}[c]||['又見面了。','你也在這裡呀。']),C.look,'smile');
   const all=shuffle(C.topics.good.slice()).slice(0,1).concat(shuffle(C.topics.bad.slice()).slice(0,1)).concat([pick(['天氣','咖啡館最近的事','小時候的回憶'])]);shuffle(all);
   const i=await choose(all.map(t=>({t:'聊聊'+t})),false,'要聊什麼呢？');const t=all[i];
   let d,face,line;
