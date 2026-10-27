@@ -10,6 +10,20 @@
   var IS_GAME = /^\.\.\//.test(src);
   var CUR = 'gc:current';
 
+  /* ================= 錯誤紀錄（給「回報問題」用）與裝置設定 ================= */
+  var EKEY = 'gc:errlog';
+  function logErr(msg, src) {
+    try { var a = JSON.parse(localStorage.getItem(EKEY) || '[]'); a.unshift({ t: Date.now(), p: location.pathname.split('/').pop() || 'index.html', m: String(msg).slice(0, 300), s: src || '' }); localStorage.setItem(EKEY, JSON.stringify(a.slice(0, 30))); } catch (e) {}
+  }
+  window.addEventListener('error', function (e) { if (e && e.message) logErr(e.message, (e.filename || '').split('/').pop() + ':' + e.lineno + ':' + e.colno); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e && e.reason; logErr('Promise：' + (r && r.message ? r.message : r)); });
+  function setting(k, d) { try { var v = localStorage.getItem('gc:' + k); return v === null ? d : v; } catch (e) { return d; } }
+  if (setting('vib', '1') === '0') { try { navigator.vibrate = function () { return false; }; } catch (e) {} }
+  if (setting('rm', '0') === '1') {
+    try { var mm0 = window.matchMedia.bind(window); window.matchMedia = function (q) { if (/prefers-reduced-motion/.test(q)) return { matches: true, media: q, onchange: null, addListener: function () {}, removeListener: function () {}, addEventListener: function () {}, removeEventListener: function () {}, dispatchEvent: function () { return false; } }; return mm0(q); }; } catch (e) {}
+    try { var rs = document.createElement('style'); rs.textContent = '*,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important}'; document.head.appendChild(rs); } catch (e) {}
+  }
+
   function curPid() { try { return localStorage.getItem(CUR) || 'guest'; } catch (e) { return 'guest'; } }
   function ns(k) { return 'gc:p:' + curPid() + ':' + k; }
   function lsGet(k) { try { return localStorage.getItem(ns(k)); } catch (e) { return null; } }
@@ -163,21 +177,25 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   function ac() {
     if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; try { AC = new C(); } catch (e) { return null; } }
     if (AC.state === 'suspended') { try { AC.resume(); } catch (e) {} }
+    if (!MG) { MG = AC.createGain(); MG.gain.value = vol(); MG.connect(AC.destination); }
     return AC;
   }
+  var MG = null;
+  function vol() { var v = parseFloat(setting('vol', '0.8')); return isNaN(v) ? 0.8 : Math.max(0, Math.min(1, v)); }
+  function out() { ac(); return MG; }
   function tone(f, d, type, vol, delay, f2) {
     var a = ac(); if (!a) return; var t = a.currentTime + (delay || 0);
     var o = a.createOscillator(), g = a.createGain(); o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
     if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.06, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + 0.03);
+    o.connect(g); g.connect(out()); o.start(t); o.stop(t + d + 0.03);
   }
   function noise(d, vol, freq, delay) {
     var a = ac(); if (!a) return; var t = a.currentTime + (delay || 0);
     var n = Math.floor(a.sampleRate * d), b = a.createBuffer(1, n, a.sampleRate), ch = b.getChannelData(0);
     for (var i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / n);
     var src = a.createBufferSource(); src.buffer = b; var fl = a.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = freq || 1200; fl.Q.value = 0.8;
-    var g = a.createGain(); g.gain.value = vol || 0.08; src.connect(fl); fl.connect(g); g.connect(a.destination); src.start(t);
+    var g = a.createGain(); g.gain.value = vol || 0.08; src.connect(fl); fl.connect(g); g.connect(out()); src.start(t);
   }
   var SFX = {
     tap: function () { tone(620, 0.035, 'triangle', 0.03); },
@@ -240,8 +258,8 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     var fl = a.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = d.f; fl.Q.value = d.q;
     var g = a.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(d.v, a.currentTime, 0.06);
     src.connect(fl); fl.connect(g);
-    if (d.tr) { var lfo = a.createOscillator(), lg = a.createGain(), mg = a.createGain(); lfo.frequency.value = d.tr; lg.gain.value = 0.5; mg.gain.value = 0.5; lfo.connect(lg); lg.connect(mg.gain); g.connect(mg); mg.connect(a.destination); lfo.start(); }
-    else g.connect(a.destination);
+    if (d.tr) { var lfo = a.createOscillator(), lg = a.createGain(), mg = a.createGain(); lfo.frequency.value = d.tr; lg.gain.value = 0.5; mg.gain.value = 0.5; lfo.connect(lg); lg.connect(mg.gain); g.connect(mg); mg.connect(out()); lfo.start(); }
+    else g.connect(out());
     src.start(); LOOPS[id] = { src: src, g: g };
   }
   function stopLoops() { for (var k in LOOPS) loop(k, false); }
@@ -451,6 +469,11 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     add: function (game, metric, n) { var m = {}; m[metric] = typeof n === 'number' ? n : 1; record(game, m, 'add'); },
     ACH: ACH, QUESTS: QUESTS, COLL: COLL, THEMES: THEMES,
     sfx: sfx, soundOn: soundOn, loop: loop, stopLoops: stopLoops,
+    settings: function () { return { sound: soundOn(), vol: vol(), vib: setting('vib', '1') !== '0', rm: setting('rm', '0') === '1' }; },
+    setVolume: function (v) { v = Math.max(0, Math.min(1, v)); try { localStorage.setItem('gc:vol', String(v)); } catch (e) {} if (MG) MG.gain.value = v; },
+    setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} },
+    errors: function () { try { return JSON.parse(localStorage.getItem(EKEY) || '[]'); } catch (e) { return []; } },
+    clearErrors: function () { try { localStorage.removeItem(EKEY); } catch (e) {} },
     setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } else stopLoops(); try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
     own: function (id) { return !!load().own[id]; },
     eq: function (slot) { var p = load(), id = p.eq[slot]; return id && p.own[id] ? id : null; },

@@ -140,6 +140,11 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 .sbox .theme .btn,.theme .tm .btn{width:auto}
 .srow .tx b .lim{display:inline-block;color:var(--on-accent);font-weight:700}
 .srow .lim{background:var(--accent);color:var(--on-accent);border-radius:6px;font-size:.7rem;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.setr{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.setr .tx{flex:1;min-width:0}.setr .tx b{display:block}.setr .tx span{display:block;color:var(--soft);font-size:.84rem;line-height:1.5}
+.sbox .setr .btn{width:auto;margin:0;min-width:64px}
+.setr input[type=range]{width:100%;accent-color:var(--accent)}
+.rpinfo{white-space:pre-wrap;font-size:.8rem;line-height:1.55;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;max-height:220px;overflow:auto;color:var(--soft);user-select:text;-webkit-user-select:text}
 .kvr{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:.93rem}
 .kvr b.no{color:var(--soft);font-weight:500}
 .kvr b.ok{color:var(--accent)}
@@ -175,7 +180,8 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
 
 
 
-.foot{display:flex;gap:10px;margin-top:18px}
+.foot{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.foot .btn{margin:0}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .credit{margin:22px 0 4px;text-align:center;color:var(--soft);font-size:.82rem;line-height:1.7}
 .foot .btn{flex:1}
@@ -230,7 +236,7 @@ h1{font-family:Huninn,"Noto Sans TC",sans-serif;font-weight:400;font-size:clamp(
   <div class="find"><input id="q" type="search" placeholder="搜尋遊戲名稱或類型" aria-label="搜尋遊戲" autocomplete="off" enterkeyhint="search"><div class="cats" id="cats" role="group" aria-label="遊戲類型"></div></div>
   <div class="grid" id="grid"></div>
   <p class="none" id="none" hidden>找不到符合的遊戲，換個關鍵字試試。</p>
-  <div class="foot"><button class="btn" type="button" id="b-backup">備份與轉移</button><button class="btn" type="button" id="b-about">關於與更新</button></div>
+  <div class="foot"><button class="btn" type="button" id="b-settings">設定</button><button class="btn" type="button" id="b-report">回報問題</button><button class="btn" type="button" id="b-backup">備份與轉移</button><button class="btn" type="button" id="b-about">關於與更新</button></div>
   <footer class="credit" id="credit"></footer>
 </div>
 <div class="sheet" id="sheet" hidden><div class="sbox" id="sbox" role="dialog" aria-modal="true"></div></div>
@@ -323,6 +329,49 @@ function storeSheet(){
   });
 }
 $('#wallet').addEventListener('click',storeSheet);
+/* ---------- settings ---------- */
+function settingsSheet(){
+  const S=GC.settings();
+  const tog=(id,on)=>'<button class="btn'+(on?' main':'')+'" type="button" id="'+id+'" aria-pressed="'+on+'">'+(on?'開':'關')+'</button>';
+  sheet('<div class="shead"><h2>設定</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">這些設定存在這台裝置上，所有玩家和所有遊戲共用。</p>'+
+    '<div class="setr"><div class="tx"><b>遊戲音效</b><span>每款遊戲上方的喇叭按鈕也能切換</span></div>'+tog('st-snd',S.sound)+'</div>'+
+    '<div class="setr" style="flex-direction:column;align-items:stretch"><div class="tx"><b>音量　<span id="st-vv" style="display:inline">'+Math.round(S.vol*100)+'%</span></b></div><input type="range" id="st-vol" min="0" max="100" step="5" value="'+Math.round(S.vol*100)+'" aria-label="音量"></div>'+
+    '<div class="setr"><div class="tx"><b>震動回饋</b><span>按到東西或出錯時手機會輕輕震動（iPhone 的網頁通常不支援）</span></div>'+tog('st-vib',S.vib)+'</div>'+
+    '<div class="setr"><div class="tx"><b>減少動畫</b><span>減少閃動和晃動，容易頭暈時可以打開。下次打開遊戲時生效</span></div>'+tog('st-rm',S.rm)+'</div>',b=>{
+    b.querySelector('#st-snd').addEventListener('click',()=>{GC.setSound(!GC.soundOn());settingsSheet();});
+    const r=b.querySelector('#st-vol');r.addEventListener('input',()=>{GC.setVolume(r.value/100);b.querySelector('#st-vv').textContent=r.value+'%';});r.addEventListener('change',()=>GC.sfx('good'));
+    b.querySelector('#st-vib').addEventListener('click',()=>{const on=!GC.settings().vib;GC.setSetting('vib',on);if(on){try{navigator.vibrate&&navigator.vibrate(30);}catch(e){}}settingsSheet();});
+    b.querySelector('#st-rm').addEventListener('click',()=>{GC.setSetting('rm',!GC.settings().rm);settingsSheet();});
+  });
+}
+$('#b-settings').addEventListener('click',settingsSheet);
+/* ---------- problem report ---------- */
+function deviceInfo(){
+  const ua=navigator.userAgent,ipad=/iPad/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const os=/iPhone/.test(ua)?'iPhone':ipad?'iPad':/Android/.test(ua)?'Android':/Windows/.test(ua)?'Windows':/Mac/.test(ua)?'Mac':'其他系統';
+  const ver=((ua.match(/OS (\d+[_\d]*)/)||ua.match(/Android (\d+[.\d]*)/)||[])[1]||'').replace(/_/g,'.');
+  const br=/Line\//.test(ua)?'LINE 內建瀏覽器':/Instagram/.test(ua)?'IG 內建瀏覽器':/FBAN|FBAV/.test(ua)?'FB 內建瀏覽器':/EdgA?\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'其他瀏覽器';
+  const app=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  return os+(ver?' '+ver:'')+'，'+br+'，'+(app?'已安裝成 App':'在瀏覽器開啟');
+}
+function reportText(desc){
+  const p=current(),m=p?meta(p.id):{},S=GC.settings(),d=new Date(),pad=n=>String(n).padStart(2,'0');
+  const errs=GC.errors().slice(0,10).map(e=>{const t=new Date(e.t);return '- '+(t.getMonth()+1)+'/'+t.getDate()+' '+pad(t.getHours())+':'+pad(t.getMinutes())+' '+e.p+'：'+e.m+(e.s?'（'+e.s+'）':'');});
+  return '【小遊戲合集 問題回報】\n發生的狀況：'+(desc||'（沒有填寫）')+'\n版本：v'+C.version+'\n時間：'+d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes())+
+    '\n裝置：'+deviceInfo()+'\n畫面：'+innerWidth+'×'+innerHeight+'，縮放 '+(window.devicePixelRatio||1)+'\n玩家：'+(p?p.name:'（沒有）')+'\n最近玩的遊戲：'+(m.lastGame?(gameName(m.lastGame)||m.lastGame):'（沒有）')+
+    '\n音效：'+(S.sound?'開':'關')+'，音量 '+Math.round(S.vol*100)+'%'+'\n最近的錯誤紀錄：'+(errs.length?'\n'+errs.join('\n'):'沒有');
+}
+function reportSheet2(){
+  sheet('<div class="shead"><h2>回報問題</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">寫下發生了什麼事，按「複製回報內容」，再貼到對話裡給我。裝置、版本和最近的錯誤會自動附上，不包含遊戲存檔。</p>'+
+    '<div class="field"><label for="rp-d">發生了什麼事？在哪個畫面？</label><textarea id="rp-d" placeholder="例如：搖搖茶舖營業結束後，畫面變成一片黃色" autocapitalize="off"></textarea></div>'+
+    '<p class="soft" style="margin:10px 0 4px">會一起附上的資訊</p><div class="rpinfo" id="rp-i"></div>'+
+    '<button class="btn main" type="button" id="rp-copy">複製回報內容</button><button class="btn" type="button" id="rp-clr">清除錯誤紀錄</button>',b=>{
+    const info=b.querySelector('#rp-i'),ta=b.querySelector('#rp-d');const upd=()=>{info.textContent=reportText(ta.value.trim());};upd();ta.addEventListener('input',upd);
+    b.querySelector('#rp-copy').addEventListener('click',async()=>{const t=reportText(ta.value.trim());try{await navigator.clipboard.writeText(t);toast('已複製，貼到對話裡就可以了');}catch(e){const r=document.createRange();r.selectNodeContents(info);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('已全選，請長按選「拷貝」');}});
+    b.querySelector('#rp-clr').addEventListener('click',()=>{GC.clearErrors();upd();toast('錯誤紀錄已清除');});
+  });
+}
+$('#b-report').addEventListener('click',reportSheet2);
 function achSheet(){
   const g=GC.get();const groups=C.games.map(x=>x.id).concat(['']);
   let h='<div class="shead"><h2>成就</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">已解鎖 '+Object.keys(g.ach).length+' / '+GC.ACH.length+'。紅色是進階成就，完成可以拿更多經驗值。</p>';
@@ -474,10 +523,10 @@ async function openAbout(){
   let usage='';try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage='這台裝置已用 '+(e.usage/1048576).toFixed(1)+' MB';}}catch(e){}
   let persisted='';try{if(navigator.storage&&navigator.storage.persisted)persisted=(await navigator.storage.persisted())?'，資料已設為長期保存':'';}catch(e){}
   sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
-    '<button class="mrow" type="button" id="ab-snd" aria-pressed="'+GC.soundOn()+'"><span>遊戲音效</span><span>'+(GC.soundOn()?'開':'關')+'</span></button>'+'<button class="mrow" type="button" id="ab-log"><span>更新紀錄</span><span aria-hidden="true">›</span></button><button class="mrow" type="button" id="ab-rep"><span>成績回報檢查</span><span aria-hidden="true">›</span></button>'+
+    '<button class="mrow" type="button" id="ab-snd"><span>設定（音效、音量、震動、動畫）</span><span aria-hidden="true">›</span></button>'+'<button class="mrow" type="button" id="ab-log"><span>更新紀錄</span><span aria-hidden="true">›</span></button><button class="mrow" type="button" id="ab-rep"><span>成績回報檢查</span><span aria-hidden="true">›</span></button>'+
     '<h3 class="danger">危險區</h3><p class="soft">以下操作無法復原。</p><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button>',b=>{
     b.querySelector('#ab-log').addEventListener('click',logSheet);
-    b.querySelector('#ab-snd').addEventListener('click',()=>{GC.setSound(!GC.soundOn());openAbout();});
+    b.querySelector('#ab-snd').addEventListener('click',settingsSheet);
     b.querySelector('#ab-rep').addEventListener('click',reportSheet);
     b.querySelector('#ab-up').addEventListener('click',async()=>{if(!REG){toast('這個瀏覽器不支援自動更新，重新整理頁面即可');return;}toast('檢查中…');try{await REG.update();setTimeout(()=>{if(REG.waiting)showUpdate();else toast('已經是最新版本');},1500);}catch(e){toast('現在沒有網路，稍後再試');}});
     b.querySelector('#ab-clear').addEventListener('click',()=>sheet('<h2>清除所有資料？</h2><p class="soft">所有玩家、所有遊戲的進度都會從這台裝置刪除。建議先匯出備份。</p><div class="row2"><button class="btn" type="button" data-close>取消</button><button class="btn warn" type="button" id="cl">全部清除</button></div>',b2=>b2.querySelector('#cl').addEventListener('click',()=>{
