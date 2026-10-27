@@ -162,7 +162,7 @@ function sim(now){
     if(i>=F.up.plots||!p.c||progress(p)>=1)return;
     const slow=(p.weed||p.bug)?.55:1;const fert=F.up.fert?1.25:1;
     let wet=dt;if(!F.up.sprinkler){wet=clamp(Math.min(now,p.w)-from,0,dt);}
-    if(wet>0){p.g=Math.min(CROPS[p.c].grow,p.g+wet*slow*fert);changed=true;}
+    if(wet>0){{const was=progress(p)>=1;p.g=Math.min(CROPS[p.c].grow,p.g+wet*slow*fert);changed=true;if(!was&&progress(p)>=1&&dt<5000)gsfx('grow');}}
     const mins=dt/MIN;
     if(!p.weed&&Math.random()<1-Math.pow(.97,mins))p.weed=true;
     if(!p.bug&&!F.up.scarecrow&&Math.random()<1-Math.pow(.98,mins))p.bug=true;
@@ -215,7 +215,7 @@ $('#tools').addEventListener('click',e=>{
   if(tool==='plant'&&!CK.some(k=>(F.seeds[k]||0)>0)){toast('沒有種子了，到商店買');}
   renderSeedbar();updateHud();
 });
-function gain(xp){const before=level();F.xp+=xp;const after=level();if(after>before){toast('升級了！Lv'+after+(CK.filter(k=>CROPS[k].lv===after).length?'，解鎖新作物':''));buzz([20,40,20]);}}
+function gain(xp){const before=level();F.xp+=xp;const after=level();if(after>before){gsfx('level');toast('升級了！Lv'+after+(CK.filter(k=>CROPS[k].lv===after).length?'，解鎖新作物':''));buzz([20,40,20]);}}
 
 /* ---------- actions ---------- */
 const fx=[];
@@ -270,8 +270,8 @@ function openShop(tab){
   }
   sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">金幣 '+F.coins+'</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
     b.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>openShop(x.dataset.tab)));
-    b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;const g=price(k)*q;F.coins+=g;F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
-    b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.buy.split(':');const q=+n,c=CROPS[k].seed*q;if(F.coins<c)return;F.coins-=c;F.seeds[k]=(F.seeds[k]||0)+q;buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;gsfx('cash');const g=price(k)*q;F.coins+=g;F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.buy.split(':');const q=+n,c=CROPS[k].seed*q;if(F.coins<c)return;F.coins-=c;gsfx('cash');F.seeds[k]=(F.seeds[k]||0)+q;buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
     b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{const u=UPS.find(z=>z.id===x.dataset.up);if(!u||F.coins<u.cost)return;F.coins-=u.cost;
       if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
       toast('升級完成：'+u.n);buzz([15,30,15]);GCmax({plots:F.up.plots,upgrades:(F.up.sprinkler?1:0)+(F.up.scarecrow?1:0)+(F.up.fert?1:0)});save();updateHud();openShop();}));

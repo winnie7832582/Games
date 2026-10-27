@@ -435,7 +435,7 @@ function startRound(){
   R={score:0,serves:(B&&B.id==='hurry'?2:4)+(has('tray')?1:0)+(B&&B.id==='bigeater'?1:0)+(run.twist==='serve'?1:0),discards:3+(has('fridge')?1:0)-((run.asc||0)>=2?1:0)+(run.twist==='discard'?1:0),draw:shuffle(run.deck.slice()),hand:[],sel:[],used:[],first:true,busy:false,sortBy:'cat',best:0};
   draw();renderRound();show('round');
 }
-function draw(){while(R.hand.length<handSize()&&R.draw.length)R.hand.push(R.draw.pop());sortHand();}
+function draw(){let n=0;while(R.hand.length<handSize()&&R.draw.length){R.hand.push(R.draw.pop());n++;}if(n)gsfx(n>3?'shuffle':'flip');sortHand();}
 function sortHand(){const o=CATS;R.hand.sort(R.sortBy==='cat'?(a,b)=>o.indexOf(CARDS[a.id].cat)-o.indexOf(CARDS[b.id].cat)||CARDS[b.id].f-CARDS[a.id].f:(a,b)=>CARDS[b.id].f-CARDS[a.id].f);}
 function renderHud(){
   $('#h-judge').textContent=CITIES[run.city]+'・'+judgeName();$('#h-money').textContent='$'+run.money;
@@ -453,7 +453,7 @@ function renderTools(hlT){
 function renderHand(){
   const box=$('#hand');box.innerHTML='';
   R.hand.forEach(c=>{const el=cardEl(c);const on=R.sel.includes(c.u);el.setAttribute('aria-pressed',String(on));
-    el.addEventListener('click',()=>{if(R.busy)return;const i=R.sel.indexOf(c.u);if(i>=0)R.sel.splice(i,1);else if(R.sel.length<SELMAX())R.sel.push(c.u);else{flashPlate('一道菜最多 '+SELMAX()+' 張牌');return;}buzz(5);renderHand();renderPreview();});
+    el.addEventListener('click',()=>{if(R.busy)return;const i=R.sel.indexOf(c.u);if(i>=0)R.sel.splice(i,1);else if(R.sel.length<SELMAX())R.sel.push(c.u);else{flashPlate('一道菜最多 '+SELMAX()+' 張牌');return;}buzz(5);gsfx('tick');renderHand();renderPreview();});
     box.appendChild(el);});
 }
 function selCards(){return R.sel.map(u=>R.hand.find(c=>c.u===u)).filter(Boolean);}
@@ -494,8 +494,8 @@ async function serve(){
   const fast=reduceMotion?0:1;
   for(const s of ev.steps){
     $('#pc').textContent=fmt(s.chips);$('#pm').textContent=fmtM(s.mult);
-    if(s.k==='card'){const e=els[s.i];e.classList.add('hl');popAt(e,(s.f?'+'+s.f:'')+(s.addM?' +'+fmtM(s.addM)+'倍':'')+(s.xM!==1?' ×'+fmtM(s.xM):''),s.addM||s.xM!==1?'var(--mult)':'var(--chips)');buzz(4);await sleep(230*fast);e.classList.remove('hl');}
-    else if(s.k==='tool'){renderTools(s.t);await sleep(300*fast);renderTools();}
+    if(s.k==='card'){const e=els[s.i];e.classList.add('hl');popAt(e,(s.f?'+'+s.f:'')+(s.addM?' +'+fmtM(s.addM)+'倍':'')+(s.xM!==1?' ×'+fmtM(s.xM):''),s.addM||s.xM!==1?'var(--mult)':'var(--chips)');buzz(4);gsfx('pop');await sleep(230*fast);e.classList.remove('hl');}
+    else if(s.k==='tool'){renderTools(s.t);gsfx('sparkle');await sleep(300*fast);renderTools();}
     else await sleep(260*fast);
   }
   $('#pt').className='tot big';await countUp($('#pt'),ev.total,ev.warn);
@@ -580,8 +580,8 @@ function renderMarket(){
 }
 $('#market-body').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;const o=run.offer;
-  if(b.dataset.tool!=null){const x=o.tools[+b.dataset.tool],T=TOOLS[x.t];if(run.money<tp(T)||run.tools.length>=MAXTOOLS)return;run.money-=tp(T);x.sold=true;run.tools.push(x.t);}
-  else if(b.id==='buy-rec'){if(run.money<4)return;run.money-=4;run.levels[o.recipe]=lvl(o.recipe)+1;o.recipeSold=true;}
+  if(b.dataset.tool!=null){const x=o.tools[+b.dataset.tool],T=TOOLS[x.t];if(run.money<tp(T)||run.tools.length>=MAXTOOLS)return;run.money-=tp(T);x.sold=true;run.tools.push(x.t);gsfx('cash');}
+  else if(b.id==='buy-rec'){if(run.money<4)return;run.money-=4;gsfx('cash');run.levels[o.recipe]=lvl(o.recipe)+1;o.recipeSold=true;}
   else if(b.id==='buy-rm'){showDeck(true,c=>{if(run.money<3)return;run.money-=3;run.deck=run.deck.filter(d=>d.u!==c.u);o.removed=true;save();renderMarket();});return;}
   else if(b.id==='buy-rr'){if(run.money<2)return;run.money-=2;const keep={recipe:o.recipe,recipeSold:o.recipeSold,removed:o.removed};run.rr=(run.rr||0)+1;run.offer=Object.assign(rollOffer(),keep);}
   else if(b.dataset.sell!=null){const i=+b.dataset.sell,t=run.tools[i];run.money+=Math.floor(TOOLS[t].p/2);run.tools.splice(i,1);}

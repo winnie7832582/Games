@@ -272,7 +272,7 @@ class Pour{
     this.tooEarly=this.active&&inCup&&this.fill<20;const pouring=this.active&&inCup&&!this.tooEarly;this.pouring=pouring;
     if(this.high&&!pouring){if(this.fill<52)this.fill+=22*dt;else if(!this.halfDone){this.halfDone=true;if(this.onHalf)this.onHalf();}}
     const sp=Math.hypot(this.ux,this.uy);
-    if(sp>12){const nx=this.ux/sp,ny=this.uy/sp;if(this.dir){const d=nx*this.dir[0]+ny*this.dir[1];if(d<-.25){this.revT.push(this.t);this.dir=[nx,ny];if(pouring){this.layer++;this.wiggles++;}}else if(d>.6)this.dir=[nx,ny];}else this.dir=[nx,ny];}
+    if(sp>12){const nx=this.ux/sp,ny=this.uy/sp;if(this.dir){const d=nx*this.dir[0]+ny*this.dir[1];if(d<-.25){this.revT.push(this.t);this.dir=[nx,ny];if(pouring){this.layer++;this.wiggles++;gsfx('swish');}}else if(d>.6)this.dir=[nx,ny];}else this.dir=[nx,ny];}
     this.revT=this.revT.filter(t=>this.t-t<.5);
     const wiggle=this.revT.length>=2,fast=sp>32&&!wiggle;
     this.mode=pouring?(wiggle?'wiggle':fast?'cut':'push'):'';
@@ -401,7 +401,7 @@ function save(){try{GCStore.setItem(KEY,JSON.stringify(D));}catch(e){try{D.galle
 
 /* ---------- screens ---------- */
 let screen='title';
-function show(n){screen=n;['title','levels','play','result','summary','gallery'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='play')requestAnimationFrame(resize);if(n==='title')renderTitle();}
+function show(n){screen=n;if(n!=='play')stopAllLoops();['title','levels','play','result','summary','gallery'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='play')requestAnimationFrame(resize);if(n==='title')renderTitle();}
 function renderTitle(){setModeButtons();const s=Object.values(D.stars).reduce((a,b)=>a+b,0);$('#tot').textContent=s?'已拿到 '+s+' / '+LEVELS.length*3+' 顆星':'';}
 $('#m-levels').addEventListener('click',()=>{renderLevels();show('levels');});
 $('#m-free').addEventListener('click',()=>startPlay(null));
@@ -658,7 +658,10 @@ function drawCutArrow(c){const now=performance.now()/1000,a=.45+.4*Math.sin(now*
 
 /* ---------- loop ---------- */
 let last=performance.now();
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
 function loop(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;
+  {const on=screen==='play'&&running&&pour&&!pour.done;gl('pour',!!(on&&pour.high&&!pour.pouring));gl('stream',!!(on&&pour.pouring));}
   if(screen==='title'){if(!reduceMotion)demoStep(dt);else if(!demo){demo=new Pour(1);for(let i=0;i<420;i++)demoStep(1/60);}drawHero();}
   if(screen==='play'&&pour){if(running){pour.step(dt);if(pour.fill>=100&&!pour.done){toast('杯子滿了');finish(true);}if(MODE==='timed'&&TS&&running){TS.t-=dt;updateTimedName();if(TS.t<=0&&!pour.done){if(pour.vis()>=20)timedCupDone(true);else endTimed();}}}renderPlay();setCoach();}
   requestAnimationFrame(loop);}

@@ -425,8 +425,8 @@ $('#a-play').addEventListener('click',()=>{
 });
 /* sleep */
 $('#a-sleep').addEventListener('click',()=>{
-  if(P.sleeping){P.sleeping=false;if(restTime()){P.mood=clamp(P.mood-6,0,100);toast((P.species==='gecko'?'白天睡覺時':'半夜')+'被叫醒，'+P.name+'有點不高興');}else toast(P.name+'醒來了');}
-  else{if(P.energy>90){toast(P.name+'還不想睡');return;}P.sleeping=true;toast('晚安，'+P.name);pet.target=has('bed')?86:pet.x;}
+  if(P.sleeping){P.sleeping=false;if(restTime()){P.mood=clamp(P.mood-6,0,100);toast((P.species==='gecko'?'白天睡覺時':'半夜')+'被叫醒，'+P.name+'有點不高興');}else toast(P.name+'醒來了');gsfx('chirp');}
+  else{if(P.energy>90){toast(P.name+'還不想睡');return;}P.sleeping=true;gsfx('zzz');toast('晚安，'+P.name);pet.target=has('bed')?86:pet.x;}
   save();updateUI();
 });
 /* more */
@@ -791,8 +791,11 @@ function rubPet(p,d){
   if(P.pers==='shy'&&bondLv()<3&&Math.random()<.15)toast(P.name+'有點害羞，躲了一下');
   updateUI();
 }
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
 function tapPet(){
   let s;const sound=SPECIES[P.species].sound;
+  gsfx(P.sleeping?'zzz':{cat:'meow',dog:'bark',rabbit:'chirp',gecko:'chirp',hamster:'squeak'}[P.species]||'chirp');
   if(P.sleeping)s=P.species==='gecko'?'（睡得好熟…）':'呼嚕…呼嚕…';else if(P.sick)s='不太舒服…';else if(P.hunger<30)s='肚子好餓…';else if(P.energy<20)s='好睏喔…';else if(P.clean<30)s='身上癢癢的';else if(P.mood<35)s='陪我玩嘛';
   else s=P.species==='hamster'?pick([sound,'（雙手捧著瓜子）','（臉頰鼓鼓的）','要不要去跑滾輪？','晚上才是我的時間']):P.species==='gecko'?pick([sound,'（歪頭看你）','（尾巴輕輕擺動）','晚上最有精神了','（慢慢爬過來）']):pick([sound,sound+' 最喜歡你了','今天天氣真好','要不要一起玩？','摸摸我嘛','（盯著你看）']);
   bubble={text:s,t:0};buzz(6);
@@ -841,7 +844,7 @@ function stepGame(dt){
     const sp=(P.pers==='lazy'?14:P.pers==='naughty'?26:20)*(P.energy<30?.6:1);
     const dx=g.tx-pet.x;if(Math.abs(dx)>3){pet.x+=Math.sign(dx)*Math.min(Math.abs(dx),sp*dt);pet.face=dx>0?1:-1;}
     const tsp=Math.hypot(g.tvx,g.tvy);g.tvx*=Math.pow(.02,dt);g.tvy*=Math.pow(.02,dt);
-    if(Math.abs(g.tx-pet.x)<7&&g.ty>40&&g.cool<=0&&tsp>8){g.cool=1;g.hits++;pet.jump=0;pet.anim='happy';pet.animT=0;fx.hearts.push({x:g.tx,y:g.ty-3,t:0});buzz(10);g.ty=Math.min(g.ty,56);}
+    if(Math.abs(g.tx-pet.x)<7&&g.ty>40&&g.cool<=0&&tsp>8){g.cool=1;g.hits++;gsfx('boing');pet.jump=0;pet.anim='happy';pet.animT=0;fx.hearts.push({x:g.tx,y:g.ty-3,t:0});buzz(10);g.ty=Math.min(g.ty,56);}
   }
   if(g.type==='catch'){
     pet.x+=(g.px-pet.x)*Math.min(1,dt*14);pet.face=g.px>pet.x?1:-1;
@@ -850,7 +853,7 @@ function stepGame(dt){
       g.items.push({x:rnd(10,90),y:-4,v:rnd(16,24)+g.time*.6,kind:r<.12?'gold':r<.3?'bad':'good',label:r<.12?'★':r<.3?pick(bad):pick(good)});}
     const s=petScale();
     g.items.forEach(it=>{it.y+=it.v*dt;const gk=P.species==='gecko'||P.species==='hamster',top=gk?pet.y-12*s:pet.y-20*s,bot=gk?pet.y-1:pet.y-6,wx=gk?14*s:8*s;if(!it.done&&it.y>top&&it.y<bot&&Math.abs(it.x-pet.x)<wx){it.done=true;
-      if(it.kind==='bad'){g.score-=2;toast(P.species==='gecko'?'守宮不能吃'+it.label+'！':it.label+'對毛孩有害！');pet.anim='confused';pet.animT=0;buzz(30);}else{g.score+=it.kind==='gold'?3:1;pet.anim='happy';pet.animT=0;fx.hearts.push({x:pet.x,y:pet.y-22,t:0});buzz(6);}}});
+      if(it.kind==='bad'){gsfx('bad');g.score-=2;toast(P.species==='gecko'?'守宮不能吃'+it.label+'！':it.label+'對毛孩有害！');pet.anim='confused';pet.animT=0;buzz(30);}else{gsfx(it.kind==='gold'?'sparkle':'pop');g.score+=it.kind==='gold'?3:1;pet.anim='happy';pet.animT=0;fx.hearts.push({x:pet.x,y:pet.y-22,t:0});buzz(6);}}});
     g.items=g.items.filter(it=>!it.done&&it.y<80);
   }
   if(g.time>=g.dur&&game)endGame();
@@ -859,7 +862,7 @@ function stepGame(dt){
 function gameDown(x,y){if(!game)return;if(game.type==='toy'){game.tx=x;game.ty=y;}if(game.type==='catch')game.px=clamp(x,8,92);}
 function gameMove(x,y,d){
   const g=game;if(!g)return;
-  if(g.type==='clean'&&ptr.down){const s=petScale();g.spots.forEach(sp=>{if(sp.done)return;const wx=pet.x+sp.x*s*pet.face,wy=pet.y+sp.y*s;if(Math.hypot(x-wx,y-wy)<3.2*s+1.5){sp.rub+=d;if(sp.rub>=sp.need){sp.done=true;buzz(8);}}});}
+  if(g.type==='clean'&&ptr.down){const s=petScale();g.spots.forEach(sp=>{if(sp.done)return;const wx=pet.x+sp.x*s*pet.face,wy=pet.y+sp.y*s;if(Math.hypot(x-wx,y-wy)<3.2*s+1.5){sp.rub+=d;if(Math.random()<.12)gsfx('swish');if(sp.rub>=sp.need){sp.done=true;buzz(8);gsfx('sparkle');}}});}
   if(g.type==='toy'&&ptr.down){g.tvx=(x-g.tx)*60;g.tvy=(y-g.ty)*60;g.tx=clamp(x,4,96);g.ty=clamp(y,20,72);}
   if(g.type==='catch'&&ptr.down)g.px=clamp(x,8,92);
 }

@@ -688,7 +688,7 @@ T.timing = {
   controls(S) { return [primary(S.step.btn, () => T.timing.hit(S))]; },
   update(S, dt) { S.phase += dt * S.speed; const ph = S.phase % 1; S.p = ph < .5 ? ph * 2 : 2 - ph * 2; const z = S.step.zone; bar(0, { needle: S.p, state: S.p >= z[0] && S.p <= z[1] ? 'in' : '' }); },
   hit(S) {
-    if (!S.running) return; const s = zoneScore(S.p, S.step.zone); S.taps.push(s); S.hitT = S.at; S.hitN++; hitFeedback(s); S.speed *= 1.18;
+    if (!S.running) return; try { window.GC && GC.sfx('swish'); } catch (e) { } const s = zoneScore(S.p, S.step.zone); S.taps.push(s); S.hitT = S.at; S.hitN++; hitFeedback(s); S.speed *= 1.18;
     bar(0, { right: `${S.taps.length} / ${S.step.count}` });
     if (S.taps.length >= S.step.count) { S.out = { taps: S.taps.slice() }; endStep(avg(S.taps), null, .55); }
   }
@@ -812,12 +812,12 @@ T.draw = {
   },
   norm(S, x, y) { const g = S.geo; return [(x - g.cx) / g.R, (y - g.cy) / g.R]; },
   inside(S, p) { return S.step.shape === 'omu' ? (p[0] / .64) ** 2 + (p[1] / .38) ** 2 <= 1 : p[0] * p[0] + p[1] * p[1] <= .72 * .72; },
-  pdown(S, x, y) { if (S.ink <= 0) return; const p = this.norm(S, x, y); S.cur = [p]; S.strokes.push(S.cur); },
+  pdown(S, x, y) { if (S.ink <= 0) return; try { window.GC && GC.loop('stream', true); } catch (e) { } const p = this.norm(S, x, y); S.cur = [p]; S.strokes.push(S.cur); },
   pmove(S, x, y) {
     if (!S.cur || S.ink <= 0) return; const p = this.norm(S, x, y), q = S.cur[S.cur.length - 1], d = Math.hypot(p[0] - q[0], p[1] - q[1]); if (d < .012) return;
     S.cur.push(p); S.ink -= d / S.step.ink; if (this.inside(S, p)) S.inLen += d; else S.outLen += d; if (S.ink <= 0) { S.ink = 0; S.cur = null; }
   },
-  pup(S) { S.cur = null; },
+  pup(S) { try { window.GC && GC.loop('stream', false); } catch (e) { }  S.cur = null; },
   update(S, dt) { S.tl -= dt; bar(0, { fill: S.ink, right: sec(S.tl) }); if (S.tl <= 0) this.done(S); },
   done(S) {
     if (!S.running) return; const tot = S.inLen + S.outLen;
@@ -1080,7 +1080,7 @@ function startPlay() {
   if (!S || S.running || S.ended) return;
   overlayEl.classList.add('hide'); ctrlEl.classList.remove('locked'); S.running = true; Snd.play('start');
 }
-function endStep(score, msg, delay) {
+function endStep(score, msg, delay) { try { window.GC && GC.stopLoops(); } catch (e) { }
   if (!S || S.ended) return; S.ended = true; S.running = false; if (S.primary && S.primary.el) S.primary.el.classList.remove('pressed');
   score = Math.round(clamp(score, 0, 100)); G.scores[S.step.key] = score; G.data[S.step.key] = S.out || { v: S.v };
   Snd.sizzle(0); ctrlEl.classList.add('locked');

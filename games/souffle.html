@@ -378,7 +378,7 @@ const eggs={
   down(){this.tap();},
   key_(k){if(k===' '||k==='Enter')this.tap();},
   tap(){
-    const st=this.st;if(!running||st.phase!=='aim'||st.done)return;
+    const st=this.st;if(!running||st.phase!=='aim'||st.done)return;gsfx('crack');
     const d=Math.abs(st.p-.5),i=st.n;let r;
     if(d<this.pf[i])r={kind:'clean',pts:100};else if(d<this.ok[i])r={kind:'speck',pts:72};else r={kind:'broken',pts:18};
     st.res.push(r);st.cur=r;st.phase='anim';st.t=0;
@@ -729,7 +729,7 @@ const bake={
     }
   },
   down(x,y){const st=this.st;if(st.phase==='serve'){st.lp={x,y};st.fp={x,y};}},
-  move(x,y){const st=this.st;if(st.phase!=='serve'||!st.lp)return;const d=Math.hypot(x-st.lp.x,y-st.lp.y);st.lp={x,y};st.fp={x,y};if(y<75){st.dust+=d;if(Math.random()<.25)buzz(3);}if(st.dust>=40)this.serve();},
+  move(x,y){const st=this.st;if(st.phase!=='serve'||!st.lp)return;const d=Math.hypot(x-st.lp.x,y-st.lp.y);if(d>2&&Math.random()<.3)gsfx('sprinkle');st.lp={x,y};st.fp={x,y};if(y<75){st.dust+=d;if(Math.random()<.25)buzz(3);}if(st.dust>=40)this.serve();},
   up(){const st=this.st;st.lp=null;st.fp=null;},
   takeOut(){
     const st=this.st;if(!running||st.phase!=='bake')return;
@@ -822,7 +822,7 @@ function drawResultHero(){const c=fitHero($('#res-hero'));drawPlate(c,S.finalH*.
 /* ---------- UI flow ---------- */
 let screen='title',cur=null,curIdx=0,running=false,finishing=false;
 function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
-function show(name){screen=name;if(name==='title'&&typeof renderFlavs==='function')renderFlavs();['title','game','result'].forEach(n=>$('#'+n).classList.toggle('on',n===name));if(name==='game')requestAnimationFrame(resize);}
+function show(name){screen=name;if(name!=='game')stopAllLoops();if(name==='title'&&typeof renderFlavs==='function')renderFlavs();['title','game','result'].forEach(n=>$('#'+n).classList.toggle('on',n===name));if(name==='game')requestAnimationFrame(resize);}
 let toastTimer=0;
 function toast(msg,kind){const t=$('#toast');t.textContent=msg;t.className='toast show'+(kind?' '+kind:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>{t.className='toast';},1300);}
 function renderSteps(){
@@ -893,8 +893,19 @@ function showResult(){
 
 /* ---------- loop ---------- */
 let last=performance.now();
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
+let ptrDown=false;cv.addEventListener('pointerdown',()=>{ptrDown=true;});['pointerup','pointercancel'].forEach(n=>cv.addEventListener(n,()=>{ptrDown=false;}));
+function soundTick(){
+  const on=screen==='game'&&cur&&running,k=cur&&cur.key,st=cur&&cur.st||{};
+  gl('boil',!!(on&&k==='base'&&st.holding));
+  gl('stir',!!(on&&(k==='whip'||k==='fold')&&ptrDown));
+  gl('pour',!!(on&&k==='fill'&&(st.holding||st.pending>.05)));
+  gl('oven',!!(on&&k==='bake'&&st.phase==='bake'));
+}
 function loop(now){
   const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;NOW+=dt;
+  soundTick();
   if(screen==='game'&&cur){cur.update(dt);if(W>0&&H>0)render();}
   else if(screen==='title'){heroT+=dt;drawTitleHero();}
   else if(screen==='result')drawResultHero();

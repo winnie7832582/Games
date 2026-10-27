@@ -285,7 +285,7 @@ function faceSVG(c,mood){
     '<circle cx="15" cy="22.5" r="1.7" fill="#1D1A16"/><circle cx="25" cy="22.5" r="1.7" fill="#1D1A16"/>'+brows+mouth+'</svg>';
 }
 function spawn(){
-  const i=G.slots.indexOf(null);if(i<0)return false;
+  const i=G.slots.indexOf(null);if(i<0)return false;gsfx('bell');
   const prog=G.t/DUR,order=makeOrder(prog);
   const vip=Math.random()<lerp(.06,.14,prog),qty=(!vip&&Math.random()<lerp(.05,.2,prog))?2:1;
   let max=(lerp(34,23,prog)+(order.top!=='none'?3:0))*PATM;if(qty===2)max+=9;if(vip)max*=.8;
@@ -333,10 +333,11 @@ function startPour(tea){
   cup.base=tea;G.pouring=tea;return true;
 }
 function stopPour(){if(G)G.pouring=null;}
-function addSugar(){if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}if(c.sugar>=3){toast('糖已經加太多了','bad');return;}c.sugar++;buzz(8);if(c.sugar===3)toast('加了三下，太甜了','bad');}
-function addIce(){if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}if(c.ice>=3){toast('冰塞不下了','bad');return;}c.ice++;buzz(8);if(c.ice===3)toast('冰加了三匙，太多了','bad');}
+function addSugar(){if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}if(c.sugar>=3){toast('糖已經加太多了','bad');return;}c.sugar++;buzz(8);gsfx('sprinkle');if(c.sugar===3)toast('加了三下，太甜了','bad');}
+function addIce(){if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}if(c.ice>=3){toast('冰塞不下了','bad');return;}c.ice++;gsfx('clink');buzz(8);if(c.ice===3)toast('冰加了三匙，太多了','bad');}
 function addTop(k){
   if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}
+  if(!c.tops.has(k))gsfx('plop');
   if(c.tops.has(k)){toast('已經加過了');return;}
   if(k==='pearl'){const p=G.pot;
     if(p.state==='cooking'){toast('珍珠還在煮');return;}
@@ -352,13 +353,13 @@ function cook(){
   if(p.state==='hard')toast('硬掉的倒掉，重煮一鍋');
   p.state='cooking';p.t=0;p.stock=0;buzz(10);
 }
-function trash(){if(!live())return;const c=G.cup;if(!c.base&&!c.tops.size&&!c.ice&&!c.sugar){toast('杯子是空的');return;}G.cup=newCup();G.pouring=null;toast('倒掉了');}
+function trash(){if(!live())return;const c=G.cup;if(!c.base&&!c.tops.size&&!c.ice&&!c.sugar){toast('杯子是空的');return;}gsfx('splash');G.cup=newCup();G.pouring=null;toast('倒掉了');}
 function seal(){
   if(!live())return;const c=G.cup;
   if(c.sealed){toast('已經封好了，點客人出餐');return;}
   if(c.fill<=0){toast('先倒茶');return;}
   G.pouring=null;document.querySelectorAll('.tea.held').forEach(b=>b.classList.remove('held'));
-  c.sealed=true;c.sealT=0;buzz(15);toast('封好了，點客人出餐');
+  c.sealed=true;gsfx('seal');c.sealT=0;buzz(15);toast('封好了，點客人出餐');
 }
 function check(cup,o){
   const m=[];
@@ -418,16 +419,19 @@ function updateHud(){
 }
 
 /* ---------- update ---------- */
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
 function update(dt){
-  if(!live())return;
+  if(!live()){gl('pour',false);gl('boil',false);return;}
+  gl('pour',!!G.pouring);gl('boil',G.pot.state==='cooking');
   G.t+=dt;
   if(G.t>=DUR){G.t=DUR;updateHud();endGame(false);return;}
   if(G.pouring){const c=G.cup;c.fill+=RATE*dt;
     if(c.fill>=100){c.fill=100;stopPour();document.querySelectorAll('.tea.held').forEach(b=>b.classList.remove('held'));toast('滿出來了','bad');buzz(30);}}
   if(G.cup.sealed)G.cup.sealT+=dt;
-  const inRush=(G.t>=32&&G.t<46)||(G.t>=84&&G.t<98);if(inRush!==G.rush){G.rush=inRush;toast(inRush?'尖峰時段！客人變多了':'尖峰結束',inRush?'bad':'good');buzz(inRush?[20,40,20]:10);}
+  const inRush=(G.t>=32&&G.t<46)||(G.t>=84&&G.t<98);if(inRush!==G.rush){G.rush=inRush;if(inRush)gsfx('alarm');toast(inRush?'尖峰時段！客人變多了':'尖峰結束',inRush?'bad':'good');buzz(inRush?[20,40,20]:10);}
   const p=G.pot;
-  if(p.state==='cooking'){p.t+=dt;if(p.t>=COOK){p.state='ready';p.stock=STOCK;p.fresh=FRESH;toast('珍珠煮好了','good');buzz(15);}}
+  if(p.state==='cooking'){p.t+=dt;if(p.t>=COOK){p.state='ready';p.stock=STOCK;p.fresh=FRESH;gsfx('ding');toast('珍珠煮好了','good');buzz(15);}}
   else if(p.state==='ready'){p.fresh-=dt;if(p.fresh<=0){p.state='hard';toast('珍珠放太久，變硬了','bad');}}
   if(G.t>=G.nextSpawn){
     const prog=G.t/DUR;
@@ -550,7 +554,7 @@ function render(){
 }
 
 /* ---------- flow ---------- */
-function show(n){screen=n;['title','game','result'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
+function show(n){screen=n;if(n!=='game')stopAllLoops();['title','game','result'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
 let LIVES=3;try{const v=parseInt(GCStore.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
 function renderLives(){$('#lv-v').textContent=LIVES<=5?'♥'.repeat(LIVES):'♥ × '+LIVES;$('#lv-v').setAttribute('aria-label',LIVES+' 次');$('#lv-m').disabled=LIVES<=1;$('#lv-p').disabled=LIVES>=10;}
 $('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});

@@ -866,7 +866,7 @@ function drawChart(res){
 
 /* ---------- flow ---------- */
 let screen='title',cur=null,curIdx=0,running=false,finishing=false;
-function show(n){screen=n;['title','game','cup','final'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
+function show(n){screen=n;if(n!=='game')stopAllLoops();['title','game','cup','final'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
 let tt=0;function toast(m,k){const t=$('#toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(tt);tt=setTimeout(()=>t.className='toast',1500);}
 function renderSteps(){$('#steps').innerHTML=R.stages.map((s,i)=>'<li class="'+(i<curIdx?'done':i===curIdx?'now':'')+'"'+(i===curIdx?' aria-current="step"':'')+'>'+s.name+'</li>').join('');}
 function renderControls(specs){
@@ -909,7 +909,18 @@ function begin(){$('#intro').hidden=true;running=true;setControlsEnabled(true);a
 const BRK={grind:['研磨機卡豆了！','豆子卡在刀盤裡'],temp:['電熱水壺跳電了！','按一下重置開關'],pour:['濾杯堵住了！','水流變得不穩'],shot:['義式機壓力異常！','壓力表亂跳'],steam:['蒸汽管堵住了！','噴嘴被奶泡塞住']};
 function armBreak(){R.brk=null;if(R.order&&cur&&R.order.brk===cur.key)R.brk={at:2.5+Math.random()*3.5,t:0,done:false};}
 function tickBreak(dt){if(!running||!R.brk||R.brk.done)return;R.brk.t+=dt;if(R.brk.t>=R.brk.at)startBreak();}
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
+function soundTick(){
+  const on=screen==='game'&&cur&&running,k=cur&&cur.key,st=(cur&&cur.st)||{},p=cur&&cur.p;
+  gl('grind',!!(on&&k==='grind'&&st.active&&!st.done));
+  gl('boil',!!(on&&k==='temp'&&!st.done));
+  gl('stream',!!(on&&((k==='bloom'&&st.holding)||(k==='pour'&&st.pouring)||(k==='art'&&p&&(p.pouring||p.high)))));
+  gl('hiss',!!(on&&k==='shot'&&!st.done));
+  gl('steam',!!(on&&k==='steam'&&!st.done));
+}
 function startBreak(){
+  gsfx('alarm');stopAllLoops();
   R.brk.done=true;running=false;setControlsEnabled(false);
   const[k1,k2]=BRK[cur.key];let n=0,left=5;const need=6;
   $('#card').innerHTML='<p class="k">機器故障</p><h3>'+k1+'</h3><p class="notes">'+k2+'。5 秒內快速連點修理鈕 '+need+' 下。</p><div class="fixbar"><i id="fixi"></i></div><button class="btn primary" id="fix" type="button">修理（0 / '+need+'）</button>';
@@ -918,7 +929,7 @@ function startBreak(){
   const end=ok=>{if(over)return;over=true;clearInterval(iv);$('#intro').hidden=true;running=true;setControlsEnabled(true);
     if(ok){R.fixed++;toast('修好了！','good');buzz([15,30]);}else{R.penalty+=8;toast('沒修好，品質受影響','bad');buzz([30,40,30]);}};
   const iv=setInterval(()=>{left-=.1;const f=$('#fixi');if(f)f.style.width=Math.max(0,left/5*100)+'%';if(left<=0)end(false);},100);
-  $('#fix').addEventListener('click',()=>{n++;buzz(8);$('#fix').textContent='修理（'+n+' / '+need+'）';if(n>=need)end(true);});
+  $('#fix').addEventListener('click',()=>{n++;buzz(8);gsfx('thud');$('#fix').textContent='修理（'+n+' / '+need+'）';if(n>=need)end(true);});
   setTimeout(()=>{try{$('#fix').focus({preventScroll:true});}catch(e){}},50);
 }
 function finishStage(){
@@ -974,7 +985,7 @@ $('#start').addEventListener('click',()=>startGame(false));$('#again').addEventL
 
 let last=performance.now();
 function loop(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;NOW+=dt;
-  if(screen==='game'&&cur){tickBreak(dt);cur.update(dt);if(W>0&&H>0)render();}
+  soundTick();if(screen==='game'&&cur){tickBreak(dt);cur.update(dt);if(W>0&&H>0)render();}
   else if(screen==='title')drawHero();
   requestAnimationFrame(loop);}
 requestAnimationFrame(loop);

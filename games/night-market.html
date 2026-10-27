@@ -319,7 +319,7 @@ function eventDef(){return S.event?MORNING.find(e=>e.id===S.event.id):null;}
 
 /* ---------- screens ---------- */
 let screen='title';
-function show(n){screen=n;['title','pick','prep','night','result','shop','end'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='night')requestAnimationFrame(resize);}
+function show(n){screen=n;if(n!=='night')stopAllLoops();['title','pick','prep','night','result','shop','end'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='night')requestAnimationFrame(resize);}
 function titleInit(){const sv=load();$('#b-cont').hidden=!(sv&&!sv.ended);
   let b=null;try{b=JSON.parse(GCStore.getItem(BEST)||'null');}catch(e){}
   $('#best').textContent=b&&typeof b.cash==='number'?'最佳紀錄 '+money(b.cash)+'，'+b.title:'';}
@@ -434,6 +434,7 @@ const SHIRTS=['#FF5A4E','#3EE6C4','#FFC94A','#8FB3E8','#E58BD8','#9BE36D','#FFFF
 const SKINS=['#F6D2B4','#E9B994','#C98E66','#8E5B3E'];
 function look(){return{shirt:pick(SHIRTS),skin:pick(SKINS),hair:pick(['#1D1A16','#3B2618','#5A3A22','#B5652F','#C9C2B8']),h:rnd(.92,1.08)};}
 function startNight(cost){
+  gsfx('gong');
   const stock={};menuOn().forEach(d=>stock[d]=S.plan.d[d].qty);
   N={t:0,cost,queue:[],leaving:[],passers:[],stock,start:Object.assign({},stock),sold:{},served:0,revenue:0,lostSold:0,lostWait:0,lostFull:0,repDelta:0,extraCost:0,
     spawnAcc:0,shoutUntil:-1,shoutCd:0,nightMul:1,pauseCook:0,fast:false,paused:false,evAt:rnd(12,30),evDone:Math.random()>.55,ended:false,id:0,priceLvl:{},
@@ -445,6 +446,7 @@ function startNight(cost){
 function newPasser(x){const dir=Math.random()<.5?1:-1;return{x:x!=null?x:(dir>0?-6:106),y:rnd(53,56.5),v:dir*rnd(6,11),look:look(),s:rnd(.62,.75)};}
 function spot(i){return i<6?{x:40+i*9,y:63}:{x:40+(i-6)*9+4.5,y:69};}
 function spawnCustomer(){
+  gsfx('bell');
   const menu=N.menu.filter(d=>N.stock[d]>0);
   let d=wpick(N.menu,weightOf);
   const fromL=Math.random()<.5,c={id:++N.id,x:fromL?-6:106,y:rnd(60,64),dish:d,wait:0,pat:(N.helper?12:10.5)*(stl().pat||1),cooking:false,prog:0,look:look(),bubble:''};
@@ -456,8 +458,11 @@ function spawnCustomer(){
   N.stock[d]--;N.queue.push(c);renderStock();
 }
 function leave(c,text,mood){c.bubble=text;c.mood=mood;c.out=true;c.tx=c.x<50?-8:108;c.y=Math.min(c.y,64);N.leaving.push(c);}
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
 function stepNight(dt){
-  if(N.paused||N.ended)return;
+  if(N.paused||N.ended){gl('sizzle',false);gl('crowd',false);return;}
+  gl('sizzle',N.queue.some(c=>c.cooking));gl('crowd',N.t<NIGHT);gl('rain',S.weather==='rain'||S.weather==='storm');
   N.t+=dt;
   const x=N.t/NIGHT;
   if(N.t<NIGHT&&!N.soldOut){
@@ -474,7 +479,7 @@ function stepNight(dt){
   for(const c of N.queue){if(cooking>=N.slots)break;if(!c.cooking){c.cooking=true;c.prog=0;cooking++;renderSlots(false);}}
   if(N.pauseCook<=0){for(const c of N.queue){if(c.cooking)c.prog+=dt*speed/cookOf(c.dish);}}
   for(let i=N.queue.length-1;i>=0;i--){const c=N.queue[i];
-    if(c.cooking&&c.prog>=1){N.queue.splice(i,1);serve(c);continue;}
+    if(c.cooking&&c.prog>=1){N.queue.splice(i,1);gsfx('ding');serve(c);continue;}
     if(!c.cooking){c.wait+=dt;if(c.wait>c.pat){N.queue.splice(i,1);N.stock[c.dish]++;N.lostWait++;N.repDelta-=1;leave(c,'太慢了','bad');renderStock();}}}
   // movement
   N.queue.forEach((c,i)=>{const s=spot(i);moveTo(c,s.x,s.y,dt,26);});
@@ -580,7 +585,7 @@ function updateNightHud(){
   const cooking=N.queue.filter(c=>c.cooking);const box=$('#slots');
   for(let i=0;i<N.slots&&i<box.children.length;i++){const c=cooking[i];box.children[i].querySelector('i').style.width=c?(clamp(c.prog,0,1)*100)+'%':'0%';}
 }
-$('#b-shout').addEventListener('click',()=>{if(!N||N.paused||N.shoutCd>0||N.t>=NIGHT)return;N.shoutUntil=N.t+6;N.shoutCd=14;toast('雞排～珍奶～來喔！','good');buzz(15);});
+$('#b-shout').addEventListener('click',()=>{if(!N||N.paused||N.shoutCd>0||N.t>=NIGHT)return;N.shoutUntil=N.t+6;N.shoutCd=14;gsfx('alarm');toast('雞排～珍奶～來喔！','good');buzz(15);});
 $('#b-fast').addEventListener('click',()=>{if(!N)return;N.fast=!N.fast;$('#b-fast').setAttribute('aria-pressed',String(N.fast));});
 
 /* ---------- night canvas ---------- */

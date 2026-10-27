@@ -317,6 +317,7 @@ let typing=null,advance=null;
 function setScene(bg,where,bar){$('#s-bg').innerHTML=bg;$('#s-where').textContent=where||'';const b=$('#s-bar');b.hidden=!bar;if(bar)b.textContent=bar;}
 function showWho(L,face){$('#s-who').innerHTML=L?portrait(L,face):'';}
 function say(name,text,L,face){
+  gsfx(name?'blip':'tick');
   if(L!==undefined)showWho(L,face);
   $('#s-name').textContent=name||'';$('#s-ch').innerHTML='';$('#s-next').hidden=false;
   text=text.replace(/\{n\}/g,G?G.name:'');
@@ -510,7 +511,7 @@ async function randomEvent(){
   await ev.run();save();setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
 }
 async function cafeDay(){
-  show('scene');const bar=()=>'今日 '+fmt(earn);let earn=0,repD=0;
+  show('scene');gsfx('door');const bar=()=>'今日 '+fmt(earn);let earn=0,repD=0;
   setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
   await randomEvent();
   const vis=ids().filter(c=>CHARS[c].visit.includes(wd())&&(!S2.includes(c)||G.day>=5));
@@ -524,7 +525,7 @@ async function cafeDay(){
       const L=genericLook();const pool=ORDERS.filter(o=>G.menu.includes(o[1]));const [txt,want]=pick(pool);
       await say('客人',txt,L,'normal');
       const i=await choose(menuOpts(),true,'要端什麼給客人？');const got=G.menu[i];
-      if(got===want){const v=Math.round(MENU[got].p*mult+(G.rep>=50?20:0));earn+=v;repD+=1;showWho(L,'smile');pop('+'+fmt(v),'var(--amber)');await say('客人',pick(['就是想要這個，謝謝！','好喝！下次還會再來。','你很懂耶。']));}
+      if(got===want){const v=Math.round(MENU[got].p*mult+(G.rep>=50?20:0));earn+=v;gsfx('cash');repD+=1;showWho(L,'smile');pop('+'+fmt(v),'var(--amber)');await say('客人',pick(['就是想要這個，謝謝！','好喝！下次還會再來。','你很懂耶。']));}
       else{const v=Math.round(MENU[got].p*.5);earn+=v;repD-=2;showWho(L,'sad');pop('+'+fmt(v),'var(--soft)');await say('客人',pick(['呃……這不是我想要的，算了。','嗯……跟我想的不太一樣。']));}
     }else{
       const c=q.c,C=CHARS[c];
@@ -604,6 +605,7 @@ function giftShop(){
 }
 function goHubKeep(){$('#h-money').textContent=fmt(G.money);}
 async function endDay(text,bonus){
+  gsfx('gong');
   show('scene');setScene(BG.street(''),'夜晚');showWho(null);
   for(const t of text.split('\n'))await say('',t);
   if(G.day>=DAYS){await finale();return;}
