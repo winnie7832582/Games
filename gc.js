@@ -117,6 +117,8 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   A('fm6', 'farm', '農場等級 5', '小菜園升到 Lv5', ['max', 'farm', 'level', 5]);
   A('fm7', 'farm', '什麼都種', '七種作物都收成過', [['max', 'farm', 'k_cabbage', 1], ['max', 'farm', 'k_radish', 1], ['max', 'farm', 'k_tomato', 1], ['max', 'farm', 'k_corn', 1], ['max', 'farm', 'k_strawberry', 1], ['max', 'farm', 'k_pumpkin', 1], ['max', 'farm', 'k_sunflower', 1]], 1);
   A('fm8', 'farm', '小富翁', '賣菜和交貨累計賺到 3000 金幣', ['sum', 'farm', 'earned', 3000]);
+  A('ph12', 'pet-house', '毛孩家族', '同時養兩隻毛孩', ['max', 'pet-house', 'pets', 2]);
+  A('ph13', 'pet-house', '熱鬧的家', '同時養四隻毛孩', ['max', 'pet-house', 'pets', 4], 1);
   A('cn10', 'corner-cafe', '店裡的小插曲', '遇到 10 次隨機小事件', ['sum', 'corner-cafe', 'rand', 10]);
   A('fm9', 'farm', '除草達人', '累計拔掉 20 次雜草', ['sum', 'farm', 'weeds', 20]);
   A('fm10', 'farm', '捕蟲高手', '累計抓到 10 隻蟲', ['sum', 'farm', 'pests', 10]);
