@@ -304,6 +304,8 @@ $('#o-go').addEventListener('click',()=>{
   P.id='p'+Date.now().toString(36);
   if(ADDING&&prev){const r=roster();prev.awayAt=Date.now();r.others[prev.id]=prev;saveRoster(r);
     HOUSE_KEYS.forEach(k=>{if(k==='inv'){const m=Object.assign({},prev.inv);Object.keys(P.inv).forEach(f=>m[f]=(m[f]||0)+P.inv[f]);P.inv=m;}else if(prev[k]!=null)P[k]=prev[k];});}
+  if(!prev&&PENDING_HOUSE){HOUSE_KEYS.forEach(k=>{if(PENDING_HOUSE[k]==null)return;if(k==='inv'){const m=Object.assign({},PENDING_HOUSE.inv);Object.keys(P.inv).forEach(f=>m[f]=(m[f]||0)+P.inv[f]);P.inv=m;}else P[k]=PENDING_HOUSE[k];});}
+  PENDING_HOUSE=null;
   const wasAdding=ADDING;ADDING=false;BOOKPG=null;
   diary(name+'來到小屋了，個性有點'+PERS[pers].n+'。');save();
   try{window.GC&&GC.max('pet-house',{pets:petCount()});}catch(e){}
@@ -354,8 +356,8 @@ function updateUI(){if(Date.now()-lastSync>4000){lastSync=Date.now();syncShared(
 let tt=0;function toast(m){const t=$('#toast');t.textContent=m;t.className='toast show';clearTimeout(tt);tt=setTimeout(()=>t.className='toast',1800);}
 
 /* ---------- sheets ---------- */
-function sheetHTML(h,bind){$('#sbox').innerHTML=h;$('#sheet').hidden=false;$('#sbox').querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheet));if(bind)bind($('#sbox'));const f=$('#sbox').querySelector('button');if(f)f.focus();}
-function closeSheet(){$('#sheet').hidden=true;}
+function sheetHTML(h,bind){$('#sbox').innerHTML=h;$('#sheet').hidden=false;$('#sheet').dataset.lock='';$('#sbox').querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',closeSheet));if(bind)bind($('#sbox'));const f=$('#sbox').querySelector('button');if(f)f.focus();}
+function closeSheet(force){if(!force&&$('#sheet').dataset.lock==='1'&&!P)return;$('#sheet').hidden=true;}
 $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet();});
 
@@ -551,8 +553,35 @@ function openDiary(day){
 function openInfo(){
   const d=ageDays(),learned=TRICKS[P.species].filter(t=>(P.tricks[t[0]]||0)>=5).map(t=>t[1]);
   sheetHTML('<h3>關於'+esc(P.name)+'</h3><div class="row"><div class="tx"><b>'+SPECIES[P.species].coats[P.coat][0]+'，'+stage()[0]+'</b><span>來到小屋第 '+(Math.floor(d)+1)+' 天</span></div></div><div class="row"><div class="tx"><b>個性：'+PERS[P.pers].n+'</b><span>'+PERS[P.pers].d+'</span></div></div><div class="row"><div class="tx"><b>最喜歡被摸的地方</b><span>'+(P.liked?SPOTS[P.like]:'還不知道，多摸摸看頭、下巴和背')+'</span></div></div><div class="row"><div class="tx"><b>會的把戲</b><span>'+(learned.join('、')||'還沒學會')+'</span></div></div><div class="row"><div class="tx"><b>健康</b><span>'+Math.round(P.health)+(P.sick?'，生病中':'')+'</span></div></div>'+
-    '<button class="btn close" type="button" id="i-reset">送養，重新開始</button><button class="btn close" type="button" data-close>關閉</button>',box=>{
-    box.querySelector('#i-reset').addEventListener('click',()=>{sheetHTML('<h3>確定要重新開始嗎？</h3><p class="soft">'+esc(P.name)+'會被好心的家庭領養，你可以重新選一隻毛孩，所有金幣和物品都會清空。</p><div class="grid2"><button class="btn" type="button" data-close>再想想</button><button class="btn main" type="button" id="i-yes">重新開始</button></div>',b2=>b2.querySelector('#i-yes').addEventListener('click',()=>{try{GCStore.removeItem(KEY);}catch(e){}P=null;closeSheet();AD={sp:'cat',col:0,name:''};showAdopt();}));});});
+    '<button class="btn close" type="button" id="i-reset">送養</button><button class="btn close" type="button" data-close>關閉</button>',box=>{
+    box.querySelector('#i-reset').addEventListener('click',rehomeAsk);});
+}
+let PENDING_HOUSE=null;
+function rehomeAsk(){
+  const others=Object.values(roster().others);
+  sheetHTML('<h3>要讓'+esc(P.name)+'去新的家嗎？</h3><p class="soft">'+esc(P.name)+'會被好心的家庭領養。'+(others.length?'金幣、食物和家具都會留下來，給其他毛孩用。':'接下來可以選擇領養新的毛孩，或是全部重新開始。')+'</p><div class="grid2"><button class="btn" type="button" data-close>再想想</button><button class="btn main" type="button" id="i-yes">確定送養</button></div>',b=>b.querySelector('#i-yes').addEventListener('click',doRehome));
+}
+function doRehome(){
+  const r=roster(),others=Object.values(r.others),gone=P.name;
+  PENDING_HOUSE={};HOUSE_KEYS.forEach(k=>{PENDING_HOUSE[k]=P[k];});
+  try{GCStore.removeItem(bkey());}catch(e){}
+  try{GCStore.removeItem(KEY);}catch(e){}P=null;
+  gsfx('swish');
+  sheetHTML('<h3>'+esc(gone)+'去新的家了</h3><p class="soft">接下來要做什麼？</p>'+
+    others.map(x=>'<div class="row"><div class="tx"><b>'+esc(x.name)+'（'+SPECIES[x.species].n+'）</b><span>上次看到時：飽足 '+Math.round(x.hunger)+'・心情 '+Math.round(x.mood)+'</span></div><button class="btn" type="button" data-pet="'+x.id+'">去看牠</button></div>').join('')+
+    '<button class="btn main close" type="button" id="rh-new">領養新的毛孩（保留金幣和物品）</button>'+
+    (others.length?'':'<button class="btn close" type="button" id="rh-fresh">全部重新開始（金幣和物品清空）</button>'),box=>{
+    box.querySelectorAll('[data-pet]').forEach(b=>b.addEventListener('click',()=>{
+      const rr=roster(),nx=rr.others[b.dataset.pet];if(!nx)return;delete rr.others[nx.id];
+      HOUSE_KEYS.forEach(k=>{if(PENDING_HOUSE[k]!=null)nx[k]=PENDING_HOUSE[k];});PENDING_HOUSE=null;
+      if(nx.awayAt){const el=Date.now()-nx.last;nx.last=Date.now()-el*.5;delete nx.awayAt;}
+      saveRoster(rr);P=nx;BOOKPG=null;closeSheet();enterHome(false);catchUp();
+      diary(gone+'去了新的家，大家會想念牠。');updateUI();save();gsfx('chirp');toast(P.name+'跑過來了！');
+    }));
+    box.querySelector('#rh-new').addEventListener('click',()=>{closeSheet(true);ADDING=false;AD={sp:'cat',col:0,name:''};showAdopt();});
+    const fr=box.querySelector('#rh-fresh');if(fr)fr.addEventListener('click',()=>{PENDING_HOUSE=null;closeSheet(true);ADDING=false;AD={sp:'cat',col:0,name:''};showAdopt();});
+  });
+  $('#sheet').dataset.lock='1';
 }
 
 /* ---------- canvas & pet ---------- */
@@ -1009,6 +1038,7 @@ function openPets(){
 /* ---------- boot ---------- */
 P=load();
 if(P&&!P.id){P.id='p'+Date.now().toString(36);save();}
+if(!P){const r0=roster(),ids0=Object.keys(r0.others);if(ids0.length){P=r0.others[ids0[0]];delete r0.others[ids0[0]];if(P.awayAt){const el=Date.now()-P.last;P.last=Date.now()-el*.5;delete P.awayAt;}saveRoster(r0);save();}}
 if(P){enterHome(false);}else{showAdopt();}
 document.addEventListener('visibilitychange',()=>{if(!P)return;if(document.hidden)save();else{const back=catchUp();updateUI();if(back&&back.h>1)welcomeBack(back);}});
 })();
