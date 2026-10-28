@@ -141,10 +141,14 @@ function newFarm(){
   const plots=[];for(let i=0;i<12;i++)plots.push({c:null,g:0,w:0,weed:false,bug:false});
   return{v:1,last:Date.now(),coins:30,xp:0,plots,seeds:{cabbage:4},stock:{},up:{plots:4,sprinkler:false,scarecrow:false,fert:false},orders:{day:'',list:[]},daily:'',stats:{harvest:0,orders:0,earned:0}};
 }
-const HASW=!!(window.GC&&GC.give&&GC.pay);
-function coins(){return HASW?GC.wallet():F.coins;}
-function addCoins(n){if(HASW)GC.give(n);else F.coins+=n;}
-function payCoins(n){if(HASW)return GC.pay(n);if(F.coins<n)return false;F.coins-=n;return true;}
+/* 小菜園用自己的金幣；可以在商店的「兌換」換成共用幣（收藏商店用），或把共用幣換回金幣 */
+const EX_TO_SHARED=5,EX_TO_FARM=3;
+function coins(){return F.coins;}
+function addCoins(n){F.coins+=n;}
+function payCoins(n){if(F.coins<n)return false;F.coins-=n;return true;}
+function wallet(){try{return window.GC&&GC.wallet?GC.wallet():0;}catch(e){return 0;}}
+function canGive(){return !!(window.GC&&(GC.give||GC.earn));}
+function canPay(){return !!(window.GC&&GC.pay);}
 function save(){try{GCStore.setItem(KEY,JSON.stringify(F));}catch(e){}}
 function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
 function level(){return Math.min(10,1+Math.floor(Math.sqrt(F.xp/25)));}
@@ -273,21 +277,31 @@ $('#q-care').addEventListener('click',()=>bulk('care'));
 let shopTab='sell';
 function openShop(tab){
   shopTab=tab||shopTab;const lv=level();
-  const tabs=[['sell','賣出'],['seed','種子'],['up','升級']];
+  const tabs=[['sell','賣出'],['seed','種子'],['up','升級'],['ex','兌換']];
   let body='';
   if(shopTab==='sell'){
     const items=CK.concat(EK).filter(k=>(F.stock[k]||0)>0);
     body=items.length?items.map(k=>{const t=trend(k);return '<div class="row"><div class="tx"><b>'+nameOf(k)+' ×'+F.stock[k]+'</b><span>'+(EXTRA[k]?'可以拿去餵毛孩，也能賣掉。':'')+'今日價 $'+price(k)+(t==='up'?' <i class="up">行情好</i>':t==='down'?' <i class="down">行情差</i>':'')+'</span></div><div class="btns"><button class="btn" type="button" data-sell="'+k+':1">賣 1</button><button class="btn main" type="button" data-sell="'+k+':all">全賣</button></div></div>';}).join(''):'<p class="soft">背包裡沒有東西。收成後可以在這裡賣掉，也可以留著完成村民的訂單。拔掉的雜草和抓到的蟋蟀，也可以留著餵毛孩。</p>';
   }else if(shopTab==='seed'){
     body=CK.map(k=>{const c=CROPS[k],lock=c.lv>lv;return '<div class="row"><div class="tx"><b>'+c.n+'　$'+c.seed+(lock?'':'')+'</b><span>'+(lock?'Lv'+c.lv+' 解鎖':'約 '+(c.grow>=60*MIN?(c.grow/60/MIN)+' 小時':(c.grow/MIN)+' 分鐘')+'長大，賣 $'+c.sell+' 左右，有 '+(F.seeds[k]||0)+' 包')+'</span></div><div class="btns"><button class="btn" type="button" data-buy="'+k+':1"'+(lock||coins()<c.seed?' disabled':'')+'>買 1</button><button class="btn main" type="button" data-buy="'+k+':5"'+(lock||coins()<c.seed*5?' disabled':'')+'>買 5</button></div></div>';}).join('');
+  }else if(shopTab==='ex'){
+    const w=wallet(),all=Math.floor(F.coins/EX_TO_SHARED);
+    body='<p class="soft">小菜園的金幣可以換成<b>共用幣</b>，拿到首頁的收藏商店買杯緣色、毛孩配件、農場裝飾和稱號。共用幣也能換回金幣買種子和升級。</p>'+
+      '<div class="row"><div class="tx"><b>金幣 → 共用幣</b><span>'+EX_TO_SHARED+' 金幣換 1 共用幣</span></div><div class="btns"><button class="btn" type="button" data-ex="s:10"'+(F.coins<10*EX_TO_SHARED||!canGive()?' disabled':'')+'>換 10</button><button class="btn main" type="button" data-ex="s:all"'+(all<1||!canGive()?' disabled':'')+'>全部換 '+all+'</button></div></div>'+
+      '<div class="row"><div class="tx"><b>共用幣 → 金幣</b><span>1 共用幣換 '+EX_TO_FARM+' 金幣</span></div><div class="btns"><button class="btn" type="button" data-ex="f:10"'+(w<10||!canPay()?' disabled':'')+'>用 10</button><button class="btn main" type="button" data-ex="f:50"'+(w<50||!canPay()?' disabled':'')+'>用 50</button></div></div>'+
+      (canPay()?'':'<p class="soft">共用幣換金幣需要最新版的合集共用模組（gc.js）。</p>');
   }else{
     const list=UPS.filter(u=>u.need(F));
     body=list.length?list.map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-up="'+u.id+'"'+(lock||coins()<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join(''):'<p class="soft">所有升級都完成了。</p>';
   }
-  sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">共用幣 '+coins()+'（和收藏商店同一個錢包）</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
+  sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">金幣 '+coins()+'　共用幣 '+wallet()+'</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
     b.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>openShop(x.dataset.tab)));
     b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;gsfx('cash');const g=price(k)*q;addCoins(g);F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
     b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.buy.split(':');const q=+n,c=CROPS[k].seed*q;if(!payCoins(c)){toast('幣不夠');return;}gsfx('cash');F.seeds[k]=(F.seeds[k]||0)+q;buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-ex]').forEach(x=>x.addEventListener('click',()=>{const[d,n]=x.dataset.ex.split(':');
+      if(d==='s'){const q=n==='all'?Math.floor(F.coins/EX_TO_SHARED):+n;if(q<1||F.coins<q*EX_TO_SHARED)return;F.coins-=q*EX_TO_SHARED;try{GC.give?GC.give(q):GC.earn(q);}catch(e){}toast('換到 '+q+' 共用幣');}
+      else{const q=+n;if(!canPay()||!GC.pay(q)){toast('共用幣不夠');return;}F.coins+=q*EX_TO_FARM;toast('換到 '+q*EX_TO_FARM+' 金幣');}
+      gsfx('cash');save();updateHud();openShop('ex');}));
     b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{const u=UPS.find(z=>z.id===x.dataset.up);if(!u||!payCoins(u.cost)){toast('幣不夠');return;}
       if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
       toast('升級完成：'+u.n);buzz([15,30,15]);GCmax({plots:F.up.plots,upgrades:(F.up.sprinkler?1:0)+(F.up.scarecrow?1:0)+(F.up.fert?1:0)});save();updateHud();openShop();}));
@@ -401,7 +415,6 @@ function boot(){
   sim(Date.now());genOrders();
   const afterReady=F.plots.slice(0,F.up.plots).filter(p=>p.c&&progress(p)>=1).length;
   const d=today();let bonus=0;if(F.daily!==d){F.daily=d;if(!first){bonus=15;addCoins(bonus);}}
-  if(HASW&&!F.merged){const old=F.coins||0;if(old>0)GC.give(old);F.coins=0;F.merged=1;if(old>0&&!first)setTimeout(()=>toast('小菜園的 '+old+' 金幣已併入共用錢包'),1200);}
   save();makeLayout();updateHud();resize();
   GCmax({level:level(),plots:F.up.plots});
   if(first){setTimeout(()=>sheet('<div class="shead"><h3>歡迎來到小菜園</h3></div><p class="soft">這裡的時間是真的：種下去的菜，就算你關掉遊戲也會繼續長。</p><p class="soft">1. 點「種植」，選種子，再點空的田。<br>2. 田地要<b>澆水</b>才會長，水乾了就會停。<br>3. 偶爾會長雜草、跑出蟲，點一下就清掉，不處理收成會變少。<br>4. 長好了點一下收成，到商店賣掉，或完成村民的訂單。</p><p class="soft">先送你 4 包小白菜種子，3 分鐘就能收成。</p><button class="btn main" type="button" data-close style="width:100%">開始種菜</button>'),300);}
