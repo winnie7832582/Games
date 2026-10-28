@@ -318,7 +318,7 @@ $('#theme').addEventListener('click',e=>{const b=e.target.closest('[data-claim]'
 function storeSheet(){
   const g=GC.get(),th=GC.theme(),W=g.wallet;
   const slots=[['glaze','杯緣色（拉一杯花、一杯好咖啡）'],['petacc','毛孩配件（毛孩小屋）'],['farmdeco','農場裝飾（小菜園）'],['title','稱號（顯示在首頁）']];
-  let h='<div class="shead"><h2>收藏商店</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">● '+W+' 幣。玩遊戲、完成成就和每日挑戰都能賺幣。'+(th?'<br>活動「'+esc(th.n)+'」期間，賺到的幣 ×1.5，限時商品開放購買。':'<br>限時商品只會在活動期間出現。')+'</p>';
+  let h='<div class="shead"><h2>收藏商店</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">● '+W+' 幣。玩遊戲、完成成就和每日挑戰都能賺幣，小菜園的金幣也能在小菜園商店的「兌換」換成共用幣。'+(th?'<br>活動「'+esc(th.n)+'」期間，賺到的幣 ×1.5，限時商品開放購買。':'<br>限時商品只會在活動期間出現。')+'</p>';
   slots.forEach(([slot,label])=>{
     h+='<p class="achg">'+label+'</p>';
     GC.COLL.filter(c=>c.slot===slot&&(!c.theme||GC.own(c.id)||(th&&th.id===c.theme))).forEach(c=>{
