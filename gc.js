@@ -319,7 +319,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     return null;
   }
   function collDef(id) { for (var i = 0; i < COLL.length; i++) if (COLL[i].id === id) return COLL[i]; return null; }
-  var TH_MS = [[10, 100], [25, 200]];
+  var TH_MS = [[10, 60], [25, 120]];
 
   /* ================= 等級 ================= */
   var TITLES = [[1, '新手店員'], [2, '見習廚師'], [3, '小店老闆'], [4, '街頭人氣王'], [5, '人氣主廚'], [6, '美食達人'], [8, '名店店長'], [10, '傳說店長']];
@@ -413,7 +413,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       for (var i = 0; i < ACH.length; i++) {
         var a = ACH[i];
         if (p.ach[a.id]) continue;
-        if (checkOne(p, a.c)) { p.ach[a.id] = Date.now(); addXp(p, a.xp, lines); var cn = earn(p, a.hard ? 40 : 15); lines.push('<b>成就解鎖</b>：' + esc(a.name) + '<small>' + esc(a.desc) + '　+' + a.xp + ' XP　+' + cn + ' 幣</small>'); again = true; }
+        if (checkOne(p, a.c)) { p.ach[a.id] = Date.now(); addXp(p, a.xp, lines); var cn = earn(p, a.hard ? 30 : 10); lines.push('<b>成就解鎖</b>：' + esc(a.name) + '<small>' + esc(a.desc) + '　+' + a.xp + ' XP　+' + cn + ' 幣</small>'); again = true; }
       }
     }
   }
@@ -428,9 +428,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       else { if (!useSum) continue; q.pr += v; }
       if (q.pr >= d.target) {
         q.done = true; addXp(p, QXP, lines);
-        var qc = earn(p, 20); lines.push('<b>每日挑戰完成</b>：' + esc(d.text) + '<small>+' + QXP + ' XP　+' + qc + ' 幣</small>');
+        var qc = earn(p, 15); lines.push('<b>每日挑戰完成</b>：' + esc(d.text) + '<small>+' + QXP + ' XP　+' + qc + ' 幣</small>');
         var all = true; for (var k = 0; k < p.q.length; k++) if (!p.q[k].done) all = false;
-        if (all) { p.qall = (p.qall || 0) + 1; addXp(p, QBONUS, lines); var bc = earn(p, 40); lines.push('<b>今日三個挑戰全部完成！</b><small>額外 +' + QBONUS + ' XP　+' + bc + ' 幣</small>'); }
+        if (all) { p.qall = (p.qall || 0) + 1; addXp(p, QBONUS, lines); var bc = earn(p, 30); lines.push('<b>今日三個挑戰全部完成！</b><small>額外 +' + QBONUS + ' XP　+' + bc + ' 幣</small>'); }
       }
     }
   }
@@ -444,7 +444,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       if (mode === 'report') {
         s.plays = (s.plays || 0) + 1;
         var tday = today(); if (p.dc.day !== tday) p.dc = { day: tday, n: 0 };
-        if (p.dc.n < 30) { var tc = Math.min(2, 30 - p.dc.n); p.dc.n += tc; earn(p, tc); }
+        if (p.dc.n < 15) { var tc = Math.min(1, 15 - p.dc.n); p.dc.n += tc; earn(p, tc); }
         var at = activeTheme(); if (at) { if (!p.th || p.th.id !== at.t.id || p.th.from !== at.from) p.th = { id: at.t.id, from: at.from, plays: 0, claimed: {} }; p.th.plays++; }
       }
       for (k in metrics) {
@@ -481,6 +481,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     ownedIn: function (slot) { var p = load(); return COLL.filter(function (c) { return c.slot === slot && p.own[c.id]; }).map(function (c) { return c.id; }); },
     theme: function () { var a = activeTheme(); if (!a) return null; return { id: a.t.id, n: a.t.n, d: a.t.d, from: a.from, to: a.to, farm: a.t.farm || {} }; },
     earn: function (n) { var p = load(); var g = earn(p, n); save(p); return g; },
+    /* 小菜園等遊戲直接用共用幣：give 加幣（不吃活動加成）、pay 付款（不夠就回傳 false） */
+    give: function (n) { var p = load(); p.wallet = (p.wallet || 0) + Math.max(0, Math.round(n)); save(p); return p.wallet; },
+    pay: function (n) { var p = load(); n = Math.round(n); if ((p.wallet || 0) < n) return false; p.wallet -= n; save(p); return true; },
     wallet: function () { return load().wallet || 0; },
     buy: function (id) {
       var p = load(), d = collDef(id); if (!d) return { ok: false, msg: '找不到這個商品' };
