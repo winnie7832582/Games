@@ -65,7 +65,8 @@ button{font:inherit;color:inherit}
 .row .tx span{display:block;color:var(--soft);font-size:.84rem;line-height:1.45}
 .row .btn{flex:none;padding:7px 11px;font-size:.92rem}
 .row .btns{display:flex;gap:6px}
-.up{color:#C2453B}.down{color:var(--water)}
+.up{color:#C2453B}
+.row.big{background:color-mix(in srgb,var(--gold) 14%,transparent);border-radius:12px;padding:9px 8px}.down{color:var(--water)}
 .done{opacity:.55}
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
 </style>
@@ -140,6 +141,10 @@ function newFarm(){
   const plots=[];for(let i=0;i<12;i++)plots.push({c:null,g:0,w:0,weed:false,bug:false});
   return{v:1,last:Date.now(),coins:30,xp:0,plots,seeds:{cabbage:4},stock:{},up:{plots:4,sprinkler:false,scarecrow:false,fert:false},orders:{day:'',list:[]},daily:'',stats:{harvest:0,orders:0,earned:0}};
 }
+const HASW=!!(window.GC&&GC.give&&GC.pay);
+function coins(){return HASW?GC.wallet():F.coins;}
+function addCoins(n){if(HASW)GC.give(n);else F.coins+=n;}
+function payCoins(n){if(HASW)return GC.pay(n);if(F.coins<n)return false;F.coins-=n;return true;}
 function save(){try{GCStore.setItem(KEY,JSON.stringify(F));}catch(e){}}
 function load(){try{const v=JSON.parse(GCStore.getItem(KEY)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
 function level(){return Math.min(10,1+Math.floor(Math.sqrt(F.xp/25)));}
@@ -169,16 +174,27 @@ function sim(now){
   });
   F.last=now;
 }
+const ORDER_GAP=20*MIN,DAY_MAX=12;
+function makeOrder(big){
+  const lv=level(),pool=CK.filter(k=>CROPS[k].lv<=lv),pk=a=>a[Math.floor(Math.random()*a.length)];
+  const need={};let val=0;
+  if(big){const kinds=Math.min(pool.length,lv>=3?3:2);const ks=pool.slice().sort(()=>Math.random()-.5).slice(0,kinds);ks.forEach(k=>{const q=3+Math.floor(Math.random()*3);need[k]=q;val+=CROPS[k].sell*q;});
+    return{who:pk(['巷口咖啡館的店長','夜市攤販聯盟','學校營養午餐','社區辦桌師傅']),need,reward:Math.round(val*2.2),xp:Math.round(val/5)+10,done:false,big:true};}
+  const c1=pk(pool),q1=2+Math.floor(Math.random()*3);need[c1]=q1;val=CROPS[c1].sell*q1;
+  if(lv>=3&&Math.random()<.4){const c2=pk(pool);if(c2!==c1){need[c2]=2;val+=CROPS[c2].sell*2;}}
+  return{who:pk(VILLAGERS),need,reward:Math.round(val*1.5),xp:Math.round(val/8)+3,done:false};
+}
 function genOrders(){
-  const day=today();if(F.orders.day===day)return;
-  const r=rng('farm-'+day),lv=level(),pool=CK.filter(k=>CROPS[k].lv<=lv);
-  const list=[];const names=VILLAGERS.slice();
-  for(let i=0;i<3;i++){const wi=Math.floor(r()*names.length);const who=names.splice(wi,1)[0];
-    const c1=pool[Math.floor(r()*pool.length)];const q1=2+Math.floor(r()*3);const need={};need[c1]=q1;
-    let val=CROPS[c1].sell*q1;
-    if(lv>=3&&i===2){const c2=pool[Math.floor(r()*pool.length)];if(c2!==c1){need[c2]=2;val+=CROPS[c2].sell*2;}}
-    list.push({who,need,reward:Math.round(val*1.5),xp:Math.round(val/8)+3,done:false});}
-  F.orders={day,list};
+  const day=today();
+  if(F.orders.day!==day){F.orders={day,list:[makeOrder(false),makeOrder(false),makeOrder(true)],made:3};return;}
+  if(F.orders.made==null)F.orders.made=F.orders.list.length;
+  const now=Date.now();
+  F.orders.list.forEach((o,i)=>{if(o.done&&!o.big&&o.doneAt&&now-o.doneAt>=ORDER_GAP&&F.orders.made<DAY_MAX){F.orders.list[i]=makeOrder(false);F.orders.made++;}});
+}
+function nextVillagerText(o){
+  if(o.big)return '今天的大訂單完成了，明天會有新的';
+  if(F.orders.made>=DAY_MAX)return '今天的村民都來過了，明天再來';
+  const left=Math.max(0,Math.ceil(((o.doneAt||0)+ORDER_GAP-Date.now())/MIN));return '下一位村民大約 '+left+' 分鐘後來';
 }
 
 /* ---------- UI ---------- */
@@ -191,7 +207,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden
 function updateHud(){
   const lv=level(),cur=xpAt(lv),nx=xpAt(lv+1);
   $('#lv').textContent='Lv'+lv;$('#xpi').style.width=(lv>=10?100:clamp((F.xp-cur)/(nx-cur)*100,0,100))+'%';$('#xpb').setAttribute('aria-valuenow',Math.round(lv>=10?100:(F.xp-cur)/(nx-cur)*100));
-  $('#coins').textContent='● '+F.coins;
+  $('#coins').textContent='● '+coins();
   const pend=F.orders.list.filter(o=>!o.done&&canFill(o)).length;const bd=$('#ord-bd');bd.hidden=!pend;bd.textContent=pend;
   const ready=F.plots.slice(0,F.up.plots).some(p=>p.c&&progress(p)>=1);
   $('#q-harvest').style.borderColor=ready?'var(--accent)':'';
@@ -263,16 +279,16 @@ function openShop(tab){
     const items=CK.concat(EK).filter(k=>(F.stock[k]||0)>0);
     body=items.length?items.map(k=>{const t=trend(k);return '<div class="row"><div class="tx"><b>'+nameOf(k)+' ×'+F.stock[k]+'</b><span>'+(EXTRA[k]?'可以拿去餵毛孩，也能賣掉。':'')+'今日價 $'+price(k)+(t==='up'?' <i class="up">行情好</i>':t==='down'?' <i class="down">行情差</i>':'')+'</span></div><div class="btns"><button class="btn" type="button" data-sell="'+k+':1">賣 1</button><button class="btn main" type="button" data-sell="'+k+':all">全賣</button></div></div>';}).join(''):'<p class="soft">背包裡沒有東西。收成後可以在這裡賣掉，也可以留著完成村民的訂單。拔掉的雜草和抓到的蟋蟀，也可以留著餵毛孩。</p>';
   }else if(shopTab==='seed'){
-    body=CK.map(k=>{const c=CROPS[k],lock=c.lv>lv;return '<div class="row"><div class="tx"><b>'+c.n+'　$'+c.seed+(lock?'':'')+'</b><span>'+(lock?'Lv'+c.lv+' 解鎖':'約 '+(c.grow>=60*MIN?(c.grow/60/MIN)+' 小時':(c.grow/MIN)+' 分鐘')+'長大，賣 $'+c.sell+' 左右，有 '+(F.seeds[k]||0)+' 包')+'</span></div><div class="btns"><button class="btn" type="button" data-buy="'+k+':1"'+(lock||F.coins<c.seed?' disabled':'')+'>買 1</button><button class="btn main" type="button" data-buy="'+k+':5"'+(lock||F.coins<c.seed*5?' disabled':'')+'>買 5</button></div></div>';}).join('');
+    body=CK.map(k=>{const c=CROPS[k],lock=c.lv>lv;return '<div class="row"><div class="tx"><b>'+c.n+'　$'+c.seed+(lock?'':'')+'</b><span>'+(lock?'Lv'+c.lv+' 解鎖':'約 '+(c.grow>=60*MIN?(c.grow/60/MIN)+' 小時':(c.grow/MIN)+' 分鐘')+'長大，賣 $'+c.sell+' 左右，有 '+(F.seeds[k]||0)+' 包')+'</span></div><div class="btns"><button class="btn" type="button" data-buy="'+k+':1"'+(lock||coins()<c.seed?' disabled':'')+'>買 1</button><button class="btn main" type="button" data-buy="'+k+':5"'+(lock||coins()<c.seed*5?' disabled':'')+'>買 5</button></div></div>';}).join('');
   }else{
     const list=UPS.filter(u=>u.need(F));
-    body=list.length?list.map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-up="'+u.id+'"'+(lock||F.coins<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join(''):'<p class="soft">所有升級都完成了。</p>';
+    body=list.length?list.map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-up="'+u.id+'"'+(lock||coins()<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join(''):'<p class="soft">所有升級都完成了。</p>';
   }
-  sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">金幣 '+F.coins+'</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
+  sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">共用幣 '+coins()+'（和收藏商店同一個錢包）</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
     b.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>openShop(x.dataset.tab)));
-    b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;gsfx('cash');const g=price(k)*q;F.coins+=g;F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
-    b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.buy.split(':');const q=+n,c=CROPS[k].seed*q;if(F.coins<c)return;F.coins-=c;gsfx('cash');F.seeds[k]=(F.seeds[k]||0)+q;buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
-    b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{const u=UPS.find(z=>z.id===x.dataset.up);if(!u||F.coins<u.cost)return;F.coins-=u.cost;
+    b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;gsfx('cash');const g=price(k)*q;addCoins(g);F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.buy.split(':');const q=+n,c=CROPS[k].seed*q;if(!payCoins(c)){toast('幣不夠');return;}gsfx('cash');F.seeds[k]=(F.seeds[k]||0)+q;buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{const u=UPS.find(z=>z.id===x.dataset.up);if(!u||!payCoins(u.cost)){toast('幣不夠');return;}
       if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
       toast('升級完成：'+u.n);buzz([15,30,15]);GCmax({plots:F.up.plots,upgrades:(F.up.sprinkler?1:0)+(F.up.scarecrow?1:0)+(F.up.fert?1:0)});save();updateHud();openShop();}));
   });
@@ -281,9 +297,9 @@ $('#b-shop').addEventListener('click',()=>openShop('sell'));
 function canFill(o){return Object.keys(o.need).every(k=>(F.stock[k]||0)>=o.need[k]);}
 function openOrders(){
   genOrders();
-  sheet('<div class="shead"><h3>今天的訂單</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">村民今天想要的菜，完成可以拿到比市價高的獎勵。每天會換新的。</p>'+
-    F.orders.list.map((o,i)=>'<div class="row'+(o.done?' done':'')+'"><div class="tx"><b>'+esc(o.who)+'</b><span>需要 '+Object.keys(o.need).map(k=>CROPS[k].n+' ×'+o.need[k]+'（有 '+(F.stock[k]||0)+'）').join('、')+'<br>獎勵 $'+o.reward+'、'+o.xp+' 經驗</span></div><button class="btn main" type="button" data-fill="'+i+'"'+(o.done||!canFill(o)?' disabled':'')+'>'+(o.done?'完成':'交貨')+'</button></div>').join(''),b=>{
-    b.querySelectorAll('[data-fill]').forEach(x=>x.addEventListener('click',()=>{const o=F.orders.list[+x.dataset.fill];if(o.done||!canFill(o))return;Object.keys(o.need).forEach(k=>F.stock[k]-=o.need[k]);o.done=true;F.coins+=o.reward;F.stats.orders++;F.stats.earned+=o.reward;gain(o.xp);GCadd('farm','orders',1);GCadd('farm','earned',o.reward);
+  sheet('<div class="shead"><h3>今天的訂單</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">交貨可以拿到比市價高的獎勵。交完一張，大約 20 分鐘後會有新的村民來，一天最多 '+DAY_MAX+' 張；最下面的大訂單一天一張，獎勵加倍。今天已來了 '+F.orders.made+' 位。</p>'+
+    F.orders.list.map((o,i)=>'<div class="row'+(o.done?' done':'')+(o.big?' big':'')+'"><div class="tx"><b>'+(o.big?'★ 大訂單：':'')+esc(o.who)+'</b><span>'+(o.done?nextVillagerText(o)+'<br>':'')+'需要 '+Object.keys(o.need).map(k=>CROPS[k].n+' ×'+o.need[k]+'（有 '+(F.stock[k]||0)+'）').join('、')+'<br>獎勵 $'+o.reward+'、'+o.xp+' 經驗</span></div><button class="btn main" type="button" data-fill="'+i+'"'+(o.done||!canFill(o)?' disabled':'')+'>'+(o.done?'完成':'交貨')+'</button></div>').join(''),b=>{
+    b.querySelectorAll('[data-fill]').forEach(x=>x.addEventListener('click',()=>{const o=F.orders.list[+x.dataset.fill];if(o.done||!canFill(o))return;Object.keys(o.need).forEach(k=>F.stock[k]-=o.need[k]);o.done=true;o.doneAt=Date.now();addCoins(o.reward);F.stats.orders++;F.stats.earned+=o.reward;gain(o.xp);GCadd('farm','orders',1);GCadd('farm','earned',o.reward);
       const left=F.orders.list.filter(z=>!z.done).length;if(!left)GCmax({allOrders:1});buzz([15,30,15]);toast('交貨完成 +$'+o.reward);gsfx('great');save();updateHud();openOrders();}));
   });
 }
@@ -372,7 +388,7 @@ cv.addEventListener('pointermove',e=>{if(!down||tool==='')return;const p=pos(e),
 let last=performance.now(),acc=0,saveT=0;
 function loop(t){
   const dt=Math.min(.05,Math.max(0,(t-last)/1000));last=t;NOW+=dt;
-  acc+=dt;if(acc>=1){acc=0;sim(Date.now());updateHud();if(!tool)renderSeedbar();}
+  acc+=dt;if(acc>=1){acc=0;sim(Date.now());genOrders();updateHud();if(!tool)renderSeedbar();}
   saveT+=dt;if(saveT>10){saveT=0;save();}
   fx.forEach(f=>f.t+=dt);for(let i=fx.length-1;i>=0;i--)if(fx[i].t>1)fx.splice(i,1);
   if(W>0&&H>0)render();requestAnimationFrame(loop);
@@ -384,7 +400,8 @@ function boot(){
   const away=Date.now()-F.last;const beforeReady=F.plots.slice(0,F.up.plots).filter(p=>p.c&&progress(p)>=1).length;
   sim(Date.now());genOrders();
   const afterReady=F.plots.slice(0,F.up.plots).filter(p=>p.c&&progress(p)>=1).length;
-  const d=today();let bonus=0;if(F.daily!==d){F.daily=d;if(!first){bonus=15;F.coins+=bonus;}}
+  const d=today();let bonus=0;if(F.daily!==d){F.daily=d;if(!first){bonus=15;addCoins(bonus);}}
+  if(HASW&&!F.merged){const old=F.coins||0;if(old>0)GC.give(old);F.coins=0;F.merged=1;if(old>0&&!first)setTimeout(()=>toast('小菜園的 '+old+' 金幣已併入共用錢包'),1200);}
   save();makeLayout();updateHud();resize();
   GCmax({level:level(),plots:F.up.plots});
   if(first){setTimeout(()=>sheet('<div class="shead"><h3>歡迎來到小菜園</h3></div><p class="soft">這裡的時間是真的：種下去的菜，就算你關掉遊戲也會繼續長。</p><p class="soft">1. 點「種植」，選種子，再點空的田。<br>2. 田地要<b>澆水</b>才會長，水乾了就會停。<br>3. 偶爾會長雜草、跑出蟲，點一下就清掉，不處理收成會變少。<br>4. 長好了點一下收成，到商店賣掉，或完成村民的訂單。</p><p class="soft">先送你 4 包小白菜種子，3 分鐘就能收成。</p><button class="btn main" type="button" data-close style="width:100%">開始種菜</button>'),300);}
