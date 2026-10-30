@@ -367,7 +367,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     { id: 'pet_santa', slot: 'petacc', n: '聖誕帽', price: 100, d: '毛孩小屋的配件', theme: 'xmas' },
     { id: 'pet_redhat', slot: 'petacc', n: '福氣帽', price: 100, d: '毛孩小屋的配件', theme: 'cny' },
     { id: 'farm_windmill', slot: 'farmdeco', n: '風車', price: 150, d: '小菜園的裝飾' },
-    { id: 'farm_pond', slot: 'farmdeco', n: '小池塘', price: 150, d: '小菜園的裝飾' },
+    { id: 'farm_pond', slot: 'farmdeco', n: '水景', price: 150, d: '小菜園的裝飾（田邊的小水塘造景，不能釣魚）' },
     { id: 'farm_flowers', slot: 'farmdeco', n: '花圃', price: 100, d: '小菜園的裝飾' },
     { id: 'farm_pumpkin', slot: 'farmdeco', n: '南瓜燈', price: 80, d: '小菜園的裝飾', theme: 'halloween' },
     { id: 'farm_tree', slot: 'farmdeco', n: '聖誕樹', price: 100, d: '小菜園的裝飾', theme: 'xmas' },
