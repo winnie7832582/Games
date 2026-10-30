@@ -576,7 +576,7 @@ function doRehome(){
       HOUSE_KEYS.forEach(k=>{if(PENDING_HOUSE[k]!=null)nx[k]=PENDING_HOUSE[k];});PENDING_HOUSE=null;
       if(nx.awayAt){const el=Date.now()-nx.last;nx.last=Date.now()-el*.5;delete nx.awayAt;}
       saveRoster(rr);P=nx;BOOKPG=null;closeSheet();enterHome(false);catchUp();
-      diary(gone+'去了新的家，大家會想念牠。');updateUI();save();gsfx('chirp');toast(P.name+'跑過來了！');
+      diary(gone+'去了新的家，大家會想念牠。');updateUI();save();if(!P.sleeping)gsfx('chirp');toast((P.sleeping?P.name+'正在睡覺，小聲一點。':P.name+'跑過來了！'));
     }));
     box.querySelector('#rh-new').addEventListener('click',()=>{closeSheet(true);ADDING=false;AD={sp:'cat',col:0,name:''};showAdopt();});
     const fr=box.querySelector('#rh-fresh');if(fr)fr.addEventListener('click',()=>{PENDING_HOUSE=null;closeSheet(true);ADDING=false;AD={sp:'cat',col:0,name:''};showAdopt();});
@@ -970,7 +970,7 @@ function randomEvent(){
   if(P.sleeping||game)return;const name=P.name;const r=Math.random();
   if((P.pers==='naughty'||P.mood<40)&&r<.35){const loss=Math.min(P.coins,10);P.coins-=loss;P.mood=clamp(P.mood+5,0,100);toast(name+'打翻了花瓶，花了 '+loss+' 金幣收拾');diary(name+'無聊到打翻花瓶，看起來還很得意。');}
   else if(r<.6){const c=Math.floor(rnd(5,16));P.coins+=c;const thing=P.species==='cat'?'一片葉子':P.species==='dog'?'一隻襪子':'一根草';toast(name+'叼回'+thing+'，裡面卡著 '+c+' 金幣');diary(name+'叼回了'+thing+'。');}
-  else if(r<.8){P.bond+=3;pet.anim='happy';pet.animT=0;toast(name+'跑過來蹭你的腳');diary(name+'跑過來撒嬌。');}
+  else if(r<.8&&!P.sleeping){P.bond+=3;pet.anim='happy';pet.animT=0;toast(name+'跑過來蹭你的腳');diary(name+'跑過來撒嬌。');}
   else{P.mood=clamp(P.mood+5,0,100);toast(name+'盯著窗外的小鳥看得好專心');}
   save();updateUI();
 }
@@ -1044,7 +1044,7 @@ function switchTo(id){
   HOUSE_KEYS.forEach(k=>{nx[k]=P[k];});
   if(nx.awayAt){const el=Date.now()-nx.last;nx.last=Date.now()-el*.5;delete nx.awayAt;}
   saveRoster(r);P=nx;BOOKPG=null;closeSheet();enterHome(false);catchUp();updateUI();save();
-  gsfx('chirp');toast(P.name+'跑過來了！');
+  if(!P.sleeping)gsfx('chirp');toast((P.sleeping?P.name+'正在睡覺，小聲一點。':P.name+'跑過來了！'));
 }
 function openPets(){
   const r=roster(),list=[P].concat(Object.values(r.others));

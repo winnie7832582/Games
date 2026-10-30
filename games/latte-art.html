@@ -134,7 +134,6 @@ input,textarea{-webkit-user-select:text;user-select:text}
       <button class="btn main" id="m-levels" type="button">拉花課程</button>
       <button class="btn" id="m-order" type="button">客人指定</button>
       <button class="btn" id="m-timed" type="button">限時挑戰</button>
-      <button class="btn" id="m-free" type="button">自由創作</button>
       <button class="btn" id="m-gal" type="button">作品集</button>
     </div>
     <p class="tot" id="tot"></p>
@@ -404,7 +403,6 @@ let screen='title';
 function show(n){screen=n;if(n!=='play')stopAllLoops();['title','levels','play','result','summary','gallery'].forEach(x=>$('#'+x).classList.toggle('on',x===n));const sc=$('#'+n+' .scroll');if(sc)sc.scrollTop=0;if(n==='play')requestAnimationFrame(resize);if(n==='title')renderTitle();}
 function renderTitle(){setModeButtons();const s=Object.values(D.stars).reduce((a,b)=>a+b,0);$('#tot').textContent=s?'已拿到 '+s+' / '+LEVELS.length*3+' 顆星':'';}
 $('#m-levels').addEventListener('click',()=>{renderLevels();show('levels');});
-$('#m-free').addEventListener('click',()=>startPlay(null));
 $('#m-gal').addEventListener('click',()=>{renderGallery();show('gallery');});
 $('#lv-back').addEventListener('click',()=>show('title'));
 $('#g-back').addEventListener('click',()=>show('title'));

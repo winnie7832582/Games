@@ -462,7 +462,7 @@ function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
 function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
 function stepNight(dt){
   if(N.paused||N.ended){gl('sizzle',false);gl('crowd',false);return;}
-  gl('sizzle',N.queue.some(c=>c.cooking));gl('crowd',N.t<NIGHT);gl('rain',S.weather==='rain'||S.weather==='storm');
+  gl('sizzle',N.queue.some(c=>c.cooking));gl('rain',S.weather==='rain'||S.weather==='storm');
   N.t+=dt;
   const x=N.t/NIGHT;
   if(N.t<NIGHT&&!N.soldOut){
