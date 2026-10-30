@@ -572,9 +572,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       ['pointerup', 'pointercancel'].forEach(function (t) { try { el.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: +id })); window.dispatchEvent(new PointerEvent(t, { pointerId: +id })); } catch (e) {} }); });
     held = {};
   }
-  function pauseGame() {
+  function pauseGame(silent) {
     if (!CAN_PAUSE || paused) return; paused = true; releaseHeld(); stopLoops();
-    var ov = document.getElementById('gc-pause'); if (ov) { ov.hidden = false; setTimeout(function () { try { document.getElementById('gc-resume').focus(); } catch (e) {} }, 30); }
+    var ov = document.getElementById('gc-pause'); if (ov && silent !== true) { ov.hidden = false; setTimeout(function () { try { document.getElementById('gc-resume').focus(); } catch (e) {} }, 30); }
   }
   function resumeGame() {
     if (!paused) return; paused = false; var ov = document.getElementById('gc-pause'); if (ov) ov.hidden = true;
@@ -584,7 +584,133 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     document.addEventListener('visibilitychange', function () { if (document.hidden) pauseGame(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && paused) { e.preventDefault(); resumeGame(); } else if ((e.key === 'p' || e.key === 'P') && !/INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '')) { paused ? resumeGame() : pauseGame(); } });
   }
-  window.GC.pause = pauseGame; window.GC.resume = resumeGame; window.GC.isPaused = function () { return paused; };
+  window.GC.pause = function () { pauseGame(); }; window.GC.resume = resumeGame; window.GC.isPaused = function () { return paused; };
+
+  /* ================= 新手教學（每款第一次玩自動出現，返回列的「？」可以重看） ================= */
+  var TOURS = {
+    'sanwei-kitchen': [
+      { t: '挑一道菜', d: '四道菜，每張卡片下面可以選普通版或職人版。', el: '#dishList' },
+      { t: '跟著每一步做', d: '每一步開始前會說明怎麼操作：按住、畫圈、來回撒，時機和力道都會算分。' },
+      { t: '看成品', d: '做完會看到成品和每一步的分數，可以再做一次挑戰更高分。' },
+      { t: '隨時暫停', d: '做菜時上方有暫停按鈕，這個「？」可以重看說明。', el: '#gc-help' }
+    ],
+    'souffle': [
+      { t: '先選口味', d: '原味、巧克力、抹茶，每次的條件都不一樣。', el: '#flavs' },
+      { t: '六個步驟', d: '從分蛋到出爐，每一步開始前都有說明，照著用手指操作。', el: '#start' },
+      { t: '撒糖粉', d: '出爐後用手指在上方左右刷兩下撒糖粉，撒好就上桌。' },
+      { t: '膨越高分越高', d: '每一步都會影響最後膨起的高度。做的時候上方可以暫停。', el: '#gc-help' }
+    ],
+    'bubble-tea': [
+      { t: '營業兩分鐘', d: '客人點什麼就做什麼。客人生氣的次數用完會提早打烊，這裡可以調。', el: '.lives' },
+      { t: '照順序做', d: '茶倒到八分滿，糖和冰照次數加，珍珠要先煮，放太久會變硬。' },
+      { t: '封膜出餐', d: '封膜後點客人就能出餐。按鈕分成茶底、加料、動作三區。' },
+      { t: '升級店面', d: '賺到的錢可以升級店面，做起來更快。', el: '#shop-open' }
+    ],
+    'cafe': [
+      { t: '四位客人', d: '每次開店有四位客人，豆子、口味、奶種和拉花都不一樣。', el: '#start' },
+      { t: '一步一步沖', d: '磨豆、控溫、萃取、打奶泡、拉花，每一步上方都有提示。' },
+      { t: '聽聲音打奶泡', d: '噴嘴埋深是低沉的滾動聲，靠近奶面會嘶嘶響，照聲音調整位置。' },
+      { t: '咖啡大賽', d: '四杯平均 70 分以上，就能跟五位對手比賽。', el: '#contest' }
+    ],
+    'latte-art': [
+      { t: '從課程開始', d: '八堂課從圓形練到天鵝，每堂課開始前都有技巧說明。', el: '#m-levels' },
+      { t: '先注入再拉花', d: '按住「高處注入」倒到一半，再用手指按在杯面推出奶泡。' },
+      { t: '目標和輔助線', d: '右上角是目標圖，杯面的虛線是輔助線，不需要時可以關掉。' },
+      { t: '更多玩法', d: '客人指定和限時挑戰會出題，作品集會留下你拉過的花。', el: '#m-order' }
+    ],
+    'night-market': [
+      { t: '三十天夜市', d: '從巷尾小攤開始，三十天內闖出名號，之後還有無限模式。', el: '#b-new' },
+      { t: '開攤前準備', d: '選地點、看天氣備料、訂價錢。備太多會剩，太少會賣光。' },
+      { t: '營業中', d: '客人等太久會走掉，點爐子可以加快出餐。' },
+      { t: '升級與研發', d: '賺的錢可以升級攤車、研發新菜、請幫手。' }
+    ],
+    'chef-cards': [
+      { t: '選食材上菜', d: '每位評審有目標分數。從手牌選 1 到 5 張上菜，分數是「美味 × 倍率」。' },
+      { t: '換牌', d: '手牌不好可以換牌。上菜和換牌的次數都有限。' },
+      { t: '一路旅行', d: '過關後到市場買廚具、升級食譜，征服四座城市。' },
+      { t: '完整規則', d: '料理組合和分數都寫在「怎麼玩」裡。', el: '#b-how' }
+    ],
+    'pet-house': [
+      { t: '真實時間', d: '毛孩會餓、會髒、會想你，你不在的時候時間也照樣在走。' },
+      { t: '照顧牠', d: '下方按鈕可以餵食、清潔、玩耍、睡覺，條變紅就要注意。', el: '.acts' },
+      { t: '摸摸牠', d: '用手指在牠身上來回摸，心情和親密度會增加；點一下會告訴你牠想要什麼。' },
+      { t: '還有更多', d: '「玩耍」裡可以帶牠出門散步；「更多」有商店、把戲、日記本。' }
+    ],
+    'corner-cafe': [
+      { t: '三十天', d: '外婆留下的咖啡館，三十天內讓它重新熱鬧起來。' },
+      { t: '每一天', d: '白天開店招呼客人，其他時間可以去見想認識的人。精神用完就要休息。' },
+      { t: '熟客點單', d: '熟客會說「老樣子」、想換口味，或交給你決定，記住他們的喜好。' },
+      { t: '十五種結局', d: '看過的結局會收進結局圖鑑。', el: '#b-gal' }
+    ],
+    'farm': [
+      { t: '真實時間種菜', d: '作物照真實時間長大，關掉遊戲也會繼續長。先送你 4 包小白菜種子，3 分鐘就能收成。' },
+      { t: '種植和澆水', d: '點「種植」選種子，再點空的田。田要澆水才會長，水乾了就會停。', el: '#tools' },
+      { t: '雜草和蟲', d: '偶爾會長雜草、跑出蟲，點一下就清掉，不處理收成會變少。這三顆可以一次全部處理。', el: '.quick' },
+      { t: '訂單和商店', d: '村民大約 20 分鐘來一位；商店可以買種子，也能兌換共用幣。', el: '#b-order' }
+    ]
+  };
+  var TOUR_KEY = '__tour:' + GNAME, tourEl = null, tourI = 0, tourPaused = false, tourSteps = null;
+  function tourCss() {
+    return '#gc-tour{position:fixed;inset:0;z-index:2147483003;font:500 15px/1.55 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}' +
+      '#gc-tour .gt-dim{position:absolute;inset:0;background:rgba(15,18,24,.62)}#gc-tour.has-hole .gt-dim{background:transparent}' +
+      '#gc-tour .gt-hole{position:absolute;border-radius:14px;box-shadow:0 0 0 200vmax rgba(15,18,24,.62);outline:3px solid #FFD66B;outline-offset:2px;pointer-events:none;transition:all .25s ease}' +
+      '#gc-tour .gt-card{position:absolute;left:12px;right:12px;margin:0 auto;max-width:340px;background:#FFFDF8;color:#1F2A37;border-radius:18px;padding:16px 16px 12px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:top .25s ease}' +
+      '#gc-tour .gt-n{font-size:12px;color:#8A93A0;letter-spacing:.05em}#gc-tour .gt-t{display:block;font-size:17px;font-weight:700;margin:2px 0 4px}#gc-tour .gt-d{margin:0;color:#3A4452}' +
+      '#gc-tour .gt-dots{display:flex;gap:5px;margin:12px 0 10px}#gc-tour .gt-dots i{width:7px;height:7px;border-radius:50%;background:#D5D9E0}#gc-tour .gt-dots i.on{background:#3B6EF5;width:18px;border-radius:4px}' +
+      '#gc-tour .gt-btns{display:flex;gap:8px;align-items:center}#gc-tour button{border:0;font:inherit;cursor:pointer;border-radius:12px;padding:11px 14px;min-height:44px}' +
+      '#gc-tour .gt-skip{background:transparent;color:#5B6472;margin-right:auto}#gc-tour .gt-prev{background:#EEF1F5;color:#1F2A37}#gc-tour .gt-next{background:#1F2A37;color:#fff;font-weight:700;min-width:96px}' +
+      '#gc-tour button:focus-visible{outline:3px solid #3B6EF5;outline-offset:2px}' +
+      '@media (prefers-color-scheme:dark){#gc-tour .gt-card{background:#222833;color:#E8EDF4}#gc-tour .gt-d{color:#C3CBD6}#gc-tour .gt-prev{background:#333B48;color:#E8EDF4}#gc-tour .gt-next{background:#E8EDF4;color:#1F2A37}#gc-tour .gt-skip{color:#A9B3C1}#gc-tour .gt-dots i{background:#4A5260}}' +
+      '@media (prefers-reduced-motion:reduce){#gc-tour .gt-hole,#gc-tour .gt-card{transition:none}}';
+  }
+  function tourTarget(sel) {
+    if (!sel) return null; var el = null; try { el = document.querySelector(sel); } catch (e) {}
+    if (!el) return null; var r = el.getBoundingClientRect(), vh = window.innerHeight, vw = window.innerWidth;
+    if (r.width < 4 || r.height < 4 || r.bottom < 40 || r.top > vh - 20 || r.right < 0 || r.left > vw) return null;
+    var cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none') return null;
+    return { l: Math.max(4, r.left - 6), t: Math.max(4, r.top - 6), r: Math.min(vw - 4, r.right + 6), b: Math.min(vh - 4, r.bottom + 6) };
+  }
+  function tourPlace() {
+    if (!tourEl) return; var s = tourSteps[tourI], card = tourEl.querySelector('.gt-card'), hole = tourEl.querySelector('.gt-hole');
+    var R = tourTarget(s.el), vh = window.innerHeight, ch = card.offsetHeight, top0 = 46;
+    tourEl.classList.toggle('has-hole', !!R); hole.hidden = !R;
+    if (!R) { card.style.top = Math.max(top0, (vh - ch) / 2) + 'px'; return; }
+    hole.style.left = R.l + 'px'; hole.style.top = R.t + 'px'; hole.style.width = (R.r - R.l) + 'px'; hole.style.height = (R.b - R.t) + 'px';
+    var below = vh - R.b - 14, above = R.t - 14 - top0;
+    card.style.top = (below >= ch || below >= above ? Math.min(R.b + 14, vh - ch - 10) : Math.max(top0, R.t - 14 - ch)) + 'px';
+  }
+  function tourRender() {
+    var s = tourSteps[tourI], n = tourSteps.length, last = tourI === n - 1, dots = '';
+    for (var i = 0; i < n; i++) dots += '<i' + (i === tourI ? ' class="on"' : '') + '></i>';
+    tourEl.querySelector('.gt-card').innerHTML = '<span class="gt-n">玩法說明 ' + (tourI + 1) + ' / ' + n + '</span><b class="gt-t" id="gt-t">' + esc(s.t) + '</b><p class="gt-d">' + esc(s.d) + '</p><div class="gt-dots" aria-hidden="true">' + dots + '</div>' +
+      '<div class="gt-btns"><button type="button" class="gt-skip">' + (last ? '關閉' : '略過') + '</button>' + (tourI ? '<button type="button" class="gt-prev">上一步</button>' : '') + '<button type="button" class="gt-next">' + (last ? '開始玩' : '下一步') + '</button></div>';
+    tourPlace(); try { tourEl.querySelector('.gt-next').focus({ preventScroll: true }); } catch (e) {}
+  }
+  function tourClose() {
+    if (!tourEl) return; tourEl.remove(); tourEl = null; lsSet(TOUR_KEY, '1');
+    window.removeEventListener('resize', tourPlace);
+    if (tourPaused) { tourPaused = false; resumeGame(); }
+  }
+  function openTour() {
+    tourSteps = TOURS[GNAME]; if (!tourSteps || tourEl) return;
+    if (CAN_PAUSE && !paused && document.querySelector('.screen.on:not(#title):not(#home)')) { pauseGame(true); tourPaused = true; }
+    var bp = document.getElementById('b-pause'), bpo = document.getElementById('pause');
+    if (bp && bp.offsetParent && bpo && bpo.hidden) try { bp.click(); } catch (e) {}
+    if (!document.getElementById('gc-tour-css')) { var st2 = document.createElement('style'); st2.id = 'gc-tour-css'; st2.textContent = tourCss(); document.head.appendChild(st2); }
+    tourEl = document.createElement('div'); tourEl.id = 'gc-tour'; tourEl.setAttribute('role', 'dialog'); tourEl.setAttribute('aria-modal', 'true'); tourEl.setAttribute('aria-labelledby', 'gt-t');
+    tourEl.innerHTML = '<div class="gt-dim"></div><div class="gt-hole" hidden></div><div class="gt-card" aria-live="polite"></div>';
+    document.body.appendChild(tourEl); tourI = 0;
+    tourEl.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('button'); if (!b) return; sfx('tap');
+      if (b.classList.contains('gt-skip')) tourClose();
+      else if (b.classList.contains('gt-prev')) { tourI = Math.max(0, tourI - 1); tourRender(); }
+      else if (b.classList.contains('gt-next')) { if (tourI >= tourSteps.length - 1) tourClose(); else { tourI++; tourRender(); } }
+    });
+    tourEl.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); tourClose(); } });
+    window.addEventListener('resize', tourPlace);
+    tourRender();
+  }
+  window.GC.tour = openTour;
 
   function touch() {
     try {
@@ -601,11 +727,12 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   var css = ':root{padding-top:calc(env(safe-area-inset-top,0px) + 36px) !important}' +
     '#gc-bar{position:fixed;left:0;right:0;top:0;z-index:2147483000;height:calc(env(safe-area-inset-top,0px) + 36px);padding:env(safe-area-inset-top,0px) 10px 0;display:flex;align-items:center;gap:8px;' +
     'font:500 14px/1 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;background:rgba(250,250,252,.92);color:#1F2A37;border-bottom:1px solid rgba(0,0,0,.08);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}' +
-    '#gc-bar a{color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;padding:8px 6px;border-radius:8px}' +
+    '#gc-bar a{color:inherit;text-decoration:none;display:flex;align-items:center;gap:4px;padding:8px 6px;border-radius:8px;white-space:nowrap;flex:none}' +
+    '#gc-bar .snd{white-space:nowrap;flex:none}@media (max-width:400px){#gc-bar #gc-pz span,#gc-bar #gc-pz ~ .snd:not(#gc-help) span{display:none}}' +
     '#gc-bar a:focus-visible{outline:2px solid #3B6EF5}' +
-    '#gc-bar .snd{display:flex;align-items:center;gap:4px;margin-left:auto;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;opacity:.8}' +
+    '#gc-bar .snd{display:flex;align-items:center;gap:4px;margin-left:0;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;opacity:.8}' +
     '#gc-bar .snd:focus-visible{outline:2px solid #3B6EF5}' +
-    '#gc-bar #gc-pz{margin-left:auto}#gc-bar #gc-pz + .snd{margin-left:0}' +
+    '#gc-bar > a + .snd{margin-left:auto}#gc-bar #gc-help{font-weight:700;font-size:16px;min-width:32px;justify-content:center;padding:6px 4px}' +
     '#gc-pause{position:fixed;inset:0;z-index:2147483002;display:flex;align-items:center;justify-content:center;background:rgba(20,22,28,.6);padding:24px}#gc-pause[hidden]{display:none}' +
     '#gc-pause .gp-card{width:100%;max-width:320px;background:#FFFDF8;color:#1F2A37;border-radius:20px;padding:22px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;font:500 15px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}' +
     '#gc-pause b{font-size:1.4rem}#gc-pause span{color:#5B6472}' +
@@ -638,7 +765,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       ov.innerHTML = '<div class="gp-card"><b>暫停中</b><span>時間停住了，回來時會從剛才的地方繼續。</span><button type="button" id="gc-resume">繼續</button><a href="../index.html">回到遊戲合集</a></div>';
       document.body.appendChild(ov); document.getElementById('gc-resume').addEventListener('click', resumeGame);
     }
+    if (TOURS[GNAME]) { var hp = document.createElement('button'); hp.type = 'button'; hp.className = 'snd'; hp.id = 'gc-help'; hp.setAttribute('aria-label', '玩法說明'); hp.textContent = '？'; hp.addEventListener('click', openTour); b.appendChild(hp); }
     b.appendChild(sp); b.appendChild(w); document.body.appendChild(b);
+    if (TOURS[GNAME] && !lsGet(TOUR_KEY)) setTimeout(function () { if (!document.hidden && !tourEl) openTour(); }, 700);
     // automatic sounds: tapping buttons, and good / bad messages
     document.addEventListener('click', function (e) { if (window.GC_OWN_SFX) return; var t = e.target.closest && e.target.closest('button'); if (!t || t.disabled || t.closest('#gc-bar')) return; sfx('tap'); }, true);
     var watched = document.querySelectorAll('#toast, .toast');
