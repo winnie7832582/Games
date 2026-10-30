@@ -77,6 +77,7 @@ button:focus-visible{outline:3px solid var(--yolk);outline-offset:3px}
 .lvb:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
 .stars{color:var(--yolk-deep);font-size:16px;letter-spacing:1px}
 .stars .off{color:var(--tile-line)}
+.farmegg{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0 0;font-size:.9rem;color:var(--ink-soft);flex-wrap:wrap}.farmegg .eggtg{border:2px solid currentColor;background:transparent;color:inherit;border-radius:10px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer;min-height:36px}.farmegg .eggtg[aria-pressed="true"]{background:#F2B632;color:#1F2A37;border-color:#F2B632}
 .homefoot{display:flex;justify-content:center;margin-top:20px}
 .textbtn{background:none;border:none;font-size:14px;color:var(--ink-soft);padding:8px 12px;text-decoration:underline;text-underline-offset:4px}
 
@@ -167,6 +168,7 @@ button:focus-visible{outline:3px solid var(--yolk);outline-offset:3px}
     <div class="sign"><h1>三味廚房</h1><p>即時料理挑戰</p></div>
     <p class="lead">挑一道菜，跟著每一步即時操作。按的時機、畫圈的力道、火候的拿捏，都會反映在最後端上桌的樣子。</p>
     <div class="list" id="dishList"></div>
+    <p class="farmegg" id="farmegg" hidden></p>
     <div class="homefoot"><button class="textbtn" id="sndHome">音效：開</button></div>
   </section>
 
@@ -1060,9 +1062,17 @@ SC.sauce = S => {
 /* ---------- flow ---------- */
 function buildDots() { const d = $('#dots'); d.innerHTML = ''; G.dish.steps.forEach(() => { const e = document.createElement('i'); e.className = 'dot'; d.appendChild(e); }); }
 function updateDots() { [...$('#dots').children].forEach((e, i) => e.className = 'dot' + (i < G.idx ? ' done' : i === G.idx ? ' now' : '')); }
+
+/* 小菜園的雞蛋（共用倉庫）：用了有加分，沒有也照樣玩 */
+function eggCount(){try{return window.GC&&GC.pantry?(GC.pantry().egg||0):0;}catch(e){return 0;}}
+function eggOn(k){try{return GCStore.getItem(k)!=='0';}catch(e){return true;}}
+function renderEgg(el,k,need){const n=eggCount();if(n<need){el.hidden=true;return;}el.hidden=false;const on=eggOn(k);
+  el.innerHTML='<span>小菜園的雞蛋 ×'+n+'：用了 +5 分（每次 '+need+' 顆）</span><button type="button" class="eggtg" aria-pressed="'+on+'">'+(on?'使用':'不用')+'</button>';
+  el.querySelector('button').onclick=()=>{try{GCStore.setItem(k,on?'0':'1');}catch(e){}renderEgg(el,k,need);};}
+function takeEgg(k,need){if(!eggOn(k)||eggCount()<need)return false;try{return GC.take('egg',need);}catch(e){return false;}}
 function startDish(id) {
-  COND = rollCond();
-  G = { id, dish: COND.id === 'ok' ? DISHES[id] : resize_(DISHES[id], COND.kw, COND.tw, COND.ts), idx: 0, scores: {}, data: {}, cond: COND };
+  COND = rollCond(); const egg = takeEgg('sanwei-egg', 1);
+  G = { id, dish: COND.id === 'ok' ? DISHES[id] : resize_(DISHES[id], COND.kw, COND.tw, COND.ts), idx: 0, scores: {}, data: {}, cond: COND, egg };
   $('#dishName').textContent = G.dish.name; buildDots(); show('game'); beginStep();
   if (COND.id !== 'ok') { const h = $('#hint'); const d = document.createElement('div'); d.style.cssText = 'margin-top:6px;font-weight:700;color:#c2453b'; d.textContent = '今日條件：' + COND.n + '，' + COND.d; h.appendChild(d); $('#ovHint').textContent += '\n今日條件：' + COND.n + '，' + COND.d; }
 }
@@ -1103,7 +1113,7 @@ function loadBest() { try { return JSON.parse(GCStore.getItem('sanwei-best') || 
 function saveBest(b) { try { GCStore.setItem('sanwei-best', JSON.stringify(b)); } catch (e) { } }
 function starsHTML(n) { return '★'.repeat(n) + `<span class="off">${'★'.repeat(3 - n)}</span>`; }
 function showResult() {
-  const d = G.dish, scores = d.steps.map(s => G.scores[s.key] || 0), total = Math.round(avg(scores));
+  const d = G.dish, scores = d.steps.map(s => G.scores[s.key] || 0), total = Math.min(100, Math.round(avg(scores)) + (G.egg ? 5 : 0));
   const stars = total >= 85 ? 3 : total >= 65 ? 2 : total >= 40 ? 1 : 0;
   const title = total >= 95 ? '神之料理' : ['黑暗料理', '勉強能吃', '家常好味道', '職人水準'][stars];
   try{window.GC&&GC.report('sanwei-kitchen',(function(){var b=G.id.replace('+',''),o={score:total,stars:stars};o['dish_'+b]=1;if(G.id.indexOf('+')>0)o.pro=total;if(stars>=3)o.stars3=1;return o;})());}catch(e){}
@@ -1111,7 +1121,7 @@ function showResult() {
   if (isNew) { best[G.id] = { score: total, stars }; saveBest(best); }
   $('#rStars').innerHTML = starsHTML(stars); $('#rStars').setAttribute('aria-label', `${stars} 顆星`);
   $('#rTitle').textContent = title; $('#rScore').textContent = total; $('#rBest').hidden = !(isNew && prev);
-  $('#rComment').textContent = COMMENTS[G.id.replace('+', '')][stars];
+  $('#rComment').textContent = COMMENTS[G.id.replace('+', '')][stars] + (G.egg ? '（用了自家雞蛋 +5）' : '');
   const ol = $('#rSteps'); ol.innerHTML = '';
   d.steps.forEach((s, i) => { const li = document.createElement('li'); li.innerHTML = '<span></span><span class="sb"><i></i></span><span class="sv"></span>'; li.children[0].textContent = s.title; li.querySelector('i').style.width = scores[i] + '%'; li.children[2].textContent = scores[i]; ol.appendChild(li); });
   RS = { id: G.id, q: dishQ(G.id), t: 0 }; S = null; show('result'); $('#result').scrollTop = 0; Snd.play(stars >= 2 ? 'fanfare' : 'ok');
@@ -1168,6 +1178,7 @@ window.GC_OWN_SFX = true;
 try { if (window.GC) { Snd.on = GC.soundOn(); syncSound(); window.addEventListener('gc-sound', e => { Snd.on = e.detail; if (!Snd.on) Snd.sizzle(0); syncSound(); }); } } catch (e) { }
 
 function renderHome() {
+  renderEgg($('#farmegg'), 'sanwei-egg', 1);
   const best = loadBest(), list = $('#dishList'); list.innerHTML = '';
   for (const id of Object.keys(DISHES)) {
     if (id.indexOf('+') > 0) continue;

@@ -61,6 +61,7 @@ h1 span:nth-child(3){animation-delay:1.74s}
 .flavs button{border:2px solid var(--vein);background:var(--surface);color:var(--ink);border-radius:14px;padding:8px 14px;font:inherit;cursor:pointer}
 .flavs button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
 .flavs button:disabled{opacity:.45;cursor:default}
+.farmegg{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 0 0;font-size:.9rem;color:var(--ink-soft);flex-wrap:wrap}.farmegg .eggtg{border:2px solid currentColor;background:transparent;color:inherit;border-radius:10px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer;min-height:36px}.farmegg .eggtg[aria-pressed="true"]{background:#F2B632;color:#1F2A37;border-color:#F2B632}
 .fdesc{margin:0 0 14px;color:var(--ink-soft);min-height:1.5em;text-align:center;font-size:.95rem}
 .best{margin:14px 0 0;color:var(--ink-soft);font-size:.95rem;min-height:1.5em}
 
@@ -144,6 +145,7 @@ h1 span:nth-child(3){animation-delay:1.74s}
     <div class="flavs" id="flavs" role="group" aria-label="口味"></div>
     <p class="fdesc" id="fdesc"></p>
     <button class="act" id="start" type="button">開始做</button>
+    <p class="farmegg" id="farmegg" hidden></p>
     <p class="best" id="best"></p>
   </section>
 
@@ -866,7 +868,16 @@ function renderFlavs(){
 }
 renderFlavs();
 $('#flavs').addEventListener('click',e=>{const b=e.target.closest('[data-fl]');if(!b||b.disabled)return;FL.pick=b.dataset.fl;saveFL();renderFlavs();});
-function startGame(){resetRun();show('game');goStage(0);}
+
+/* 小菜園的雞蛋（共用倉庫）：用了有加分，沒有也照樣玩 */
+function eggCount(){try{return window.GC&&GC.pantry?(GC.pantry().egg||0):0;}catch(e){return 0;}}
+function eggOn(k){try{return GCStore.getItem(k)!=='0';}catch(e){return true;}}
+function renderEgg(el,k,need){const n=eggCount();if(n<need){el.hidden=true;return;}el.hidden=false;const on=eggOn(k);
+  el.innerHTML='<span>小菜園的雞蛋 ×'+n+'：用了 +5 分（每次 '+need+' 顆）</span><button type="button" class="eggtg" aria-pressed="'+on+'">'+(on?'使用':'不用')+'</button>';
+  el.querySelector('button').onclick=()=>{try{GCStore.setItem(k,on?'0':'1');}catch(e){}renderEgg(el,k,need);};}
+function takeEgg(k,need){if(!eggOn(k)||eggCount()<need)return false;try{return GC.take('egg',need);}catch(e){return false;}}
+renderEgg($('#farmegg'),'souffle-egg',2);
+function startGame(){resetRun();S.egg=takeEgg('souffle-egg',2);show('game');goStage(0);}
 $('#start').addEventListener('click',startGame);
 $('#again').addEventListener('click',startGame);
 $('#restart').addEventListener('click',()=>{cur=null;startGame();});
@@ -878,17 +889,17 @@ showBest();
 
 function scoreColor(v){return v>=80?'var(--good)':v>=50?'var(--yolk)':'var(--bad)';}
 function showResult(){
-  const qf=.4+.6*clamp(S.q||0,0,1);let total=0;ROWS.forEach(([k,,w])=>{total+=(S.scores[k]||0)*w*(k==='bake'||k==='serve'?qf:1);});total=Math.round(total);
+  const qf=.4+.6*clamp(S.q||0,0,1);let total=0;ROWS.forEach(([k,,w])=>{total+=(S.scores[k]||0)*w*(k==='bake'||k==='serve'?qf:1);});total=Math.round(total);if(S.egg)total=Math.min(100,total+5);
   try{window.GC&&GC.report('souffle',{score:total,choc:S.flavor==='choc'?total:0,matcha:S.flavor==='matcha'?total:0,hard:S.cond!=='ok'?total:0});}catch(e){}
   const g=GRADES.find(x=>total>=x[0]);
   $('#r-score').textContent=total;$('#r-grade').textContent=g[1];$('#r-desc').textContent=g[2];
-  const cm=S.finalH*.14;const stN=starsOfScore(total);$('#r-rise').textContent=(cm<.4?'幾乎沒有膨起來':'高出杯緣 '+cm.toFixed(1)+' 公分')+'　口味：'+FLV().n+'　條件：'+condOf().n+'　'+'★'.repeat(stN)+'☆'.repeat(3-stN);
+  const cm=S.finalH*.14;const stN=starsOfScore(total);$('#r-rise').textContent=(cm<.4?'幾乎沒有膨起來':'高出杯緣 '+cm.toFixed(1)+' 公分')+'　口味：'+FLV().n+'　條件：'+condOf().n+'　'+'★'.repeat(stN)+'☆'.repeat(3-stN)+(S.egg?'　自家雞蛋 +5':'');
   {const pb=FL.best[S.flavor||'plain']||0;const before={choc:flavorOpen('choc'),matcha:flavorOpen('matcha')};if(total>pb){FL.best[S.flavor||'plain']=total;saveFL();}if(!before.choc&&flavorOpen('choc'))toast('解鎖巧克力口味！');if(!before.matcha&&flavorOpen('matcha'))toast('解鎖抹茶口味！');}
   const best=loadBest();
   if(!best||total>best.score){saveBest({score:total,grade:g[1]});$('#r-best').textContent=best?'新紀錄！比上次多 '+(total-best.score)+' 分':'第一份成績已記下';}
   else $('#r-best').textContent='最佳紀錄 '+best.score+' 分';
   $('#r-rows').innerHTML=ROWS.map(([k,name])=>{const v=S.scores[k]||0;return '<li><div class="row-top"><span>'+name+'</span><b>'+v+'</b></div><div class="meter"><i style="width:'+v+'%;background:'+scoreColor(v)+'"></i></div><p>'+(S.notes[k]||'')+'</p></li>';}).join('');
-  show('result');showBest();$('.scroll').scrollTop=0;
+  show('result');showBest();renderEgg($('#farmegg'),'souffle-egg',2);$('.scroll').scrollTop=0;
 }
 
 /* ---------- loop ---------- */

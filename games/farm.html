@@ -40,7 +40,15 @@ button{font:inherit;color:inherit}
 .seedbar button:disabled{opacity:.4}
 .quick{display:flex;gap:8px;padding:8px 12px 0}
 .quick button{flex:1;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 4px;cursor:pointer;font-size:.9rem}
-.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:8px 10px 12px}
+.tools{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:8px 8px 12px}
+.pond{position:relative;height:130px;border-radius:14px;background:linear-gradient(#8FD0E8,#4A9CC0);overflow:hidden;margin:8px 0;touch-action:manipulation}
+.pond::before{content:"";position:absolute;inset:auto -10% -30% -10%;height:60%;background:radial-gradient(ellipse at 50% 0,rgba(255,255,255,.25),transparent 60%)}
+.pond .bob{position:absolute;left:50%;top:48%;width:20px;height:20px;margin:-10px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#fff 0 38%,#E5483A 40%);box-shadow:0 2px 0 rgba(0,0,0,.2);transition:transform .12s;display:none}
+.pond.wait .bob,.pond.bite .bob{display:block}.pond.wait .bob{animation:bob 1.6s ease-in-out infinite}.pond.bite .bob{transform:translateY(9px) scale(.8)}
+.pond .ex{position:absolute;left:calc(50% + 14px);top:22%;font-weight:900;color:#fff;font-size:26px;display:none;text-shadow:0 2px 0 rgba(0,0,0,.25)}.pond.bite .ex{display:block}
+.pond .msg{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+@keyframes bob{50%{transform:translateY(3px)}}@media (prefers-reduced-motion:reduce){.pond.wait .bob{animation:none}}
+.pbar{display:block;height:6px;border-radius:3px;background:var(--line);margin-top:6px;overflow:hidden}.pbar i{display:block;height:100%;background:var(--accent)}
 .tool{display:flex;flex-direction:column;align-items:center;gap:3px;border:2px solid var(--line);background:var(--surface);border-radius:14px;padding:8px 2px 7px;cursor:pointer;font-size:.86rem;position:relative;touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .tool svg{width:26px;height:26px}
 .tool[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
@@ -88,6 +96,7 @@ button{font:inherit;color:inherit}
     <button class="tool" type="button" data-tool="harvest" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 14h20l-2 12H8zM10 14c0-6 3-9 6-9s6 3 6 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>收成</span></button>
     <button class="tool" type="button" id="b-shop"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12l2-6h18l2 6M6 12v14h20V12M5 12h22M13 26v-7h6v7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>商店</span></button>
     <button class="tool" type="button" id="b-order"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4h16v24H8zM12 11h8M12 16h8M12 21h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>訂單</span><span class="bd" id="ord-bd" hidden></span></button>
+    <button class="tool" type="button" id="b-kit"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 14h18v8a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6zM4 14h24M12 10c0-2 2-2 2-4M18 10c0-2 2-2 2-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>農舍</span><span class="bd" id="kit-bd" hidden></span></button>
   </div>
   <div class="sheet" id="sheet" hidden><div class="sbox" id="sbox" role="dialog" aria-modal="true"></div></div>
 </div>
@@ -119,6 +128,26 @@ const CROPS={
 const CK=Object.keys(CROPS);
 const EXTRA={dandelion:{n:'蒲公英',sell:2},cricket:{n:'蟋蟀',sell:4}};
 const EK=Object.keys(EXTRA);
+/* 加工坊：作物做成加工品，放進共用倉庫（gc.js），賣得比較貴，之後其他遊戲也能用 */
+const RECIPES=[
+  {id:'pickle',n:'醃蘿蔔',in:'radish',q:4,time:15*MIN,sell:70,lv:1},
+  {id:'ketchup',n:'番茄醬',in:'tomato',q:3,time:30*MIN,sell:120,lv:2},
+  {id:'jam',n:'草莓果醬',in:'strawberry',q:3,time:60*MIN,sell:380,lv:4}
+];
+function recipe(id){return RECIPES.find(r=>r.id===id);}
+function hasPan(){return !!(window.GC&&GC.stock&&GC.take&&GC.pantry);}
+function pan(){if(hasPan())try{return GC.pantry();}catch(e){}return Object.assign({},F.goods||{});}
+function panAdd(id,n){if(hasPan())try{GC.stock(id,n);return;}catch(e){}F.goods=F.goods||{};F.goods[id]=(F.goods[id]||0)+n;}
+function panTake(id,n){if(hasPan())try{return GC.take(id,n);}catch(e){}F.goods=F.goods||{};if((F.goods[id]||0)<n)return false;F.goods[id]-=n;return true;}
+function kitSlots(){return F.up.kitchen2?2:1;}
+const GOODS={pickle:['醃蘿蔔',70],ketchup:['番茄醬',120],jam:['草莓果醬',380],egg:['雞蛋',15],fish:['吳郭魚',30],milkfish:['虱目魚',55]};
+/* 雞舍：餵飽的雞每 4 小時下一顆蛋；池塘：每 30 分鐘補一條魚，最多 5 條 */
+const EGG_MS=4*60*MIN,FED_MS=12*60*MIN,POND_MS=30*MIN,POND_MAX=5;
+function hens(){return F.up.coop2?4:F.up.coop?2:0;}
+function henSim(now){const h=F.hen;if(!hens()){h.t=now;return;}const from=h.t||now,end=Math.min(now,h.fed||0);if(end>from)h.prog=(h.prog||0)+(end-from);h.t=now;
+  while(h.prog>=EGG_MS){h.prog-=EGG_MS;h.eggs=Math.min(hens()*4,(h.eggs||0)+hens());}}
+function pondSim(now){const p=F.pond;if(!F.up.pond){p.t=now;return;}if(p.n>=POND_MAX){p.t=now;return;}const k=Math.floor((now-(p.t||now))/POND_MS);if(k>0){p.n=Math.min(POND_MAX,p.n+k);p.t=p.n>=POND_MAX?now:p.t+k*POND_MS;}}
+function fmtLeft(ms){const m=Math.ceil(ms/MIN);return m>=60?Math.floor(m/60)+' 小時'+(m%60?' '+m%60+' 分':''):m+' 分鐘';}
 function nameOf(k){return (CROPS[k]||EXTRA[k]).n;}
 const PLOTS=[4,6,9,12];
 const UPS=[
@@ -127,6 +156,10 @@ const UPS=[
   {id:'plots2',n:'擴建農田（9 塊）',cost:400,lv:4,d:'田地增加到 9 塊',need:s=>s.up.plots===6},
   {id:'fert',n:'有機肥料',cost:500,lv:4,d:'所有作物長得快 25%',need:s=>!s.up.fert},
   {id:'sprinkler',n:'自動灑水器',cost:700,lv:3,d:'田地永遠是濕的，不用再澆水',need:s=>!s.up.sprinkler},
+  {id:'coop',n:'雞舍（2 隻雞）',cost:250,lv:2,d:'餵飽的雞會下蛋，蛋可以給舒芙蕾、三味廚房、夜市人生用',need:s=>!s.up.coop},
+  {id:'pond',n:'池塘',cost:350,lv:3,d:'可以釣魚，魚可以給夜市人生用',need:s=>!s.up.pond},
+  {id:'coop2',n:'雞舍擴建（4 隻雞）',cost:450,lv:4,d:'多養兩隻雞，蛋變兩倍',need:s=>s.up.coop&&!s.up.coop2},
+  {id:'kitchen2',n:'加工坊第二口鍋',cost:400,lv:3,d:'可以同時加工兩批',need:s=>!s.up.kitchen2},
   {id:'plots3',n:'擴建農田（12 塊）',cost:900,lv:6,d:'田地增加到 12 塊',need:s=>s.up.plots===9}
 ];
 const VILLAGERS=['王奶奶','隔壁阿伯','便當店老闆娘','小學老師','咖啡館店長','麵店阿姨','社區志工','路過的旅人'];
@@ -165,6 +198,7 @@ function stageOf(p){const x=progress(p);return x>=1?3:x>=.55?2:x>=.25?1:0;}
 
 /* growth simulation (also catches up after being away) */
 function sim(now){
+  henSim(now);pondSim(now);
   const dt=Math.min(now-F.last,24*3600000);if(dt<=0){F.last=now;return;}
   const from=now-dt;let changed=false;
   F.plots.forEach((p,i)=>{
@@ -213,6 +247,7 @@ function updateHud(){
   $('#lv').textContent='Lv'+lv;$('#xpi').style.width=(lv>=10?100:clamp((F.xp-cur)/(nx-cur)*100,0,100))+'%';$('#xpb').setAttribute('aria-valuenow',Math.round(lv>=10?100:(F.xp-cur)/(nx-cur)*100));
   $('#coins').textContent='● '+coins();
   const pend=F.orders.list.filter(o=>!o.done&&canFill(o)).length;const bd=$('#ord-bd');bd.hidden=!pend;bd.textContent=pend;
+  const kr=(F.kit||[]).filter(k=>k&&Date.now()>=k.end).length+(F.hen.eggs>0?1:0);const kb=$('#kit-bd');kb.hidden=!kr;kb.textContent=kr;
   const ready=F.plots.slice(0,F.up.plots).some(p=>p.c&&progress(p)>=1);
   $('#q-harvest').style.borderColor=ready?'var(--accent)':'';
   const tips={plant:seedSel?'點空的田地種下'+CROPS[seedSel].n:'先選一種種子',water:'點田地澆水，可以一路滑過去',harvest:'點成熟的作物收成',  '':'點「種植」開始，田地需要澆水才會長大'};
@@ -280,8 +315,9 @@ function openShop(tab){
   const tabs=[['sell','賣出'],['seed','種子'],['up','升級'],['ex','兌換']];
   let body='';
   if(shopTab==='sell'){
-    const items=CK.concat(EK).filter(k=>(F.stock[k]||0)>0);
-    body=items.length?items.map(k=>{const t=trend(k);return '<div class="row"><div class="tx"><b>'+nameOf(k)+' ×'+F.stock[k]+'</b><span>'+(EXTRA[k]?'可以拿去餵毛孩，也能賣掉。':'')+'今日價 $'+price(k)+(t==='up'?' <i class="up">行情好</i>':t==='down'?' <i class="down">行情差</i>':'')+'</span></div><div class="btns"><button class="btn" type="button" data-sell="'+k+':1">賣 1</button><button class="btn main" type="button" data-sell="'+k+':all">全賣</button></div></div>';}).join(''):'<p class="soft">背包裡沒有東西。收成後可以在這裡賣掉，也可以留著完成村民的訂單。拔掉的雜草和抓到的蟋蟀，也可以留著餵毛孩。</p>';
+    const items=CK.concat(EK).filter(k=>(F.stock[k]||0)>0),G=pan();
+    const goods=Object.keys(GOODS).filter(k=>G[k]>0).map(k=>'<div class="row"><div class="tx"><b>'+GOODS[k][0]+' ×'+G[k]+'</b><span>共用倉庫・價錢 $'+GOODS[k][1]+'</span></div><div class="btns"><button class="btn" type="button" data-gsell="'+k+':1">賣 1</button><button class="btn main" type="button" data-gsell="'+k+':all">全賣</button></div></div>').join('');
+    body=goods+(items.length?items.map(k=>{const t=trend(k);return '<div class="row"><div class="tx"><b>'+nameOf(k)+' ×'+F.stock[k]+'</b><span>'+(EXTRA[k]?'可以拿去餵毛孩，也能賣掉。':'')+'今日價 $'+price(k)+(t==='up'?' <i class="up">行情好</i>':t==='down'?' <i class="down">行情差</i>':'')+'</span></div><div class="btns"><button class="btn" type="button" data-sell="'+k+':1">賣 1</button><button class="btn main" type="button" data-sell="'+k+':all">全賣</button></div></div>';}).join(''):goods?'':'<p class="soft">背包裡沒有東西。收成後可以在這裡賣掉，也可以留著完成村民的訂單。拔掉的雜草和抓到的蟋蟀，也可以留著餵毛孩。</p>');
   }else if(shopTab==='seed'){
     body=CK.map(k=>{const c=CROPS[k],lock=c.lv>lv;return '<div class="row"><div class="tx"><b>'+c.n+'　$'+c.seed+(lock?'':'')+'</b><span>'+(lock?'Lv'+c.lv+' 解鎖':'約 '+(c.grow>=60*MIN?(c.grow/60/MIN)+' 小時':(c.grow/MIN)+' 分鐘')+'長大，賣 $'+c.sell+' 左右，有 '+(F.seeds[k]||0)+' 包')+'</span></div><div class="btns"><button class="btn" type="button" data-buy="'+k+':1"'+(lock||coins()<c.seed?' disabled':'')+'>買 1</button><button class="btn main" type="button" data-buy="'+k+':5"'+(lock||coins()<c.seed*5?' disabled':'')+'>買 5</button></div></div>';}).join('');
   }else if(shopTab==='ex'){
@@ -297,13 +333,14 @@ function openShop(tab){
   sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">金幣 '+coins()+'　共用幣 '+wallet()+'</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
     b.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>openShop(x.dataset.tab)));
     b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;gsfx('cash');const g=price(k)*q;addCoins(g);F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
+    b.querySelectorAll('[data-gsell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.gsell.split(':');const r=GOODS[k];const q=n==='all'?(pan()[k]||0):1;if(!r||!q||!panTake(k,q))return;gsfx('cash');const g=r[1]*q;addCoins(g);F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
     b.querySelectorAll('[data-buy]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.buy.split(':');const q=+n,c=CROPS[k].seed*q;if(!payCoins(c)){toast('幣不夠');return;}gsfx('cash');F.seeds[k]=(F.seeds[k]||0)+q;buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
     b.querySelectorAll('[data-ex]').forEach(x=>x.addEventListener('click',()=>{const[d,n]=x.dataset.ex.split(':');
       if(d==='s'){const q=n==='all'?Math.floor(F.coins/EX_TO_SHARED):+n;if(q<1||F.coins<q*EX_TO_SHARED)return;F.coins-=q*EX_TO_SHARED;try{GC.give?GC.give(q):GC.earn(q);}catch(e){}toast('換到 '+q+' 共用幣');}
       else{const q=+n;if(!canPay()||!GC.pay(q)){toast('共用幣不夠');return;}F.coins+=q*EX_TO_FARM;toast('換到 '+q*EX_TO_FARM+' 金幣');}
       gsfx('cash');save();updateHud();openShop('ex');}));
     b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{const u=UPS.find(z=>z.id===x.dataset.up);if(!u||!payCoins(u.cost)){toast('幣不夠');return;}
-      if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
+      if(u.id==='coop'){F.hen.t=Date.now();}if(u.id==='pond'){F.pond={n:POND_MAX,t:Date.now()};}if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
       toast('升級完成：'+u.n);buzz([15,30,15]);GCmax({plots:F.up.plots,upgrades:(F.up.sprinkler?1:0)+(F.up.scarecrow?1:0)+(F.up.fert?1:0)});save();updateHud();openShop();}));
   });
 }
@@ -318,6 +355,69 @@ function openOrders(){
   });
 }
 $('#b-order').addEventListener('click',openOrders);
+let barnTab='kit',fishT=[];
+function barnTabs(){return '<div class="tabs">'+[['kit','加工坊'],['hen','雞舍'],['pond','池塘']].map(([k,n])=>'<button class="tab" type="button" data-btab="'+k+'" aria-pressed="'+(barnTab===k)+'">'+n+'</button>').join('')+'</div>';}
+function bindTabs(b){b.querySelectorAll('[data-btab]').forEach(x=>x.addEventListener('click',()=>openBarn(x.dataset.btab)));}
+function openBarn(tab){fishT.forEach(clearTimeout);fishT=[];if(tab)barnTab=tab;sim(Date.now());if(barnTab==='hen')return openHen();if(barnTab==='pond')return openPond();openKitchen();}
+function openHen(){
+  const n=hens(),h=F.hen,now=Date.now(),fed=h.fed>now,food=(F.stock.dandelion||0)+(F.stock.cricket||0);
+  let body;
+  if(!n)body='<p class="soft">還沒有雞舍。到商店的「升級」蓋雞舍（Lv2 解鎖），雞吃飽了會下蛋。</p>';
+  else body='<div class="row"><div class="tx"><b>'+n+' 隻雞・'+(fed?'吃飽了':'肚子餓了')+'</b><span>'+(fed?'還能飽 '+fmtLeft(h.fed-now)+'，大約每 4 小時每隻下一顆蛋':'餓著的時候不會下蛋')+'</span>'+(fed?'<span class="pbar"><i style="width:'+Math.round((h.prog||0)/EGG_MS*100)+'%"></i></span>':'')+'</div>'+
+      '<button class="btn main" type="button" id="hen-feed">'+(fed?'再餵一次':'餵飼料')+'</button></div>'+
+      '<p class="soft">餵一次可以飽 12 小時，每隻雞吃一份：先用拔下來的蒲公英和抓到的蟋蟀（現在有 '+food+' 份），不夠的每份 $4。</p>'+
+      '<div class="row"><div class="tx"><b>雞蛋 ×'+(h.eggs||0)+'</b><span>撿起來放進共用倉庫，舒芙蕾、三味廚房、夜市人生都能用</span></div><button class="btn main" type="button" id="hen-take"'+(h.eggs>0?'':' disabled')+'>撿蛋</button></div>';
+  sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+body,b=>{bindTabs(b);
+    const fb=b.querySelector('#hen-feed');if(fb)fb.addEventListener('click',()=>{let need=hens(),cost=0;
+      ['dandelion','cricket'].forEach(k=>{const u=Math.min(need,F.stock[k]||0);F.stock[k]=(F.stock[k]||0)-u;need-=u;});cost=need*4;
+      if(cost&&!payCoins(cost)){toast('金幣不夠買飼料');return;}F.hen.t=Date.now();F.hen.fed=Date.now()+FED_MS;gsfx('munch');buzz(8);toast('雞吃飽了'+(cost?'（飼料 $'+cost+'）':''));save();updateHud();openHen();});
+    const tb=b.querySelector('#hen-take');if(tb)tb.addEventListener('click',()=>{const e=F.hen.eggs||0;if(!e)return;panAdd('egg',e);F.hen.eggs=0;gain(e);GCadd('farm','eggs',e);gsfx('pop');buzz([8,20,8]);toast('撿到 '+e+' 顆蛋，放進共用倉庫');save();updateHud();openHen();});});
+}
+function openPond(){
+  if(!F.up.pond){sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+'<p class="soft">還沒有池塘。到商店的「升級」挖池塘（Lv3 解鎖），就可以釣魚。</p>',bindTabs);return;}
+  const p=F.pond,G=pan();
+  sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+
+    '<p class="soft">池塘裡有 <b id="pd-n">'+p.n+'</b> 條魚，每 30 分鐘補一條（最多 '+POND_MAX+' 條）。拋竿後等浮標往下沉、出現「！」再拉竿，太早拉會把魚嚇跑。</p>'+
+    '<div class="pond" id="pond" role="img" aria-label="池塘"><span class="bob"></span><span class="ex">！</span><span class="msg" id="pd-msg"></span></div>'+
+    '<button class="btn main" type="button" id="pd-go" style="width:100%;padding:14px"'+(p.n<1?' disabled':'')+'>'+(p.n<1?'魚被釣光了，等一下再來':'拋竿')+'</button>'+
+    '<p class="soft" style="margin-top:10px">釣到的魚會放進共用倉庫，可以賣掉或給夜市人生用。倉庫裡有<span id="pd-inv">吳郭魚 '+(G.fish||0)+' 條、虱目魚 '+(G.milkfish||0)+' 條</span>。</p>',b=>{bindTabs(b);
+    const pd=b.querySelector('#pond'),go=b.querySelector('#pd-go'),msg=b.querySelector('#pd-msg');let st='idle',biteAt=0;
+    const later=(f,ms)=>fishT.push(setTimeout(()=>{if(!$('#sheet').hidden&&b.isConnected)f();},ms));
+    const reset=t=>{st='idle';pd.className='pond';msg.textContent=t||'';go.textContent=F.pond.n<1?'魚被釣光了，等一下再來':'再拋一次';go.disabled=F.pond.n<1;};
+    const act=()=>{
+      if(st==='idle'){if(F.pond.n<1)return;st='wait';pd.className='pond wait';msg.textContent='';go.textContent='等魚上鉤…';gsfx('plop');
+        later(()=>{if(st!=='wait')return;st='bite';biteAt=performance.now();pd.className='pond bite';go.textContent='拉竿！';gsfx('splash');buzz(30);
+          later(()=>{if(st==='bite')reset('魚跑掉了…');},900);},1500+Math.random()*2500);}
+      else if(st==='wait'){gsfx('bad');reset('太早了，魚被嚇跑了');}
+      else if(st==='bite'){const r=Math.random(),k=r<.25?'milkfish':'fish';F.pond.n--;if(F.pond.n===POND_MAX-1)F.pond.t=Date.now();panAdd(k,1);gain(k==='fish'?3:5);GCadd('farm','fish',1);
+        gsfx('great');buzz([10,30,10]);b.querySelector('#pd-n').textContent=F.pond.n;{const G2=pan();b.querySelector('#pd-inv').textContent='吳郭魚 '+(G2.fish||0)+' 條、虱目魚 '+(G2.milkfish||0)+' 條';}save();reset('釣到一條'+GOODS[k][0]+'！');}
+    };
+    go.addEventListener('click',act);pd.addEventListener('pointerdown',e=>{e.preventDefault();if(st!=='idle')act();});
+  });
+}
+function openKitchen(){
+  F.kit=F.kit||[];const now=Date.now(),lv=level(),n=kitSlots(),G=pan();
+  const free=()=>{for(let i=0;i<n;i++)if(!F.kit[i])return i;return -1;};
+  let slots='';for(let i=0;i<n;i++){const k=F.kit[i];
+    if(!k)slots+='<div class="row"><div class="tx"><b>鍋子 '+(i+1)+'</b><span>空著，從下面選一樣來做</span></div></div>';
+    else{const r=recipe(k.r),done=now>=k.end,pr=clamp(1-(k.end-now)/(k.end-k.start),0,1);
+      slots+='<div class="row"><div class="tx"><b>'+r.n+' ×'+k.q+'</b><span>'+(done?'做好了！':'還要 '+fmtLeft(k.end-now))+'</span>'+(done?'':'<span class="pbar"><i style="width:'+Math.round(pr*100)+'%"></i></span>')+'</div>'+(done?'<button class="btn main" type="button" data-take="'+i+'">收進倉庫</button>':'')+'</div>';}}
+  const fi=free();
+  const recs=RECIPES.map(r=>{const lock=r.lv>lv,have=F.stock[r.in]||0,max=Math.min(5,Math.floor(have/r.q));
+    return '<div class="row"><div class="tx"><b>'+r.n+(lock?'':'　$'+r.sell)+'</b><span>'+(lock?'Lv'+r.lv+' 解鎖':CROPS[r.in].n+' ×'+r.q+' → 1 罐，'+fmtLeft(r.time)+'（有 '+have+' 個）')+'</span></div>'+
+      (lock?'':'<div class="btns"><button class="btn" type="button" data-make="'+r.id+':1"'+(fi<0||max<1?' disabled':'')+'>做 1</button><button class="btn main" type="button" data-make="'+r.id+':'+max+'"'+(fi<0||max<2?' disabled':'')+'>做 '+Math.max(2,max)+'</button></div>')+'</div>';}).join('');
+  const inv=Object.keys(GOODS).filter(k=>G[k]>0).map(k=>GOODS[k][0]+' ×'+G[k]).join('、');
+  sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+'<p class="soft">把作物做成加工品，賣得比直接賣菜貴。做好的東西會放進<b>共用倉庫</b>，之後其他遊戲也能用。</p>'+slots+
+    '<p class="soft" style="margin-top:12px">'+(fi<0?'鍋子都在忙，做好再來。':'要做什麼？一次最多 5 罐。')+'</p>'+recs+
+    '<p class="soft" style="margin-top:12px">共用倉庫：'+(inv||'還是空的')+'。可以到商店的「賣出」賣掉。</p>',b=>{bindTabs(b);
+    b.querySelectorAll('[data-make]').forEach(x=>x.addEventListener('click',()=>{const[id,q0]=x.dataset.make.split(':');const r=recipe(id),q=+q0,i=free();
+      if(!r||i<0||q<1||(F.stock[r.in]||0)<r.q*q)return;F.stock[r.in]-=r.q*q;const t=Date.now();F.kit[i]={r:id,q,start:t,end:t+r.time*q};
+      gsfx('plop');buzz(8);toast('開始做'+r.n+' ×'+q);save();updateHud();openKitchen();}));
+    b.querySelectorAll('[data-take]').forEach(x=>x.addEventListener('click',()=>{const i=+x.dataset.take,k=F.kit[i];if(!k||Date.now()<k.end)return;const r=recipe(k.r);
+      panAdd(k.r,k.q);F.kit[i]=null;gain(Math.round(r.sell*k.q/20)+2);GCadd('farm','processed',k.q);gsfx('ding');buzz([10,30,10]);toast(r.n+' ×'+k.q+' 收進倉庫');save();updateHud();openKitchen();}));
+  });
+}
+$('#b-kit').addEventListener('click',()=>openBarn(F.hen.eggs>0&&!(F.kit||[]).some(k=>k&&Date.now()>=k.end)?'hen':null));
 
 /* ---------- canvas ---------- */
 const cv=$('#cv'),ctx=cv.getContext('2d'),stageEl=$('#stage');
@@ -410,14 +510,15 @@ function loop(t){
 
 /* ---------- boot ---------- */
 function boot(){
-  const first=!load();F=load()||newFarm();
+  const first=!load();F=load()||newFarm();F.kit=F.kit||[];F.hen=F.hen||{t:Date.now(),fed:0,prog:0,eggs:0};F.pond=F.pond||{n:POND_MAX,t:Date.now()};
   const away=Date.now()-F.last;const beforeReady=F.plots.slice(0,F.up.plots).filter(p=>p.c&&progress(p)>=1).length;
   sim(Date.now());genOrders();
   const afterReady=F.plots.slice(0,F.up.plots).filter(p=>p.c&&progress(p)>=1).length;
   const d=today();let bonus=0;if(F.daily!==d){F.daily=d;if(!first){bonus=15;addCoins(bonus);}}
   save();makeLayout();updateHud();resize();
   GCmax({level:level(),plots:F.up.plots});
-  if(first){/* 第一次的說明改由 gc.js 的新手教學顯示 */}
+  if(!first&&!F.kitHint){F.kitHint=1;save();setTimeout(()=>toast('新功能：下方的「加工」可以把作物做成果醬'),first?0:2600);}
+  if(first){F.kitHint=1;/* 第一次的說明改由 gc.js 的新手教學顯示 */}
   else if(away>3*MIN||bonus){setTimeout(()=>{const m=Math.round(away/MIN);const t=(m>=60?Math.floor(m/60)+' 小時 '+(m%60)+' 分鐘':m+' 分鐘');
     sheet('<div class="shead"><h3>歡迎回來</h3></div><p class="soft">離開了 '+t+'。'+(afterReady>0?'有 '+afterReady+' 塊田的作物可以收成了。':'作物還在慢慢長大。')+(bonus?'<br>今日第一次來，送你 $'+bonus+'。':'')+'</p><button class="btn main" type="button" data-close style="width:100%">去看看</button>');},300);}
   requestAnimationFrame(loop);

@@ -348,6 +348,17 @@ function goPrep(){
   let on=menuOn();while(on.length>SLOTS[S.upg.slots]){S.plan.d[on.pop()].on=false;}
   renderPrep();show('prep');
 }
+/* 小菜園的食材（共用倉庫）：每天各用一次，效果只到今晚 */
+const FARMUSE=[{id:'ketchup',items:[['ketchup',1]],n:'番茄醬 ×1',d:'自家番茄醬淋上去，今晚售價 +8%',fx:()=>addBuff('price',1.08,1)},
+  {id:'fish',items:[['fish',2],['milkfish',2]],n:'魚 ×2',d:'煮魚湯招待客人，今晚人潮 +12%',fx:()=>addBuff('traffic',1.12,1)},
+  {id:'egg',items:[['egg',4]],n:'雞蛋 ×4',d:'自家雞蛋當食材，今晚食材成本 −15%',fx:()=>addBuff('cost',.85,1)},
+  {id:'pickle',items:[['pickle',2]],n:'醃蘿蔔 ×2',d:'當小菜送給客人，今晚人潮 +6%',fx:()=>addBuff('traffic',1.06,1)}];
+function farmPan(){try{return window.GC&&GC.pantry?GC.pantry():{};}catch(e){return{};}}
+function farmPick(u,P){for(const it of u.items){const tot=u.id==='fish'?(P.fish||0)+(P.milkfish||0):(P[it[0]]||0);if(tot>=it[1])return it;}return null;}
+function farmCard(){const P=farmPan(),used=S.farmDay===S.day?(S.farmUsed||[]):[];
+  const rows=FARMUSE.filter(u=>used.includes(u.id)||farmPick(u,P));if(!rows.length)return '';
+  return '<div class="card"><h3>小菜園送來的食材</h3><p class="soft">共用倉庫裡的東西，每樣一天用一次，效果只到今晚。</p>'+rows.map(u=>{const on=used.includes(u.id);
+    return '<div class="row" style="align-items:center"><span class="lb" style="flex:1"><b>'+u.n+'</b><br><span class="soft">'+u.d+'</span></span><button class="btn" type="button" data-farm="'+u.id+'"'+(on?' disabled':'')+'>'+(on?'已使用':'使用')+'</button></div>';}).join('')+'</div>';}
 function renderPrep(){
   const wd=weekday(S.day),W=WEATHER[S.weather],est=estimate();
   $('#p-day').innerHTML='第 '+S.day+' 天<small>／'+(S.endless?'∞':DAYS)+'，週'+WEEK[wd]+'</small>';
@@ -358,6 +369,7 @@ function renderPrep(){
   if(ev){const e=S.event;h+='<div class="card event"><h3>今天發生了一件事</h3><p class="q">'+esc(ev.text(e.data))+'</p>';
     if(!e.done){h+='<div class="opts">'+ev.opts.map((o,i)=>'<button class="btn" data-ev="'+i+'" type="button"'+(o.cost&&o.cost>S.cash?' disabled':'')+'>'+esc(o.label)+'</button>').join('')+'</div>';}
     else h+='<p class="res">'+esc(e.result)+'</p>';h+='</div>';}
+  h+=farmCard();
   h+='<div class="card"><div class="weather">'+WICON[S.weather]+'<div><h3>今天'+W.name+'，'+W.temp+'°C</h3><p class="soft">'+W.hint+'。週'+WEEK[wd]+(WMUL[wd]>1.1?'，人潮比平常多。':WMUL[wd]<.86?'，人潮比較少。':'。')+'</p></div></div></div>';
   h+='<div class="card"><h3>擺攤地點</h3><div class="locs">'+LOCS.map((l,i)=>{const lock=S.rep<l.rep;return '<button class="loc" type="button" data-loc="'+i+'" aria-pressed="'+(S.plan.loc===i)+'"'+(lock?' disabled':'')+'><b>'+l.name+'</b><span>'+(lock?'聲望 '+l.rep+' 解鎖':'租金 '+money(l.rent))+'</span><span>人潮 ×'+l.traffic+(l.note&&!lock?'<br>'+l.note:'')+'</span></button>';}).join('')+'</div></div>';
   const slots=SLOTS[S.upg.slots],onN=menuOn().length;
@@ -388,7 +400,11 @@ function updateDock(){
 $('#prep-body').addEventListener('click',e=>{
   const t=e.target.closest('button');if(!t)return;
   if(t.dataset.ev!=null){const ev=eventDef(),o=ev.opts[+t.dataset.ev];if(o.cost&&o.cost>S.cash)return;S.event.result=o.fx(S.event.data);S.event.done=true;save();renderPrep();return;}
-  if(t.dataset.loc!=null){S.plan.loc=+t.dataset.loc;}
+  if(t.dataset.farm){const u=FARMUSE.find(x=>x.id===t.dataset.farm),P=farmPan();if(S.farmDay!==S.day){S.farmDay=S.day;S.farmUsed=[];}if(!u||S.farmUsed.includes(u.id))return;
+    let ok=false;if(u.id==='fish'){let need=2;const a=Math.min(need,P.fish||0);if(a+(P.milkfish||0)>=need){try{if(a)GC.take('fish',a);if(need-a)GC.take('milkfish',need-a);ok=true;}catch(e){}}}
+    else{const it=farmPick(u,P);try{ok=!!it&&GC.take(it[0],it[1]);}catch(e){}}
+    if(!ok)return;u.fx();S.farmUsed.push(u.id);try{window.GC&&GC.sfx('good');}catch(e){}}
+  else if(t.dataset.loc!=null){S.plan.loc=+t.dataset.loc;}
   else if(t.dataset.tog){const p=S.plan.d[t.dataset.tog];if(!p.on&&menuOn().length>=SLOTS[S.upg.slots])return;p.on=!p.on;}
   else if(t.dataset.price){const[d,i]=t.dataset.price.split(':');S.plan.d[d].price=+i;}
   else if(t.dataset.q){const[d,n]=t.dataset.q.split(':');const p=S.plan.d[d];p.qty=clamp(p.qty+(+n),0,STORE[S.upg.cart]);}
