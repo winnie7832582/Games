@@ -81,6 +81,8 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 .who{height:100%;max-height:340px;display:flex;align-items:flex-end;justify-content:center}
 .who svg{display:block;height:100%;width:auto;max-width:86vw}
 .where{position:absolute;left:12px;top:10px;background:rgba(0,0,0,.45);color:#fff;border-radius:999px;padding:3px 12px;font-size:.85rem;z-index:2}
+.skipb{position:absolute;right:12px;top:40px;z-index:3;border:0;background:rgba(0,0,0,.45);color:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:.82rem;cursor:pointer;min-height:32px}.skipb[aria-pressed="true"]{background:var(--rose);color:#fff}
+.cfg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px}.cfg button{flex:1 1 40%;border:2px solid var(--line);background:var(--card,#fff);color:inherit;border-radius:12px;padding:9px 8px;font:inherit;font-size:.9rem;cursor:pointer;text-align:left;line-height:1.35}.cfg button small{display:block;color:var(--soft);font-size:.78rem}.cfg button[aria-pressed="true"]{border-color:var(--rose);background:rgba(211,93,122,.12)}
 .sbar{position:absolute;right:12px;top:10px;background:rgba(0,0,0,.45);color:#fff;border-radius:999px;padding:3px 12px;font-size:.85rem;z-index:2;font-variant-numeric:tabular-nums}
 .dwrap{position:relative;padding:0 10px 12px;z-index:3}
 .dbox{background:var(--surface);border:2px solid var(--ink);border-radius:18px;padding:14px 16px 16px;min-height:120px;cursor:pointer;position:relative;box-shadow:0 6px 0 rgba(0,0,0,.12)}
@@ -152,7 +154,7 @@ h1{font-family:"Noto Serif TC","Songti TC",serif;font-weight:900;font-size:clamp
 
   <section class="screen" id="scene" aria-label="劇情">
     <div class="stagebg" id="s-bg"></div>
-    <span class="where" id="s-where"></span><span class="sbar" id="s-bar" hidden></span>
+    <span class="where" id="s-where"></span><button class="skipb" id="s-skip" type="button" aria-pressed="false">快轉已讀</button><span class="sbar" id="s-bar" hidden></span>
     <div class="stagearea"><div class="who" id="s-who"></div></div>
     <div class="dwrap"><div class="choices" id="s-ch"></div><div class="dbox" id="s-box" tabindex="0" role="button" aria-label="繼續"><span class="dname" id="s-name"></span><div class="dtext" id="s-text" aria-live="polite"></div><span class="dnext" id="s-next">點一下繼續</span></div></div>
   </section>
@@ -175,7 +177,30 @@ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fmt=n=>'$'+Math.round(n).toLocaleString('en-US');
 
 /* ================= DATA ================= */
-const DAYS=30,WEEK=['一','二','三','四','五','六','日'];
+const DAYS=30;
+/* 每一輪的長度、主角、設定卡 */
+function LEN(){return (G&&G.len)||DAYS;}
+function sc(d){return Math.max(1,Math.ceil(d*LEN()/30));}
+function visitsToday(c){if(G.focus===c)return true;if(G.mod==='rain'&&c==='lin')return true;return CHARS[c].visit.includes(wd());}
+function eveToday(c){return G.focus===c||CHARS[c].eve.days.includes(wd());}
+function svN(v){return LEN()<30?Math.round(v*.6):v;}
+function rent(){return G.mod==='love'?400:300;}
+function itemMul(k){return G.mod==='rain'&&(TAGS[k]||[]).some(t=>t==='warm'||t==='tea')?1.3:1;}
+const MODS={
+  rain:{n:'雨季',d:'這個月常下雨。熱飲和茶賣得更好（+30%），若琳幾乎天天來店裡。'},
+  tight:{n:'小本經營',d:'開局少 $1,500，但名聲漲得比較快（×2）。'},
+  critic:{n:'美食評論家',d:'月中會有評論家來店裡，猜中他想要的，名聲大漲。'},
+  chain:{n:'對面開了連鎖店',d:'路過的客人少一位，但常客更死忠，在店裡加的好感 +50%。'},
+  love:{n:'戀愛季節',d:'所有人的好感加得更多（×1.3），但店租漲到 $400。'},
+  recipe:{n:'外婆的食譜本',d:'研發新品不用看廚藝，也不花精神。'}
+};
+const SHE={qing:1,lin:1,ruolan:1};
+const READK='cornercafe-read';let READ=null,readT=0,SKIP=false;
+try{READ=new Set(JSON.parse(GCStore.getItem(READK)||'[]'));}catch(e){READ=new Set();}
+try{SKIP=GCStore.getItem('cornercafe-skip')==='1';}catch(e){}
+function hkey(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return (h>>>0).toString(36);}
+function markRead(k){if(READ.has(k))return;READ.add(k);clearTimeout(readT);readT=setTimeout(()=>{try{const a=[...READ];GCStore.setItem(READK,JSON.stringify(a.slice(-4000)));}catch(e){}},800);}
+const WEEK=['一','二','三','四','五','六','日'];
 const STATS={cook:'廚藝',talk:'談吐',charm:'魅力',taste:'品味',fit:'體力'};
 const MENU={
   americano:{n:'美式咖啡',p:80},latte:{n:'拿鐵',p:110},earlgrey:{n:'伯爵茶',p:100},cocoa:{n:'熱可可',p:90},sandwich:{n:'早餐三明治',p:120},
@@ -239,10 +264,12 @@ const ACTS=[
 /* ================= STATE ================= */
 const KEY='cornercafe-v1',GAL='cornercafe-endings';
 let G=null;
-function newGame(name,inh){
+function newGame(name,inh,cfg){
   G={v:1,name:name||'小晞',day:1,money:3000,rep:20,energy:100,stats:{cook:10,talk:10,charm:10,taste:10,fit:10},aff:{yuan:0,qing:0,kai:0,lin:0,yichen:0,ruolan:0},met:{},ev:{yuan:0,qing:0,kai:0,lin:0,yichen:0,ruolan:0},
     menu:['americano','latte','earlgrey','cocoa','sandwich'],gifts:{},partner:null,friend:{},phase:'morning',log:[],seenHint:{}};
   if(inh){try{Object.keys(G.stats).forEach(k=>{G.stats[k]=Math.max(10,Math.round((inh.stats&&inh.stats[k]||10)*.5));});G.menu=Array.from(new Set(G.menu.concat(inh.menu||[])));G.money=3000+Math.min(3000,Math.round((inh.money||0)*.1));G.rep=Math.max(20,Math.round((inh.rep||0)*.5));G.inherit=true;window.GC&&GC.max('corner-cafe',{inherit:1});}catch(e){}}
+  cfg=cfg||{};G.len=cfg.len||DAYS;G.focus=cfg.focus||null;G.mod=cfg.mod||null;G.duo={};G.dv={};G.br={};G.pk={};
+  if(G.mod==='tight')G.money=Math.max(500,G.money-1500);
   save();
 }
 function save(){try{GCStore.setItem(KEY,JSON.stringify(G));}catch(e){}}
@@ -252,7 +279,7 @@ function addGal(id){const g=gal();if(!g.includes(id)){g.push(id);try{GCStore.set
   try{if(window.GC){var o={endings:gal().length};o['end_'+id]=1;if(id.indexOf('love-')===0)o.love=1;GC.report('corner-cafe',o);}}catch(e){}}
 const wd=()=>(G.day-1)%7;
 function addStat(fx){Object.keys(fx).forEach(k=>{G.stats[k]=clamp(G.stats[k]+fx[k],0,100);});}
-function addAff(c,v){G.aff[c]=clamp(G.aff[c]+v,0,100);return v;}
+function addAff(c,v){if(v>0){let m=1;if(G.focus===c)m*=1.8;if(G.mod==='love')m*=1.3;v=Math.round(v*m);}G.aff[c]=clamp(G.aff[c]+v,0,100);return v;}
 
 /* ================= ART ================= */
 const HAIR={
@@ -320,12 +347,15 @@ function say(name,text,L,face){
   gsfx(name?'blip':'tick');
   if(L!==undefined)showWho(L,face);
   $('#s-name').textContent=name||'';$('#s-ch').innerHTML='';$('#s-next').hidden=false;
+  const rk=hkey((name||'')+'|'+text),wasRead=READ.has(rk);
   text=text.replace(/\{n\}/g,G?G.name:'');
+  if(SKIP&&wasRead){clearInterval(typing);typing=null;$('#s-text').textContent=text;
+    return new Promise(res=>{let done=false;const go=()=>{if(done)return;done=true;advance=null;res();};advance=go;setTimeout(go,110);});}
   return new Promise(res=>{
     const el=$('#s-text');let i=0;el.textContent='';
     const done=()=>{clearInterval(typing);typing=null;el.textContent=text;};
     if(reduceMotion){done();}else typing=setInterval(()=>{i++;el.textContent=text.slice(0,i);if(i>=text.length)done();},24);
-    advance=()=>{if(typing){done();return;}advance=null;res();};
+    advance=()=>{if(typing){done();return;}advance=null;markRead(rk);res();};
   });
 }
 function choose(opts,grid,prompt){
@@ -339,6 +369,8 @@ function choose(opts,grid,prompt){
   });
 }
 $('#s-box').addEventListener('click',()=>{if(advance)advance();});
+function paintSkip(){const b=$('#s-skip');b.setAttribute('aria-pressed',String(SKIP));b.textContent=SKIP?'快轉中':'快轉已讀';}
+paintSkip();$('#s-skip').addEventListener('click',e=>{e.stopPropagation();SKIP=!SKIP;try{GCStore.setItem('cornercafe-skip',SKIP?'1':'0');}catch(_){}paintSkip();if(SKIP&&advance&&!typing)advance();});
 $('#s-box').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&advance){e.preventDefault();advance();}});
 function pop(text,color){const p=document.createElement('span');p.className='pop';p.textContent=text;p.style.color=color||'var(--rose)';$('#scene').appendChild(p);setTimeout(()=>p.remove(),1150);}
 function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
@@ -350,9 +382,23 @@ function hasInh(){try{return !!JSON.parse(GCStore.getItem('cornercafe-inherit')|
 function titleInit(){$('#store').innerHTML=storeSVG();const sv=load();$('#b-cont').hidden=!sv;const g=gal();$('#rec').textContent=g.length?'已解鎖 '+g.length+' / '+ENDINGS.length+' 個結局'+(s2on()?'　第二季角色已登場（第 5 天起會來店裡）':''):'';show('title');}
 $('#b-cont').addEventListener('click',()=>{G=load();if(!G){titleInit();return;}goHub();});
 $('#b-new').addEventListener('click',()=>{
-  sheet('<h3>你的名字</h3><p class="soft">大家會這樣叫你。</p><div class="namein"><input id="nm" maxlength="6" value="小晞" aria-label="你的名字"></div>'+(hasInh()?'<label class="inh" style="display:flex;gap:10px;align-items:flex-start;margin:10px 0;line-height:1.5"><input type="checkbox" id="nm-inh" checked style="width:22px;height:22px;margin-top:2px"><span>繼承上一輪的成長<br><small style="color:var(--soft)">能力值減半、保留研發過的菜單、拿回一部分資金和名聲</small></span></label>':'')+'<button class="btn main close" type="button" id="nm-go">開始</button>',b=>{
-    const go=()=>{const v=($('#nm').value||'').trim()||'小晞';let inh=null;try{if($('#nm-inh')&&$('#nm-inh').checked)inh=JSON.parse(GCStore.getItem('cornercafe-inherit')||'null');}catch(e){}closeSheet();newGame(v,inh);prologue();};
-    b.querySelector('#nm-go').addEventListener('click',go);b.querySelector('#nm').addEventListener('keydown',e=>{if(e.key==='Enter')go();});});
+  const cfg={len:30,focus:null,mod:null},cards=gal().length?shuffle(Object.keys(MODS).slice()).slice(0,3):[];let nm='小晞';
+  const render=()=>{
+    const people=ids();
+    sheet('<h3>新的一輪</h3><p class="soft">大家會怎麼叫你？</p><div class="namein"><input id="nm" maxlength="6" value="'+esc(nm)+'" aria-label="你的名字"></div>'+
+      (hasInh()?'<label class="inh" style="display:flex;gap:10px;align-items:flex-start;margin:10px 0;line-height:1.5"><input type="checkbox" id="nm-inh" checked style="width:22px;height:22px;margin-top:2px"><span>繼承上一輪的成長<br><small style="color:var(--soft)">能力值減半、保留研發過的菜單、拿回一部分資金和名聲</small></span></label>':'')+
+      '<p class="sect">這一輪要玩多久？</p><div class="cfg" role="group" aria-label="長度"><button type="button" data-len="30" aria-pressed="'+(cfg.len===30)+'">三十天<small>完整的故事</small></button><button type="button" data-len="15" aria-pressed="'+(cfg.len===15)+'">十五天短篇<small>專心追一個人，好感加得快</small></button></div>'+
+      (cfg.len===15?'<p class="sect">這次要追誰？</p><div class="cfg" role="group" aria-label="主角">'+people.map(c=>'<button type="button" data-focus="'+c+'" aria-pressed="'+(cfg.focus===c)+'">'+CHARS[c].n+'<small>'+CHARS[c].job+'</small></button>').join('')+'<button type="button" data-focus="" aria-pressed="'+(!cfg.focus)+'">不追人<small>專心經營咖啡館</small></button></div>':'')+
+      (cards.length?'<p class="sect">這一輪的設定（抽到三張，選一張）</p><div class="cfg" role="group" aria-label="設定">'+cards.map(k=>'<button type="button" data-mod="'+k+'" aria-pressed="'+(cfg.mod===k)+'">'+MODS[k].n+'<small>'+MODS[k].d+'</small></button>').join('')+'<button type="button" data-mod="" aria-pressed="'+(!cfg.mod)+'">不用設定<small>跟平常一樣</small></button></div>':'')+
+      '<button class="btn main close" type="button" id="nm-go">開始</button>',b=>{
+      const ni=b.querySelector('#nm');ni.addEventListener('input',()=>{nm=ni.value;});
+      b.querySelectorAll('[data-len]').forEach(x=>x.addEventListener('click',()=>{cfg.len=+x.dataset.len;if(cfg.len===30)cfg.focus=null;render();}));
+      b.querySelectorAll('[data-focus]').forEach(x=>x.addEventListener('click',()=>{cfg.focus=x.dataset.focus||null;render();}));
+      b.querySelectorAll('[data-mod]').forEach(x=>x.addEventListener('click',()=>{cfg.mod=x.dataset.mod||null;render();}));
+      const go=()=>{const v=(ni.value||'').trim()||'小晞';let inh=null;try{if($('#nm-inh')&&$('#nm-inh').checked)inh=JSON.parse(GCStore.getItem('cornercafe-inherit')||'null');}catch(e){}closeSheet();newGame(v,inh,cfg);prologue();};
+      b.querySelector('#nm-go').addEventListener('click',go);ni.addEventListener('keydown',e=>{if(e.key==='Enter')go();});});
+  };
+  render();
 });
 $('#b-gal').addEventListener('click',showGallery);
 async function prologue(){
@@ -360,7 +406,7 @@ async function prologue(){
   await say('','外婆過世後，留給你一封信和一把鑰匙。');
   await say('','「巷口那間咖啡館，就交給{n}了。不用賺大錢，只要讓來的人都能喝到一杯暖暖的就好。」');
   setScene(BG.cafe('day'),'巷口咖啡館');
-  await say('','推開門，木頭吧台還留著咖啡的香味。你決定試試看，用三十天讓這裡重新熱鬧起來。');
+  await say('','推開門，木頭吧台還留著咖啡的香味。你決定試試看，用'+(LEN()===30?'三十':'十五')+'天讓這裡重新熱鬧起來。');
   await say('','（白天開店招呼客人，晚上可以上課提升自己、研發新品，或是去找在店裡認識的人。精神不夠時記得休息。）');
   goHub();
 }
@@ -372,7 +418,7 @@ $('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet();}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet();});
 function heartStr(v){const n=Math.round(v/20);return '<span class="hearts" aria-label="好感 '+v+'">'+'♥'.repeat(n)+'<span class="off">'+'♥'.repeat(5-n)+'</span></span>';}
 $('#h-stat').addEventListener('click',()=>{
-  let h='<h3>'+esc(G.name)+'的狀態</h3><p class="soft">店的名聲 '+G.rep+'，菜單 '+G.menu.length+' 樣</p>';
+  let h='<h3>'+esc(G.name)+'的狀態</h3><p class="soft">店的名聲 '+G.rep+'，菜單 '+G.menu.length+' 樣'+(LEN()!==30?'。十五天短篇'+(G.focus?'，主角：'+CHARS[G.focus].n:''):'')+(G.mod?'。<br>這一輪的設定：'+MODS[G.mod].n+'，'+MODS[G.mod].d:'')+'</p>';
   h+=Object.keys(STATS).map(k=>'<div class="kv"><span>'+STATS[k]+'</span><i><s style="width:'+G.stats[k]+'%"></s></i><b>'+G.stats[k]+'</b></div>').join('');
   const met=ids().filter(c=>G.met[c]);
   h+='<p class="sect" style="margin-top:14px">認識的人</p>'+(met.length?met.map(c=>{const C=CHARS[c];return '<div class="ppl"><span class="pt">'+portrait(C.look,'normal')+'</span><span class="tx"><b>'+C.n+'</b>　'+heartStr(G.aff[c])+(G.partner===c?'　交往中':'')+'<span>'+C.job+'，晚上常在'+C.eve.place+'（週'+C.eve.days.map(d=>WEEK[d]).join('、')+'）</span></span></div>';}).join(''):'<p class="soft">還沒認識任何人，先開店看看吧。</p>');
@@ -385,24 +431,24 @@ $('#h-stat').addEventListener('click',()=>{
 /* ================= HUB ================= */
 function goHub(){
   show('hub');
-  $('#h-day').innerHTML='第 '+G.day+' 天<small>／'+DAYS+'，週'+WEEK[wd()]+'</small>';$('#h-money').textContent=fmt(G.money);
+  $('#h-day').innerHTML='第 '+G.day+' 天<small>／'+LEN()+'，週'+WEEK[wd()]+'</small>';$('#h-money').textContent=fmt(G.money);
   $('#h-en').style.width=G.energy+'%';$('#h-env').textContent=Math.round(G.energy);
   const opts=$('#h-opts');let h='';
   if(G.phase==='morning'){
     $('#h-view').innerHTML=BG.cafe('day')+'<span class="cap">早上・咖啡館</span>';
-    const vis=ids().filter(c=>CHARS[c].visit.includes(wd())&&G.met[c]);
-    $('#h-msg').textContent=(G.day===1?'第一天開店，有點緊張。':pick(['陽光照進窗戶，是開店的好天氣。','磨豆機轉起來，店裡慢慢有了香味。','門口的風鈴輕輕響著。']))+(vis.length?'今天'+vis.map(c=>CHARS[c].short).join('、')+'可能會來。':'');
-    h='<button class="opt big" type="button" id="o-open"><span class="tx"><b>開店營業</b><span>招呼客人，記住常客喜歡什麼。精神 −20，店租與材料 $300</span></span></button>';
+    const vis=ids().filter(c=>visitsToday(c)&&G.met[c]);
+    $('#h-msg').textContent=(G.day===1?'第一天開店，有點緊張。':pick(['陽光照進窗戶，是開店的好天氣。','磨豆機轉起來，店裡慢慢有了香味。','門口的風鈴輕輕響著。']))+(vis.length?'今天'+vis.map(c=>CHARS[c].short).join('、')+'可能會來。':'')+(G.mod&&G.day<=2?'（這一輪的設定：'+MODS[G.mod].n+'）':'');
+    h='<button class="opt big" type="button" id="o-open"><span class="tx"><b>開店營業</b><span>招呼客人，記住常客喜歡什麼。精神 −20，店租與材料 $300</span></span></button>'+(G.day>=2?'<button class="opt" type="button" id="o-auto"><span class="tx"><b>交給工讀生顧店</b><span>不用一位一位招呼，直接看今天的結果。熟客好感加得比較少，也不會認識新朋友。精神 −10，工讀生 $200</span></span></button>':'')+(G.day>=3?'<button class="opt" type="button" id="o-helper" aria-pressed="'+!!G.helper+'"><span class="tx"><b>工讀生：'+(G.helper?'有請':'沒請')+'</b><span>'+(G.helper?'路過的客人交給工讀生，你專心招呼熟客。每天 $100':'請工讀生招呼路過的客人，你只要招呼熟客。每天 $100')+'</span></span></button>':'');
   }else{
     $('#h-view').innerHTML=BG.street('')+'<span class="cap">晚上・巷口</span>';
     $('#h-msg').textContent=G.energy<25?'今天好累，也許該早點休息。':'打烊了。今晚要做什麼呢？';
     const met=ids().filter(c=>G.met[c]);
-    if(met.length){h+='<p class="sect">去找人</p>';met.forEach(c=>{const C=CHARS[c],here=C.eve.days.includes(wd());
+    if(met.length){h+='<p class="sect">去找人</p>';met.forEach(c=>{const C=CHARS[c],here=eveToday(c);
       h+='<button class="opt" type="button" data-meet="'+c+'"'+(!here||G.energy<20?' disabled':'')+'><span class="pt">'+portrait(C.look,here?'smile':'closed')+'</span><span class="tx"><b>'+C.n+'　'+heartStr(G.aff[c])+'</b><span>'+(here?'今晚在'+C.eve.place+'。精神 −20':'今晚不在，週'+C.eve.days.map(d=>WEEK[d]).join('、')+'會在'+C.eve.place)+'</span></span></button>';});}
     h+='<p class="sect">提升自己</p>';
     ACTS.forEach(a=>{h+='<button class="opt" type="button" data-act="'+a.id+'"'+(G.money<a.cost||G.energy<a.en?' disabled':'')+'><span class="tx"><b>'+a.n+'　'+fmt(a.cost)+'</b><span>'+a.d+'。精神 −'+a.en+'</span></span></button>';});
     const next=RESEARCH.find(r=>!G.menu.includes(r));
-    if(next){const ok=G.stats.cook>=MENU[next].need;h+='<button class="opt" type="button" id="o-res"'+(!ok||G.energy<25?' disabled':'')+'><span class="tx"><b>研發新品：'+MENU[next].n+'</b><span>'+(ok?'加進菜單，能招待更多客人。精神 −25':'需要廚藝 '+MENU[next].need+'（目前 '+G.stats.cook+'）')+'</span></span></button>';}
+    if(next){const ok=G.mod==='recipe'||G.stats.cook>=MENU[next].need;h+='<button class="opt" type="button" id="o-res"'+(!ok||(G.mod!=='recipe'&&G.energy<25)?' disabled':'')+'><span class="tx"><b>研發新品：'+MENU[next].n+'</b><span>'+(ok?'加進菜單，能招待更多客人。'+(G.mod==='recipe'?'照著外婆的食譜做，不花精神':'精神 −25'):'需要廚藝 '+MENU[next].need+'（目前 '+G.stats.cook+'）')+'</span></span></button>';}
     h+='<p class="sect">其他</p><button class="opt" type="button" id="o-shop"><span class="tx"><b>買禮物</b><span>送給在意的人。不花精神</span></span></button>';
     h+='<button class="opt" type="button" id="o-rest"><span class="tx"><b>早點休息</b><span>明天精神會更好</span></span></button>';
   }
@@ -411,6 +457,8 @@ function goHub(){
 $('#h-opts').addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b||b.disabled)return;
   if(b.id==='o-open')cafeDay();
+  else if(b.id==='o-auto')autoDay();
+  else if(b.id==='o-helper'){G.helper=!G.helper;save();goHub();}
   else if(b.dataset.meet)meet(b.dataset.meet);
   else if(b.dataset.act)doAct(b.dataset.act);
   else if(b.id==='o-res')research();
@@ -501,7 +549,31 @@ const RAND=[
     const i=await choose([{t:'端一杯飲料過去，陪他坐一下'},{t:'隨口問「今天還好嗎？」'},{t:'不打擾，讓他靜一靜'}],false);
     if(i===0){addAff(c,4);showWho(C.look,'smile');affPop(4);await say(C.n,'謝謝。有人陪著，感覺好多了。',C.look,'smile');}
     else if(i===1){addAff(c,2);affPop(2);await say(C.n,'還好啦，只是有點累。',C.look,'normal');}
-    else{await say('','他過了一會兒自己離開了，給了你一個淡淡的微笑。');}}}
+    else{await say('','他過了一會兒自己離開了，給了你一個淡淡的微笑。');}}},
+  {id:'duo_qk',w:4,when:()=>G.met.qing&&G.met.kai&&G.day>=6&&!(G.duo&&G.duo.qk),run:async()=>{G.duo=G.duo||{};G.duo.qk=1;const Q=CHARS.qing.look,K=CHARS.kai.look;setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','曉晴在窗邊畫畫。阿凱一進門就大叫：「陳曉晴？國小坐我隔壁的那個陳曉晴？」',K,'surprised');
+    await say('陳曉晴','周凱！你就是把我畫本弄濕的那個人！我記了二十年！',Q,'surprised');
+    await say('周凱','那是意外啦！我是想幫你擋雨……',K,'blush');
+    const i=await choose([{t:'「那今天阿凱請客賠罪！」'},{t:'「畫本裡畫了什麼？好想看。」'},{t:'「阿凱小時候長怎樣？」'}],false);
+    if(i===0){duoAff('qing',3,'kai',3);await say('','阿凱乖乖付了兩杯的錢。曉晴笑到趴在桌上，說原諒他了。');}
+    else if(i===1){addAff('qing',5);affPop(5);await say('陳曉晴','是一隻撐著傘的小狗……啊，原來我那時候就在畫他。',Q,'blush');}
+    else{addAff('kai',5);affPop(5);await say('周凱','比現在瘦一半！不過跑步一樣是全班第一！',K,'smile');}}},
+  {id:'duo_yl',w:4,when:()=>G.met.yuan&&G.met.lin&&G.day>=8&&!(G.duo&&G.duo.yl),run:async()=>{G.duo=G.duo||{};G.duo.yl=1;const Y=CHARS.yuan.look,N=CHARS.lin.look;setScene(BG.cafe('day'),'巷口咖啡館');
+    await say('','予安在吧台攤開一張圖，是一座老音樂廳的修復設計。',Y,'normal');
+    await say('沈若琳','……這是我第一次上台演出的地方。我以為它早就要拆了。',N,'surprised');
+    await say('林予安','還沒。我在試著說服他們留下來。',Y,'normal');
+    const i=await choose([{t:'「你們應該一起辦一場募款音樂會！」'},{t:'「若琳，說說你第一次上台的事吧。」'},{t:'「予安，這張圖畫了多久？」'}],false);
+    if(i===0){duoAff('yuan',3,'lin',3);await say('','兩個人互看一眼，難得同時笑了。那天你們一直聊到很晚。');}
+    else if(i===1){addAff('lin',5);affPop(5);await say('沈若琳','那天我緊張到弓都在抖。……可是台下的燈很暖，像這間店。',N,'smile');}
+    else{addAff('yuan',5);affPop(5);await say('林予安','三年。每次想放棄，就來這裡喝杯咖啡。',Y,'smile');}}},
+  {id:'duo_yr',w:4,when:()=>G.met.yichen&&G.met.ruolan&&G.day>=8&&!(G.duo&&G.duo.yr),run:async()=>{G.duo=G.duo||{};G.duo.yr=1;const C1=CHARS.yichen.look,R=CHARS.ruolan.look;setScene(BG.flower('day'),'轉角花店');
+    await say('','一陣慌亂的叫聲。麻糬掙脫牽繩衝進若蘭的花店，撞翻了一整桶向日葵。',C1,'surprised');
+    await say('江亦辰','對不起對不起！我馬上賠……',C1,'surprised');
+    await say('白若蘭','沒關係啦。你看，牠趴在花裡面的樣子，好可愛。',R,'smile');
+    const i=await choose([{t:'「我們一起幫忙收拾吧。」'},{t:'「若蘭，這些花可以拿來布置咖啡館嗎？」'},{t:'「亦辰，麻糬是不是喜歡花香？」'}],false);
+    if(i===0){duoAff('yichen',3,'ruolan',3);await say('','三個人蹲在地上撿花，麻糬在旁邊搖尾巴，好像這一切都是牠的功勞。');}
+    else if(i===1){addAff('ruolan',5);affPop(5);await say('白若蘭','當然可以。被狗狗挑過的花，一定很有精神。',R,'smile');}
+    else{addAff('yichen',5);affPop(5);await say('江亦辰','牠年輕的時候最愛在花園裡打滾。……謝謝你們，讓牠今天這麼開心。',C1,'smile');}}}
 ];
 async function randomEvent(){
   if(G.day<3||Math.random()>.55)return;
@@ -510,40 +582,114 @@ async function randomEvent(){
   G.lastRand=ev.id;try{window.GC&&GC.add('corner-cafe','rand',1);}catch(e){}
   await ev.run();save();setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
 }
+
+/* ---------- 比較有彈性的點單與閒聊 ---------- */
+const TAGS={americano:['caf'],latte:['caf','milk'],earlgrey:['tea'],cocoa:['sweet','warm'],sandwich:['food'],cheesecake:['sweet','food'],pourover:['caf'],cinnamon:['sweet','food','warm'],matcha:['tea','milk'],lemontart:['sweet']};
+const MOODS=[['caf','今天好睏，想要提神的。'],['sweet','今天想吃點甜的，犒賞一下自己。'],['food','有點餓，有沒有可以墊肚子的？'],['tea','今天不想喝咖啡，來點茶好了。'],['warm','外面好冷，想要暖暖的。'],['milk','想喝順口一點、有奶的。']];
+const CHAT={
+  yuan:['這週的書展快結束了，我挑了兩本詩集。','你有沒有覺得下雨天的咖啡比較香？','最近在讀一本講老街的書，裡面有寫到這條巷子。'],
+  qing:['我今天畫了一整天的貓，手好痠。','你看，這是我剛畫的你們店門口！','下次的插畫展，可以放一張這間店的畫嗎？'],
+  kai:['今天早上跑了十公里，腿已經不是我的了。','下次一起去爬山嗎？我知道一條不累的路線。','你的咖啡是我健身後的獎勵。'],
+  lin:['今天練琴練到忘記吃飯。','這首曲子的中段一直彈不好，好煩。','你店裡放的音樂，我很喜歡。'],
+  yichen:['今天幫一隻好大的黃金獵犬洗牙，牠一直舔我。','麻糬最近很愛睡在你們門口的那塊墊子上。','你有養寵物嗎？感覺你會是很溫柔的主人。'],
+  ruolan:['今天進了一批海芋，好想送你一枝。','這個季節的花最好整理了，顏色都好溫柔。','如果你的店要辦活動，我可以幫忙佈置花。']
+};
+const GENCHAT=['今天店裡好熱鬧。','窗外的陽光剛剛好。','這個時間來，剛好人不多。'];
+function weekdayChat(){const w=wd();return w===4?'終於快週末了。':w>=5?'假日還要出門，辛苦你啦。':'又是新的一週，加油。';}
+function askType(c){const known=(G.tried&&G.tried[c]&&G.tried[c][CHARS[c].fav]);const r=Math.random();
+  if(known)return r<.35?'usual':r<.6?'mood':r<.75?'change':'free';return r<.45?'mood':r<.8?'free':'change';}
+async function serveRegular(c){
+  const C=CHARS[c];G.tried=G.tried||{};const tried=G.tried[c]=G.tried[c]||{};
+  const type=askType(c);let opts=G.menu.map(k=>({t:MENU[k].n,s:fmt(MENU[k].p)})),mood=null,quick=-1;
+  if(type==='usual'){await say(C.n,C.lines.again,C.look,'normal');if(G.menu.includes(C.fav)){quick=0;opts=[{t:'★ 老樣子（'+MENU[C.fav].n+'）',s:fmt(MENU[C.fav].p)}].concat(opts);}}
+  else if(type==='change')await say(C.n,pick(['今天想換換口味，你幫我挑一個吧。','老是喝同一種有點膩了，有推薦的嗎？','今天想試點不一樣的。']),C.look,'smile');
+  else if(type==='free')await say(C.n,pick(['交給你決定吧。','今天喝什麼好呢……你推薦吧。','你覺得我今天適合什麼？']),C.look,'normal');
+  else{mood=pick(MOODS.filter(m=>G.menu.some(k=>TAGS[k].includes(m[0]))));await say(C.n,mood[1],C.look,'normal');}
+  let i=await choose(opts,true,'要端什麼給'+C.short+'？');if(quick===0){i=i===0?G.menu.indexOf(C.fav):i-1;}
+  const got=G.menu[i],isNew=!tried[got];tried[got]=(tried[got]||0)+1;
+  let d,face,line;
+  const base=got===C.fav?'fav':C.ok.includes(got)?'ok':C.bad.includes(got)?'bad':'meh';
+  if(type==='usual'){d=base==='fav'?4:base==='ok'?1:base==='bad'?-2:0;line=base==='fav'?C.lines.fav:base==='bad'?C.lines.bad:C.lines.ok;}
+  else if(type==='change'){if(base==='fav'){d=1;line='哈哈，又是這個。不過你記得我喜歡，很開心。';}else if(base==='ok'){d=4;line='這個好！今天就是想要這種感覺。';}else if(base==='bad'){d=-1;line=C.lines.bad;}else{d=2;line='第一次喝這個，意外地不錯耶。';}}
+  else if(type==='mood'){const hit=TAGS[got].includes(mood[0]);if(hit&&base==='fav'){d=5;line=C.lines.fav;}else if(hit&&base!=='bad'){d=3;line=pick(['就是這個，你怎麼知道！','剛好是我現在需要的。','謝謝，好貼心。']);}else if(base==='fav'){d=2;line=C.lines.fav;}else if(base==='bad'){d=-2;line=C.lines.bad;}else{d=0;line='嗯……跟我想的不太一樣，不過還是謝謝。';}}
+  else{d=base==='fav'?4:base==='ok'?2:base==='bad'?-1:1;line=base==='fav'?C.lines.fav:base==='bad'?C.lines.bad:C.lines.ok;if(isNew&&base!=='bad'){d+=1;line+='　（第一次喝這個，'+C.short+'好像很新奇）';}}
+  face=d>=3?'smile':d<0?'sad':'normal';
+  return{got,d,face,line};
+}
+async function chatAfter(c){
+  if(Math.random()>.4)return;const C=CHARS[c];const pool=(CHAT[c]||[]).concat([weekdayChat()]);
+  await say(C.n,pick(pool),C.look,'smile');
+  const i=await choose([{t:pick(['「真的嗎？跟我說說。」','「好好喔。」','「辛苦了。」'])},{t:'笑著點點頭'}],false);
+  if(i===0){addAff(c,1);affPop(1);}
+}
 async function cafeDay(){
   show('scene');gsfx('door');const bar=()=>'今日 '+fmt(earn);let earn=0,repD=0;
   setScene(BG.cafe('day'),'巷口咖啡館','今日 $0');
   await randomEvent();
-  const vis=ids().filter(c=>CHARS[c].visit.includes(wd())&&(!S2.includes(c)||G.day>=5));
-  const nGen=2+Math.floor(G.rep/25);const queue=[];
+  await criticVisit();
+  const vis=ids().filter(c=>visitsToday(c)&&(!S2.includes(c)||G.day>=sc(5)));
+  const nGen=Math.max(1,2+Math.floor(G.rep/25)-(G.mod==='chain'?1:0));const queue=[];
   for(let i=0;i<nGen;i++)queue.push({gen:true});
   vis.forEach(c=>queue.splice(Math.floor(Math.random()*(queue.length+1)),0,{c}));
   const mult=1+G.stats.cook/100;
   const menuOpts=()=>G.menu.map(k=>({t:MENU[k].n,s:fmt(MENU[k].p)}));
+  let helped=0,helpEarn=0;
   for(const q of queue){
+    if(q.gen&&G.helper){const pool=ORDERS.filter(o=>G.menu.includes(o[1]));const want=pick(pool)[1];const v=Math.round(MENU[want].p*mult*.85*itemMul(want));helped++;helpEarn+=v;earn+=v;repD+=1;$('#s-bar').textContent=bar();continue;}
     if(q.gen){
       const L=genericLook();const pool=ORDERS.filter(o=>G.menu.includes(o[1]));const [txt,want]=pick(pool);
       await say('客人',txt,L,'normal');
       const i=await choose(menuOpts(),true,'要端什麼給客人？');const got=G.menu[i];
-      if(got===want){const v=Math.round(MENU[got].p*mult+(G.rep>=50?20:0));earn+=v;gsfx('cash');repD+=1;showWho(L,'smile');pop('+'+fmt(v),'var(--amber)');await say('客人',pick(['就是想要這個，謝謝！','好喝！下次還會再來。','你很懂耶。']));}
+      if(got===want){const v=Math.round(MENU[got].p*mult*itemMul(got)+(G.rep>=50?20:0));earn+=v;gsfx('cash');repD+=1;showWho(L,'smile');pop('+'+fmt(v),'var(--amber)');await say('客人',pick(['就是想要這個，謝謝！','好喝！下次還會再來。','你很懂耶。']));}
       else{const v=Math.round(MENU[got].p*.5);earn+=v;repD-=2;showWho(L,'sad');pop('+'+fmt(v),'var(--soft)');await say('客人',pick(['呃……這不是我想要的，算了。','嗯……跟我想的不太一樣。']));}
     }else{
       const c=q.c,C=CHARS[c];
-      if(!G.met[c]){await introScene(c);}
-      else{await say(C.n,C.lines.again,C.look,'normal');}
-      const i=await choose(menuOpts(),true,'要端什麼給'+C.short+'？');const got=G.menu[i];
-      let d,face,line;
-      if(got===C.fav){d=4;face='smile';line=C.lines.fav;}else if(C.ok.includes(got)){d=1;face='normal';line=C.lines.ok;}else if(C.bad.includes(got)){d=-2;face='sad';line=C.lines.bad;}else{d=0;face='normal';line=C.lines.ok;}
-      const v=Math.round(MENU[got].p*mult);earn+=v;addAff(c,d);showWho(C.look,face);affPop(d);await say(C.n,line);
+      let got,d,face,line;
+      if(!G.met[c]){await introScene(c);const i=await choose(menuOpts(),true,'要端什麼給'+C.short+'？');got=G.menu[i];G.tried=G.tried||{};(G.tried[c]=G.tried[c]||{})[got]=1;
+        if(got===C.fav){d=4;face='smile';line=C.lines.fav;}else if(C.ok.includes(got)){d=1;face='normal';line=C.lines.ok;}else if(C.bad.includes(got)){d=-2;face='sad';line=C.lines.bad;}else{d=0;face='normal';line=C.lines.ok;}}
+      else{({got,d,face,line}=await serveRegular(c));}
+      const v=Math.round(MENU[got].p*mult*itemMul(got));earn+=v;addAff(c,G.mod==='chain'&&d>0?Math.round(d*1.5):d);showWho(C.look,face);affPop(d);await say(C.n,line);
+      if(G.met[c])await chatAfter(c);
       if(got!==C.fav&&!G.menu.includes(C.fav)&&!G.seenHint[c]){G.seenHint[c]=1;await say('',C.short+'好像在找菜單上沒有的東西。也許研發「'+MENU[C.fav].n+'」會讓他開心。');}
     }
     $('#s-bar').textContent=bar();
   }
-  G.rep=clamp(G.rep+repD,0,100);G.money+=earn-300;G.energy=clamp(G.energy-20,0,100);G.phase='evening';save();
+  if(helped){await say('','工讀生招呼了 '+helped+' 位路過的客人，收入 '+fmt(helpEarn)+'（工讀生薪水 $100）。');}
+  G.rep=clamp(G.rep+(repD>0&&G.mod==='tight'?repD*2:repD),0,100);G.money+=earn-rent()-(G.helper?100:0);G.energy=clamp(G.energy-20,0,100);G.phase='evening';save();
   try{window.GC&&GC.add('corner-cafe','days',1);}catch(e){}
   showWho(null);setScene(BG.cafe('night'),'打烊後');
-  await say('','打烊了。今天收入 '+fmt(earn)+'，扣掉店租和材料 $300。店的名聲 '+(repD>=0?'+':'')+repD+'。');
+  await say('','打烊了。今天收入 '+fmt(earn)+'，扣掉店租和材料 '+fmt(rent())+'。店的名聲 '+(repD>=0?'+':'')+repD+'。');
   goHub();
+}
+function hadEnding(c){const g=gal();return g.includes('love-'+c)||g.includes('friend-'+c);}
+/* 交給工讀生顧店：直接算結果 */
+async function autoDay(){
+  show('scene');gsfx('door');setScene(BG.cafe('day'),'巷口咖啡館');showWho(null);
+  const vis=ids().filter(c=>visitsToday(c)&&(!S2.includes(c)||G.day>=sc(5)));
+  const nGen=Math.max(1,2+Math.floor(G.rep/25)-(G.mod==='chain'?1:0)),mult=1+G.stats.cook/100,pool=ORDERS.filter(o=>G.menu.includes(o[1]));
+  let earn=0,repD=0,newFace=0;const lines=[];
+  for(let i=0;i<nGen;i++){const w=pick(pool)[1];earn+=Math.round(MENU[w].p*mult*.85*itemMul(w));repD+=1;}
+  vis.forEach(c=>{const C=CHARS[c];if(!G.met[c]){newFace++;return;}
+    const got=G.menu.includes(C.fav)?C.fav:(C.ok.find(k=>G.menu.includes(k))||G.menu[0]);earn+=Math.round(MENU[got].p*mult*itemMul(got));
+    const d=got===C.fav?2:1;addAff(c,d);lines.push(C.short+'來了，工讀生端了'+MENU[got].n+'。（好感 +'+d+'）');});
+  G.rep=clamp(G.rep+(repD>0&&G.mod==='tight'?repD*2:repD),0,100);G.money+=earn-rent()-200;G.energy=clamp(G.energy-10,0,100);G.phase='evening';save();
+  try{window.GC&&GC.add('corner-cafe','days',1);}catch(e){}
+  await say('','你把店交給工讀生，自己在後面備料、整理帳本。');
+  for(const l of lines)await say('',l);
+  if(newFace)await say('','聽說有'+(newFace>1?newFace+'位':'一位')+'新面孔來過，下次自己顧店也許能認識。');
+  setScene(BG.cafe('night'),'打烊後');
+  await say('','今天收入 '+fmt(earn)+'，扣掉店租和材料 '+fmt(rent())+'、工讀生 $200。店的名聲 +'+repD+'。');
+  goHub();
+}
+/* 設定卡「美食評論家」：月中來一次 */
+async function criticVisit(){
+  if(G.mod!=='critic'||G.criticDone||G.day<sc(10))return;G.criticDone=1;
+  const pool=ORDERS.filter(o=>G.menu.includes(o[1])),adv=pool.filter(o=>RESEARCH.includes(o[1])),pk2=pick(adv.length?adv:pool);const L=genericLook();
+  await say('','一位拿著筆記本的客人坐到角落，安靜地觀察店裡每個細節。',L,'normal');
+  await say('美食評論家','聽說這間店最近很有名。'+pk2[0],L,'normal');
+  const i=await choose(G.menu.map(k=>({t:MENU[k].n,s:fmt(MENU[k].p)})),true,'評論家想要什麼？');
+  if(G.menu[i]===pk2[1]){repAdd(15);cash(500);showWho(L,'smile');pop('名聲 +15','var(--amber)');await say('美食評論家','……很好。這篇文章，我會寫得很長。',L,'smile');await say('','（名聲 +15，評論家多付了 $500 小費）');}
+  else{repAdd(-8);showWho(L,'sad');await say('美食評論家','嗯，跟我期待的不太一樣。',L,'normal');await say('','（名聲 −8）他在筆記本上寫了很久。');}
 }
 async function introScene(c){
   const C=CHARS[c];G.met[c]=1;
@@ -563,10 +709,13 @@ async function meet(c){
   const C=CHARS[c];G.energy=clamp(G.energy-20,0,100);
   show('scene');setScene(BG[C.eve.bg]?BG[C.eve.bg]('night'):BG.street(''),C.eve.place);
   const k=G.ev[c],req=EVREQ[k];
-  const ready=req&&G.aff[c]>=req.aff&&(req.si==null||G.stats[C.stats[req.si]]>=req.sv)&&(!req.day||G.day>=req.day)&&!(k===4&&G.partner&&G.partner!==c);
-  if(ready){await EVENTS[c][k]();G.ev[c]=k+1;}
+  const ready=req&&G.aff[c]>=req.aff&&(req.si==null||G.stats[C.stats[req.si]]>=svN(req.sv))&&(!req.day||G.day>=sc(req.day))&&!(k===4&&G.partner&&G.partner!==c);
+  G.dv=G.dv||{};G.br=G.br||{};
+  if(ready){if(k===3&&G.br[c]===0&&ALT[c])await ALT[c]();else await EVENTS[c][k]();
+    if(k===1){const pk=G.pk&&G.pk[c];G.br[c]=pk&&pk.d>0?pk.i:-1;}G.ev[c]=k+1;}
+  else if(!G.dv[c]&&DV[c]&&k>=1&&G.aff[c]>=30&&hadEnding(c)){G.dv[c]=1;await DV[c]();}
   else{await chat(c);
-    if(req&&G.aff[c]>=req.aff&&req.si!=null&&G.stats[C.stats[req.si]]<req.sv)await say('','（'+C.short+'好像還想聊更深的話題。也許你的'+STATS[C.stats[req.si]]+'要再提升到 '+req.sv+'。）');}
+    if(req&&G.aff[c]>=req.aff&&req.si!=null&&G.stats[C.stats[req.si]]<svN(req.sv))await say('','（'+C.short+'好像還想聊更深的話題。也許你的'+STATS[C.stats[req.si]]+'要再提升到 '+svN(req.sv)+'。）');}
   const gi=Object.keys(G.gifts).filter(g=>G.gifts[g]>0);
   if(gi.length){const opts=gi.map(g=>({t:'送'+GIFTS[g].n}));opts.push({t:'不送禮物'});
     const i=await choose(opts,false,'要送禮物給'+C.short+'嗎？');
@@ -596,7 +745,7 @@ async function doAct(id){
   endDay('去了'+a.n+'。'+Object.keys(fx).map(k=>STATS[k]+' +'+fx[k]).join('、')+'。'+(extra?'\n'+extra:''),0);
 }
 function research(){
-  const next=RESEARCH.find(r=>!G.menu.includes(r));if(!next)return;G.menu.push(next);G.energy=clamp(G.energy-25,0,100);G.stats.cook=clamp(G.stats.cook+2,0,100);
+  const next=RESEARCH.find(r=>!G.menu.includes(r));if(!next)return;G.menu.push(next);if(G.mod!=='recipe')G.energy=clamp(G.energy-25,0,100);G.stats.cook=clamp(G.stats.cook+2,0,100);
   endDay('試做了好幾次，終於做出滿意的'+MENU[next].n+'！明天開始加進菜單。（廚藝 +2）',0);
 }
 function giftShop(){
@@ -608,14 +757,14 @@ async function endDay(text,bonus){
   gsfx('gong');
   show('scene');setScene(BG.street(''),'夜晚');showWho(null);
   for(const t of text.split('\n'))await say('',t);
-  if(G.day>=DAYS){await finale();return;}
+  if(G.day>=LEN()){await finale();return;}
   G.day++;G.phase='morning';G.energy=clamp(G.energy+45+G.stats.fit/4+bonus,0,100);save();
   goHub();
 }
 
 /* ================= STORY EVENTS ================= */
 async function pickAff(c,opts){
-  const C=CHARS[c];const i=await choose(opts.map(o=>({t:o.t,dis:o.dis,s:o.s})),false);const o=opts[i];
+  const C=CHARS[c];const i=await choose(opts.map(o=>({t:o.t,dis:o.dis,s:o.s})),false);const o=opts[i];G.pk=G.pk||{};G.pk[c]={i,d:o.d||0};
   if(o.d)addAff(c,o.d);if(o.fx)o.fx();showWho(C.look,o.face||(o.d>=6?'blush':o.d>0?'smile':'sad'));affPop(o.d||0);
   for(const raw of o.r){const l=Array.isArray(raw)?raw[0]:String(raw);await say(l[0]==='-'?'':C.n,l.replace(/^-/,''));}return i;
 }
@@ -737,6 +886,66 @@ const EVENTS={
 };
 
 /* ================= ENDINGS ================= */
+/* ---------- 劇情分歧：第二段劇情選第一個選項的人，第四段會看到不同的版本 ---------- */
+const ALT={
+  yuan:async()=>{const L=CHARS.yuan.look;setScene(BG.street(''),'舊城區');
+    await say('','那棟老公寓拆除的早上，予安傳了訊息給你：「可以陪我去嗎？」',L,'normal');
+    await say('','怪手一下一下敲進牆裡。予安一直沒說話，直到工人遞給他一塊磨石子地磚。',L,'sad');
+    await say('林予安','我跟他們要的。是那天我們站著的那層樓梯。',L,'normal');
+    await pickAff('yuan',[{t:'「把它鑲在店裡的吧台上吧。」',d:9,r:[['-他愣了一下，然後很輕地笑了。'],['這樣，它就有新的地方可以待了。']]},{t:'「你自己留著吧，那是你的回憶。」',d:6,r:[['也是我們的。……不過，我會好好收著。']]}]);},
+  qing:async()=>{const L=CHARS.qing.look;setScene(BG.cafe('day'),'咖啡館');
+    await say('','曉晴抱著畫本衝進店裡，臉紅紅的。',L,'blush');
+    await say('陳曉晴','你還記得畫展那天嗎？我回家以後，把你那天的樣子畫下來了……',L,'blush');
+    await say('陳曉晴','我想拿這張去參加插畫比賽。可、可以嗎？',L,'blush');
+    await pickAff('qing',[{t:'「當然好，我很榮幸。」',d:8,r:[['真的嗎？！我一定會拿獎回來給你看！'],['-她抱著畫本轉了一圈，差點撞到椅子。']]},{t:'「可以，但要把我畫得比本人好看喔。」',d:7,r:[['-她噗哧一聲笑出來。'],['不用啦，你本人就已經……啊，沒事！']]}]);},
+  kai:async()=>{const L=CHARS.kai.look;setScene(BG.street(''),'消防分隊');
+    await say('','消防分隊開放日。阿凱穿著整套裝備，站在紅色的消防車前面朝你揮手。',L,'smile');
+    await say('周凱','上次你跟得上我跑步，我就想說，你一定撐得住這個！',L,'smile');
+    await pickAff('kai',[{t:'試穿消防衣，拿起水帶',d:8,r:[['-衣服比想像中重很多，你差點站不穩，他從後面扶住你。'],['很重吧？我每天就是穿著它，想著要平安回家。']]},{t:'帶一大袋三明治請隊員們吃',d:G.menu.includes('sandwich')?9:7,r:[['-隊員們一擁而上，阿凱搶到最後一個，硬是分了一半給你。'],['以後隊上的早餐，可以都交給你嗎？']]}]);},
+  lin:async()=>{const L=CHARS.lin.look;setScene(BG.stage(),'排練室');
+    await say('','若琳約你到空無一人的排練室。譜架上放著一份新寫的曲子，標題還空著。',L,'normal');
+    await say('沈若琳','上次你說，第二樂章讓你想到下雨的巷口。我一直想著這句話，寫了這首。',L,'smile');
+    await say('','她拉完一段，看著你：「你覺得，它像什麼？」',L,'normal');
+    await pickAff('lin',[{t:'「像打烊後，還亮著一盞燈的店。」',d:9,r:[['-她低頭寫下幾個字，又劃掉，最後只寫了「巷口」。'],['就叫這個吧。']]},{t:'「像雨停之後的第一口熱茶。」',d:7,r:[['……你總是說得出我說不出來的話。']]}]);},
+  yichen:async()=>{const L=CHARS.yichen.look;setScene(BG.cafe('day'),'咖啡館');
+    await say('','亦辰抱著一個紙箱走進店裡。箱子裡探出一顆小小的頭，是那天你幫忙按住的小貓。',L,'smile');
+    await say('江亦辰','牠完全好了。只是一直沒有人領養……牠好像比較喜歡你。',L,'smile');
+    await pickAff('yichen',[{t:'「那就讓牠當店貓吧。」',d:9,r:[['-小貓跳上吧台，在收銀機旁邊縮成一團，好像本來就住在這裡。'],['以後我可以常常來看牠嗎？……也來看你。']]},{t:'「我幫你在店裡貼送養海報。」',d:7,r:[['謝謝。你總是想得很周到。'],['-他蹲下來摸摸小貓，笑容比平常放鬆。']]}]);},
+  ruolan:async()=>{const L=CHARS.ruolan.look;setScene(BG.flower('day'),'花店');
+    await say('','若蘭約你到花店。工作台上，那束垂頭的花已經變成一個小小的乾燥花框。',L,'smile');
+    await say('白若蘭','你說要把它留下來，我就照做了。你看，顏色是不是比想像中溫柔？',L,'smile');
+    await pickAff('ruolan',[{t:'「掛在店裡的窗邊，每天都看得到。」',d:8,r:[['-她把花框貼在胸口，像在想像它掛上去的樣子。'],['那我以後經過，都會偷看一眼。']]},{t:'「下一束，我們一起做。」',d:9,r:[['-她愣了一下，耳朵慢慢紅了。'],['……好。說好了，不能反悔喔。']]}]);}
+};
+/* ---------- 似曾相識：完成過這個角色的結局，下一輪會多一段 ---------- */
+const DV={
+  yuan:async()=>{const L=CHARS.yuan.look;setScene(BG.cafe('night'),'咖啡館');
+    await say('','予安翻著速寫本，突然停在某一頁。',L,'surprised');
+    await say('林予安','奇怪……這張是我很久以前畫的。吧台後面的人，跟你好像。',L,'surprised');
+    await say('林予安','可是那時候，我們應該還不認識。',L,'normal');
+    await pickAff('yuan',[{t:'「也許，你本來就會走進這間店。」',d:6,r:[['……或許吧。我好像一直在找這個位子。']]},{t:'「那張畫可以送我嗎？」',d:7,r:[['-他撕下那頁，在角落寫了日期，猶豫了一下，又補上一句：「又見面了。」']]}]);},
+  qing:async()=>{const L=CHARS.qing.look;setScene(BG.park('night'),'夜晚的公園');
+    await say('陳曉晴','跟你說喔，我最近一直夢到這間店。牆上掛著我的畫，還有人在奶泡上拉了一顆愛心。',L,'smile');
+    await say('陳曉晴','醒來以後好想哭，可是又覺得好幸福。很奇怪吧？',L,'blush');
+    await pickAff('qing',[{t:'「一點都不奇怪。那幅畫，我們真的掛起來吧。」',d:7,r:[['……嗯！這次一定要！'],['-她說「這次」的時候，自己也愣了一下。']]},{t:'「那我明天拉一顆愛心給你。」',d:6,r:[['一言為定！會成真的那種！']]}]);},
+  kai:async()=>{const L=CHARS.kai.look;setScene(BG.river(),'河堤');
+    await say('周凱','跟你說一件怪事。我總覺得，我以前在你店裡吃過一個超好吃的三明治。',L,'normal');
+    await say('周凱','可是你的店才開沒多久啊？我是不是太餓了……',L,'surprised');
+    await pickAff('kai',[{t:'「那明天就幫你做一個一樣的。」',d:7,r:[['那我要第一個到！老闆，老樣子！'],['-說完他自己也愣住了：「……老樣子？」']]},{t:'「也許是很久以前的約定吧。」',d:6,r:[['約定喔……那我一定會守住的。']]}]);},
+  lin:async()=>{const L=CHARS.lin.look;setScene(BG.street('rain'),'雨夜');
+    await say('','雨夜，若琳在騎樓下輕輕哼著一段旋律。',L,'closed');
+    await say('沈若琳','這首曲子，我不記得是什麼時候寫的。可是每次經過你的店，它就會自己出現。',L,'normal');
+    await say('沈若琳','我想把它叫做〈巷口〉。你覺得呢？',L,'smile');
+    await pickAff('lin',[{t:'「很適合。我好像聽過。」',d:7,r:[['……我也覺得，你好像聽過。']]},{t:'「那要第一個拉給我聽。」',d:6,r:[['-她把傘往你那邊靠了一點。'],['好，只拉給你聽。']]}]);},
+  yichen:async()=>{const L=CHARS.yichen.look;setScene(BG.street(''),'店門口');
+    await say('','亦辰牽著麻糬經過。老狗一看到你，就自己走到咖啡館門口那塊墊子上趴下。',L,'surprised');
+    await say('江亦辰','牠很少這樣。好像……這裡本來就是牠的位子。',L,'surprised');
+    await pickAff('yichen',[{t:'「那就幫牠保留這個位子吧。」',d:7,r:[['-他蹲下來摸摸麻糬，聲音很輕。'],['謝謝。我也是，總覺得來這裡像回家。']]},{t:'端一碗溫水給麻糬',d:6,r:[['-麻糬喝完，滿足地嘆了一口氣。'],['你對牠好溫柔。……跟我記得的一樣。']]}]);},
+  ruolan:async()=>{const L=CHARS.ruolan.look;setScene(BG.flower('night'),'花店');
+    await say('','若蘭遞給你一枝花，剛好是你最喜歡的那一種。',L,'smile');
+    await say('白若蘭','你沒說過你喜歡這個吧？可是我挑花的時候，手就自己伸過去了。',L,'surprised');
+    await pickAff('ruolan',[{t:'「也許你本來就知道。」',d:7,r:[['……那就當作，是花替我記住的吧。']]},{t:'「那我也要記住你喜歡什麼。」',d:6,r:[['-她笑著遞給你一張小卡，上面寫著她最喜歡的花。']]}]);}
+};
+function duoAff(a,va,b,vb){addAff(a,va);addAff(b,vb);gsfx('good');pop('♥ '+CHARS[a].short+' +'+va+'　'+CHARS[b].short+' +'+vb);}
 const ENDINGS=[
   {id:'love-yuan',n:'窗邊的老位子',who:'yuan',t:'一年後，予安設計的第一棟建築落成了。開幕那天，他在致詞時說：「靈感來自巷口一間咖啡館。」\n每天早上八點，他仍然坐在窗邊的老位子，點同一杯手沖。只是現在，他會等你打烊，一起走回家。'},
   {id:'love-qing',n:'畫在奶泡上的愛心',who:'qing',t:'曉晴畫的菜單掛在牆上，成了店裡最受歡迎的拍照角落。她的繪本出版了，書名叫《巷口咖啡館》。\n簽書會那天，她在每一本書的最後一頁都畫了一顆小小的愛心，就像你每天為她拉的那杯拿鐵。'},
@@ -759,11 +968,11 @@ async function finale(){
   if(G.partner)id='love-'+G.partner;
   else{const best=ids().slice().sort((a,b)=>(G.aff[b]||0)-(G.aff[a]||0))[0];
     if((G.aff[best]||0)>=60)id='friend-'+best;
-    else if(G.money>=25000&&G.rep>=60)id='cafe-top';
-    else if(G.money>=8000)id='cafe-warm';else id='cafe-next';}
+    else if(G.money>=25000*LEN()/30&&G.rep>=60)id='cafe-top';
+    else if(G.money>=8000*LEN()/30)id='cafe-warm';else id='cafe-next';}
   const E=ENDINGS.find(e=>e.id===id);addGal(id);try{GCStore.setItem('cornercafe-inherit',JSON.stringify({stats:G.stats,menu:G.menu,money:Math.round(G.money),rep:G.rep}));}catch(e){}try{GCStore.removeItem(KEY);}catch(e){}
-  show('scene');setScene(E.who?BG[CHARS[E.who].eve.bg]('night'):BG.cafe('day'),'第三十天');showWho(E.who?CHARS[E.who].look:null,'smile');
-  await say('','三十天，就這樣過去了。');
+  show('scene');setScene(E.who?BG[CHARS[E.who].eve.bg]('night'):BG.cafe('day'),(LEN()===30?'第三十天':'第十五天'));showWho(E.who?CHARS[E.who].look:null,'smile');
+  await say('',(LEN()===30?'三十':'十五')+'天，就這樣過去了。');
   show('ending');
   const ex=E.who?'<div style="width:160px;margin:0 auto">'+portrait(CHARS[E.who].look,E.id.startsWith('love')?'blush':'smile')+'</div>':storeSVG();
   $('#end-body').innerHTML='<div class="end">'+ex+'<p class="k">'+(E.id.startsWith('love')?'戀愛結局':E.id.startsWith('friend')?'友情結局':'咖啡館結局')+'</p><h2>'+E.n+'</h2>'+E.t.split('\n').map(p=>'<p class="t">'+esc(p)+'</p>').join('')+
@@ -771,9 +980,12 @@ async function finale(){
     '<p class="k" style="margin:12px 0">已解鎖 '+gal().length+' / '+ENDINGS.length+' 個結局</p><button class="btn main close" type="button" id="e-again">再玩一次</button><button class="btn close" type="button" id="e-gal">結局圖鑑</button></div>';
   $('#e-again').addEventListener('click',()=>{titleInit();});$('#e-gal').addEventListener('click',showGallery);
 }
+function endHint(e){if(e.who&&S2.includes(e.who)&&!s2on())return '先完成任何一個結局，第二季的角色才會出現';const n=e.who?CHARS[e.who].short:'',ta=e.who&&SHE[e.who]?'她':'他';
+  if(e.id.startsWith('love'))return '跟'+n+'的好感很高，在最後一段劇情答應'+ta;if(e.id.startsWith('friend'))return '跟'+n+'很要好（好感 60 以上），但沒有交往';
+  return {'cafe-top':'沒有交往，存到 $25,000、名聲 60 以上（短篇減半）','cafe-warm':'沒有特別要好的人，存到 $8,000（短篇減半）','cafe-next':'其他情況'}[e.id]||'';}
 function showGallery(){
   const g=gal();
-  sheet('<h3>結局圖鑑</h3><p class="soft">已解鎖 '+g.length+' / '+ENDINGS.length+'。每個角色都有戀愛和友情兩種結局，咖啡館也有三種。</p><div class="gal">'+ENDINGS.map(e=>{const ok=g.includes(e.id);return '<div class="row">'+(e.who?'<span class="pt" style="width:44px;height:48px;border-radius:12px;overflow:hidden;background:var(--bg);flex:none">'+(ok?portrait(CHARS[e.who].look,'smile'):'')+'</span>':'')+'<div class="tx"><b>'+(ok?e.n:'？？？')+'</b><span>'+(e.id.startsWith('love')?'戀愛結局・'+CHARS[e.who].n:e.id.startsWith('friend')?'友情結局・'+CHARS[e.who].n:'咖啡館結局')+'</span></div></div>';}).join('')+'</div><button class="btn close" type="button" data-close>關閉</button>');
+  sheet('<h3>結局圖鑑</h3><p class="soft">已解鎖 '+g.length+' / '+ENDINGS.length+'。每個角色都有戀愛和友情兩種結局，咖啡館也有三種。</p><div class="gal">'+ENDINGS.map(e=>{const ok=g.includes(e.id);return '<div class="row">'+(e.who?'<span class="pt" style="width:44px;height:48px;border-radius:12px;overflow:hidden;background:var(--bg);flex:none">'+(ok?portrait(CHARS[e.who].look,'smile'):'')+'</span>':'')+'<div class="tx"><b>'+(ok?e.n:'？？？')+'</b><span>'+(e.id.startsWith('love')?'戀愛結局・'+CHARS[e.who].n:e.id.startsWith('friend')?'友情結局・'+CHARS[e.who].n:'咖啡館結局')+(ok?'':'<br>線索：'+endHint(e))+'</span></div></div>';}).join('')+'</div><button class="btn close" type="button" data-close>關閉</button>');
 }
 
 titleInit();
