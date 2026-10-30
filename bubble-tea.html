@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>搖搖茶舖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;900&display=swap">
+<style>
+:root{
+  --bg:#FFD23F; --ink:#1D1A16; --ink-soft:#5B5246; --surface:#FFFFFF; --panel:#FFF4C7;
+  --red:#E5483A; --jade:#17936F; --track:#F1E2A8; --shadow:#1D1A16; --on-red:#FFFFFF;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B1812; --ink:#FFF1C9; --ink-soft:#C9BB95; --surface:#2A251B; --panel:#231F17;
+    --red:#FF6B5C; --jade:#4CC9A0; --track:#3A3325; --shadow:#000000; --on-red:#1B1812;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1B1812; --ink:#FFF1C9; --ink-soft:#C9BB95; --surface:#2A251B; --panel:#231F17;
+  --red:#FF6B5C; --jade:#4CC9A0; --track:#3A3325; --shadow:#000000; --on-red:#1B1812;
+  color-scheme:dark;
+}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;font-weight:500;
+  -webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+.app{height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column}
+.screen{display:none;flex:1;min-height:0;flex-direction:column}
+.screen.on{display:flex}
+
+/* title */
+#title{align-items:center;justify-content:center;padding:20px 26px 26px;text-align:center}
+.sign{display:flex;flex-direction:column;align-items:center;flex:none;background:var(--red);color:#FFFFFF;font-weight:900;font-size:clamp(2.6rem,13vw,3.6rem);line-height:1.12;padding:20px 20px;border:4px solid var(--ink);border-radius:10px;box-shadow:8px 8px 0 var(--shadow);margin:0 0 26px}
+.how{max-width:21em;margin:0 0 22px;line-height:1.8;color:var(--ink);text-wrap:pretty}
+.best{margin:14px 0 0;color:var(--ink-soft);min-height:1.5em}
+.mod{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)}
+.mod[hidden]{display:none}
+.mod .panel{width:100%;max-width:560px;background:var(--surface);border:3px solid var(--ink);border-bottom:0;border-radius:20px 20px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:86vh;overflow:auto}
+.mod h2{margin:0 0 4px;font-weight:900}
+.sub2{margin:0 0 10px;color:var(--ink-soft)}
+.upr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:2px dashed var(--panel)}
+.upr .tx{flex:1;min-width:0}.upr .tx b{display:block}.upr .tx span{display:block;font-size:.88rem;color:var(--ink-soft)}
+.upr .btn{padding:8px 12px;font-size:.95rem}
+.cust.vip{border-color:#E8A31C;background:var(--panel)}
+.regb{background:#2E8B57;color:#fff;border-radius:6px;font-size:.7rem;font-weight:900;padding:1px 5px;white-space:nowrap}
+.combo{font-size:.78rem;font-weight:900;color:var(--red);margin-left:4px}
+.pad .zt.two{grid-template-columns:1fr 1fr}.pad .zt.two .btn{font-size:.8rem;gap:0;padding:4px 1px;white-space:nowrap;letter-spacing:-.02em;min-height:0}.pad .zt.two .dot{display:none}
+.stabs{display:flex;gap:6px;margin:4px 0 10px}.stabs button{flex:1;border:2px solid var(--ink);background:var(--surface);color:var(--ink);border-radius:10px;padding:8px 4px;font:inherit;font-weight:900;cursor:pointer}.stabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tg{min-width:72px}.tg[aria-pressed="true"]{background:var(--jade);color:#fff}
+.jamline{display:flex;align-items:center;gap:8px;justify-content:center;margin:10px 0 0;font-size:.92rem}
+.vipb{background:#E8A31C;color:#1D1A16;border-radius:6px;font-size:.7rem;font-weight:900;padding:1px 5px}
+.qty{background:var(--ink);color:var(--bg);border-radius:6px;font-size:.78rem;font-weight:900;padding:1px 5px}
+.lives{display:flex;align-items:center;gap:10px;margin:0 0 18px;font-weight:900}
+.lives button{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);background:var(--surface);font-size:1.2rem;font-weight:900;cursor:pointer;color:var(--ink)}
+.lives button:disabled{opacity:.35}
+.lives output{min-width:5.6em;text-align:center;color:var(--red);font-size:1.15rem;letter-spacing:1px}
+
+.btn{border:3px solid var(--ink);background:var(--surface);border-radius:14px;box-shadow:0 4px 0 var(--shadow);
+  cursor:pointer;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
+  transition:transform .05s,box-shadow .05s}
+.btn:active,.btn.held{transform:translateY(3px);box-shadow:0 1px 0 var(--shadow)}
+.btn:disabled{opacity:.4;cursor:default;transform:none;box-shadow:0 4px 0 var(--shadow)}
+.btn:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.big{font-weight:900;font-size:1.35rem;padding:14px 40px;background:var(--ink);color:var(--bg)}
+
+/* hud */
+.hud{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px 6px;font-weight:900;font-variant-numeric:tabular-nums}
+.hud .time{font-size:1.25rem}
+.hud .money{font-size:1.25rem}
+.hearts{color:var(--red);font-size:1.2rem;letter-spacing:2px}
+
+/* customers */
+.queue{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:2px 10px 8px}
+.cust{position:relative;display:flex;flex-direction:column;align-items:stretch;padding:6px 6px 8px;min-height:158px;
+  border:3px solid var(--ink);border-radius:14px;background:var(--surface);box-shadow:0 4px 0 var(--shadow);
+  text-align:left;cursor:pointer;touch-action:manipulation;-webkit-user-select:none;user-select:none;transition:transform .05s,box-shadow .05s,opacity .25s}
+.cust:active{transform:translateY(3px);box-shadow:0 1px 0 var(--shadow)}
+.cust:focus-visible{outline:3px solid var(--red);outline-offset:3px}
+.cust.empty{border-style:dashed;box-shadow:none;background:transparent;align-items:center;justify-content:center;color:var(--ink-soft);cursor:default;font-size:.9rem}
+.cust.leave{opacity:0;transform:translateY(-8px)}
+.who{display:flex;align-items:center;gap:6px}
+.who svg{width:34px;height:34px;flex:none}
+.who .price{margin-left:auto;font-weight:900;font-variant-numeric:tabular-nums}
+.ticket{margin-top:6px;padding-top:6px;border-top:2px dashed var(--ink);display:flex;flex-direction:column;gap:1px;font-size:.92rem;line-height:1.35}
+.ticket b{font-weight:900;font-size:1.08rem}
+.ticket .dim{color:var(--ink-soft)}
+.pat{margin-top:auto;height:7px;border-radius:4px;background:var(--track);overflow:hidden}
+.pat i{display:block;height:100%;background:var(--jade);border-radius:4px}
+.float{position:absolute;left:50%;top:40%;transform:translate(-50%,0);font-weight:900;font-size:1.3rem;pointer-events:none;animation:up .9s ease-out forwards;white-space:nowrap}
+@keyframes up{to{transform:translate(-50%,-34px);opacity:0}}
+.face .o{stroke:#1D1A16;stroke-width:1.8;stroke-linecap:round;fill:none}
+
+/* work area */
+.work{position:relative;flex:1;min-height:150px;margin:0 10px;border:3px solid var(--ink);border-radius:16px;background:var(--panel);overflow:hidden}
+.work canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.toast{position:absolute;left:50%;top:8px;transform:translate(-50%,-6px);opacity:0;padding:6px 14px;border-radius:999px;background:var(--ink);color:var(--bg);
+  font-weight:900;font-size:.95rem;white-space:nowrap;pointer-events:none;transition:opacity .12s,transform .12s;z-index:2}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.bad{background:var(--red);color:var(--on-red)}
+.toast.good{background:var(--jade);color:#FFFFFF}
+
+/* controls */
+.pad{display:grid;grid-template-columns:5fr 6fr;gap:8px;padding:8px 10px 12px}
+.pad .zone{position:relative;display:grid;gap:6px;padding:20px 6px 6px;border:2px dashed var(--ink);border-radius:14px;background:var(--panel)}
+.pad .zone .zl{position:absolute;left:10px;top:2px;font-size:.72rem;font-weight:900;color:var(--ink-soft)}
+.pad .zt{grid-template-columns:1fr;grid-auto-rows:minmax(44px,1fr)}
+.pad .zp{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(48px,1fr)}
+.pad .za{grid-column:1/-1;grid-template-columns:1fr 1fr 1.5fr;padding-top:6px;border-style:solid;border-width:2px}
+.pad .za .seal{font-size:1.1rem}
+.pad .top{background:var(--surface)}
+@media (max-height:720px){
+  .cust{min-height:118px;padding:4px 5px 6px}
+  .ticket{font-size:.84rem;margin-top:4px;padding-top:4px}
+  .pad{gap:6px;padding:6px 8px 8px}
+  .pad .zone{padding:17px 5px 5px;gap:5px}
+  .pad .zt{grid-auto-rows:minmax(34px,1fr)}
+  .pad .zp{grid-auto-rows:minmax(38px,1fr)}
+  #pad .btn{min-height:34px;padding:5px 4px;font-size:.95rem}
+  .pad .za{padding-top:5px}
+}
+@media (max-height:620px){
+  .hud{padding:5px 12px 3px}.hud .time{font-size:1.05rem}
+  .queue{padding:2px 8px 5px;gap:6px}
+  .cust{min-height:92px;padding:3px 4px 5px}
+  .ticket{font-size:.78rem;line-height:1.25}
+  .work{min-height:100px}
+  .pad{gap:5px;padding:5px 8px 6px}
+  .pad .zone{padding:5px;gap:4px}
+  .pad .zone .zl{display:none}
+  #pad .zt{grid-auto-rows:32px}#pad .zp{grid-auto-rows:49px}
+  #pad .za .btn{height:38px}
+  #pad .btn{min-height:0;height:100%;padding:2px 4px;font-size:.88rem;box-shadow:0 2px 0 var(--shadow)}
+  .pad .za{padding:5px}
+}
+#game{overflow-y:auto}
+.pad .btn{padding:11px 4px;font-size:1rem;font-weight:900;display:flex;align-items:center;justify-content:center;gap:6px;min-height:50px}
+.pad .tea{touch-action:none}
+.pad .seal{background:var(--ink);color:var(--bg)}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.pad .btn.held{background:var(--bg)}
+
+/* result */
+#result{overflow-y:auto;padding:18px 14px 26px}
+.sheet{background:var(--surface);border:3px solid var(--ink);border-radius:18px;box-shadow:0 6px 0 var(--shadow);padding:20px 18px 22px;text-align:center}
+.sheet h2{margin:0;font-weight:900;font-size:1.7rem}
+.sheet .sub{margin:4px 0 14px;color:var(--ink-soft);line-height:1.7;text-wrap:balance}
+.rev{font-weight:900;font-size:3.6rem;line-height:1;margin:6px 0 2px;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0 14px;padding:12px 0;border-top:2px dashed var(--ink);border-bottom:2px dashed var(--ink)}
+.stats div{display:flex;flex-direction:column;gap:2px}
+.stats b{font-weight:900;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.stats span{font-size:.85rem;color:var(--ink-soft)}
+.tip{margin:0 0 18px;line-height:1.7;text-align:left}
+.newbest{color:var(--jade);font-weight:900;min-height:1.5em;margin:0 0 6px}
+
+@media (max-height:640px){.cust{min-height:136px}.ticket{font-size:.85rem}.pad .btn{min-height:44px;padding:8px 4px}}
+@media (prefers-reduced-motion:reduce){.float{animation-duration:.01s}.toast,.btn,.cust{transition:none}}
+.hud .hl{display:flex;align-items:center;gap:8px}
+.pz{width:36px;height:36px;border-radius:50%;border:3px solid var(--ink);background:var(--surface);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.pz:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+#game{position:relative}
+.pause{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(29,26,22,.55);padding:20px}
+.pause[hidden]{display:none}
+.pause .pcard{width:100%;max-width:340px;background:var(--surface);border:3px solid var(--ink);border-radius:20px;padding:20px 18px;text-align:center;display:flex;flex-direction:column;gap:10px}
+.pause h2{margin:0;font-weight:900}.pause p{margin:0 0 6px;color:var(--ink-soft)}
+.pause .btn{width:100%}
+</style>
+<script src="../gc.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <section class="screen on" id="title" aria-labelledby="sign">
+    <h1 class="sign" id="sign" aria-label="搖搖茶舖"><span aria-hidden="true">搖</span><span aria-hidden="true">搖</span><span aria-hidden="true">茶</span><span aria-hidden="true">舖</span></h1>
+    <p class="how">客人點什麼就做什麼。茶要倒到八分滿，糖和冰照次數加，珍珠要先煮、放太久會變硬。封膜後點客人出餐。營業兩分鐘，客人生氣的次數用完就提早打烊。</p>
+    <div class="lives" role="group" aria-label="失誤次數"><span>可以失誤</span><button type="button" id="lv-m" aria-label="減少">−</button><output id="lv-v" aria-live="polite"></output><button type="button" id="lv-p" aria-label="增加">＋</button><span>次</span></div>
+    <button class="btn big" id="open" type="button">開店</button>
+    <button class="btn" id="shop-open" type="button" style="margin-top:12px"></button>
+    <p class="jamline" id="jamline" hidden></p>
+    <p class="best" id="best"></p>
+  </section>
+
+  <div class="mod" id="shopmod" hidden><div class="panel" role="dialog" aria-modal="true" aria-labelledby="shop-h"><h2 id="shop-h">店舖</h2><p class="sub2" id="shop-coins"></p><div class="stabs" id="shop-tabs"></div><div id="shop-list"></div><button class="btn big" id="shop-close" type="button" style="width:100%;margin-top:12px">關閉</button></div></div>
+
+  <section class="screen" id="game" aria-label="營業中">
+    <div class="hud">
+      <span class="hl"><button class="pz" id="b-pause" type="button" aria-label="暫停"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg></button><span class="time" id="time">2:00</span></span>
+      <span class="hearts" id="hearts" aria-label="剩下 3 次失誤機會">♥♥♥</span>
+      <span class="money" id="money">$0</span>
+    </div>
+    <div class="pause" id="pause" hidden role="dialog" aria-modal="true" aria-labelledby="pz-h">
+      <div class="pcard"><h2 id="pz-h">暫停中</h2><p id="pz-t"></p>
+        <button class="btn big" id="pz-go" type="button">繼續營業</button>
+        <button class="btn" id="pz-re" type="button">重新開始</button>
+        <button class="btn" id="pz-home" type="button">回到茶舖門口</button></div>
+    </div>
+    <div class="queue" id="queue"></div>
+    <div class="work" id="work">
+      <canvas id="cv" aria-hidden="true"></canvas>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <div class="pad" id="pad">
+      <div class="zone zt" id="teas" role="group" aria-label="茶底">
+        <span class="zl">茶底（按住倒茶）</span>
+      </div>
+      <div class="zone zp" role="group" aria-label="加料">
+        <span class="zl">加料</span>
+        <button class="btn top" id="b-sugar" type="button">加糖</button>
+        <button class="btn top" id="b-ice" type="button">加冰</button>
+        <button class="btn top" id="b-pearl" type="button">珍珠</button>
+        <button class="btn top" id="b-coco" type="button">椰果</button>
+      </div>
+      <div class="zone za" role="group" aria-label="動作">
+        <button class="btn" id="b-cook" type="button">煮珍珠</button>
+        <button class="btn" id="b-trash" type="button">倒掉重做</button>
+        <button class="btn seal" id="b-seal" type="button">封膜出餐</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="result" aria-label="打烊">
+    <div class="sheet">
+      <h2 id="r-title"></h2>
+      <p class="sub" id="r-sub"></p>
+      <p class="rev" id="r-rev">$0</p>
+      <p class="newbest" id="r-best"></p>
+      <p class="newbest" id="r-coins" style="color:var(--ink)"></p>
+      <div class="stats">
+        <div><b id="r-served">0</b><span>杯賣出</span></div>
+        <div><b id="r-perfect">0</b><span>杯完美</span></div>
+        <div><b id="r-angry">0</b><span>位生氣</span></div>
+      </div>
+      <p class="tip" id="r-tip"></p>
+      <button class="btn big" id="again" type="button">再開一天</button>
+    </div>
+  </section>
+
+</div>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function buzz(p){try{navigator.vibrate&&navigator.vibrate(p);}catch(e){}}
+function hex(h){h=String(h).trim().replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h,16)||0;return[(n>>16)&255,(n>>8)&255,n&255];}
+function rgba(h,a){const A=hex(h);return 'rgba('+A[0]+','+A[1]+','+A[2]+','+a+')';}
+const FONT='"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+
+const BASES={black:{name:'紅茶',color:'#B4532A',price:35},green:{name:'綠茶',color:'#C4B94E',price:35},milk:{name:'奶茶',color:'#C99A6C',price:45},
+  wm:{name:'冬瓜茶',color:'#B97F3C',price:35,cost:60,d:'古早味，客人愛點全糖'},yk:{name:'多多綠',color:'#D6DB97',price:50,cost:80,d:'綠茶加養樂多，酸酸甜甜'},sb:{name:'草莓果茶',color:'#E06A7B',price:55,cost:120,d:'有小菜園的草莓果醬時，每杯多 $20'}};
+const EXTRA_B=['wm','yk','sb'];
+/* 常客：點數請來店裡，每次都點同一杯；第二次起只說「老樣子」，等太久才會說出來 */
+const REGS=[{id:'amei',n:'阿美',d:'隔壁花店的老闆娘',o:{base:'milk',sugar:1,ice:1,top:'pearl'},skin:'#F3C9A0',hair:'#5A3A22',cost:50},
+  {id:'kai',n:'小凱',d:'放學的高中生',o:{base:'black',sugar:2,ice:2,top:'none'},skin:'#E9B994',hair:'#1D1A16',cost:50},
+  {id:'lin',n:'林伯',d:'晨運完的阿伯',o:{base:'green',sugar:0,ice:0,top:'none'},skin:'#C98E66',hair:'#7A6A5A',cost:60},
+  {id:'yu',n:'雨晴',d:'加班的上班族',o:{base:'milk',sugar:0,ice:1,top:'coco'},skin:'#F6D2B4',hair:'#B5652F',cost:60}];
+function orderText(o){return BASES[o.base].name+' '+SUGAR[o.sugar]+' '+ICE[o.ice]+' '+TOPS[o.top];}
+const SUGAR=['無糖','半糖','全糖'];
+const ICE=['去冰','少冰','正常冰'];
+const TOPS={none:'不加料',pearl:'加珍珠',coco:'加椰果'};
+const DUR=120,COOK=7;let STOCK=5,FRESH=40,RATE=50,PATM=1;
+const SHOPK='teashop-shop';let SHOP={coins:0,lv:{pot:0,keep:0,sign:0,rate:0},off:{},own:{},menu:{},reg:{},useJam:true};
+try{const v=JSON.parse(GCStore.getItem(SHOPK)||'null');if(v&&v.lv)SHOP=Object.assign(SHOP,v,{lv:Object.assign({pot:0,keep:0,sign:0,rate:0},v.lv)});}catch(e){}
+['off','own','menu','reg'].forEach(k=>SHOP[k]=SHOP[k]||{});if(SHOP.useJam==null)SHOP.useJam=true;
+function ef(k){return SHOP.off[k]?0:SHOP.lv[k];}
+function offCount(){return Object.keys(SHOP.lv).filter(k=>SHOP.lv[k]>0&&SHOP.off[k]).length;}
+function activeBases(){return['black','green','milk'].concat(EXTRA_B.filter(k=>SHOP.own[k]&&SHOP.menu[k]));}
+function jamCount(){try{return window.GC&&GC.pantry?(GC.pantry().jam||0):0;}catch(e){return 0;}}
+function saveShop(){try{GCStore.setItem(SHOPK,JSON.stringify(SHOP));}catch(e){}}
+function applyShop(){STOCK=5+2*ef('pot');FRESH=40+20*ef('keep');PATM=1+.1*ef('sign');RATE=50+15*ef('rate');}
+const UPG=[{k:'pot',n:'大鍋子',d:'珍珠一鍋多 2 份',c:[40,100]},{k:'keep',n:'保溫鍋',d:'珍珠變硬的時間多 20 秒',c:[40,100]},{k:'sign',n:'親切招牌',d:'客人多等 10% 的時間',c:[60,140]},{k:'rate',n:'快速出茶',d:'倒茶更快，要抓準時機',c:[50,120]}];
+applyShop();
+
+let P={};
+function readPalette(){const cs=getComputedStyle(document.documentElement);const g=n=>cs.getPropertyValue(n).trim();
+  P={ink:g('--ink'),soft:g('--ink-soft'),surface:g('--surface'),panel:g('--panel'),red:g('--red'),jade:g('--jade'),track:g('--track')};}
+readPalette();
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readPalette);}catch(e){}
+new MutationObserver(readPalette).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- state ---------- */
+let G=null,screen='title';
+function newCup(){return{base:null,mixed:false,fill:0,sugar:0,ice:0,tops:new Set(),hard:false,sealed:false};}
+function newGame(){
+  applyShop();
+  G={rush:false,t:0,money:0,hearts:LIVES,maxHearts:LIVES,served:0,perfect:0,angry:0,custN:0,slots:[null,null,null],nextSpawn:.8,
+    cup:newCup(),pot:{state:'empty',t:0,stock:0,fresh:0},pouring:null,over:false,
+    mistakes:{base:0,fill:0,sugar:0,ice:0,top:0,late:0,hard:0},combo:0,maxCombo:0,regBonus:0,regSeen:{},jam:false,bases:activeBases()};
+  if(G.bases.includes('sb')&&SHOP.useJam&&jamCount()>0){try{if(GC.take('jam',1))G.jam=true;}catch(e){}}
+}
+
+/* ---------- customers ---------- */
+const SKIN=['#F6D2B4','#E9B994','#C98E66','#8E5B3E','#F3C9A0'];
+const HAIR=['#2B1D16','#5A3A22','#1D1A16','#B5652F','#7A6A5A','#E5483A'];
+function makeOrder(prog){
+  const B=(G&&G.bases)||['black','green','milk'],ex=B.filter(k=>EXTRA_B.includes(k));
+  const base=ex.length&&Math.random()<.4?pick(ex):pick(['black','green','milk','milk']);
+  const top=prog<.12?'none':pick(['none','pearl','pearl','coco']);
+  return{base,sugar:Math.floor(Math.random()*3),ice:Math.floor(Math.random()*3),top};
+}
+function faceSVG(c,mood){
+  const mouth=mood===0?'<path class="o" d="M14 27 Q20 32 26 27"/>':mood===1?'<path class="o" d="M15 29 L25 29"/>':'<path class="o" d="M14 31 Q20 26 26 31"/>';
+  const brows=mood===2?'<path class="o" d="M11.5 17.5 L17 19.5 M28.5 17.5 L23 19.5"/>':'';
+  return '<svg class="face" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="22" r="14" fill="'+c.skin+'" stroke="#1D1A16" stroke-width="1.8"/>'+
+    '<path d="M6 21 Q7 6 20 6 Q33 6 34 21 Q29 12 20 12.5 Q11 12 6 21Z" fill="'+c.hair+'" stroke="#1D1A16" stroke-width="1.8" stroke-linejoin="round"/>'+
+    '<circle cx="15" cy="22.5" r="1.7" fill="#1D1A16"/><circle cx="25" cy="22.5" r="1.7" fill="#1D1A16"/>'+brows+mouth+'</svg>';
+}
+function spawn(){
+  const i=G.slots.indexOf(null);if(i<0)return false;gsfx('bell');
+  const prog=G.t/DUR;
+  const regs=REGS.filter(r=>SHOP.reg[r.id]&&!G.regSeen[r.id]&&!G.slots.some(c=>c&&c.reg===r.id));
+  if(regs.length&&G.t>8&&Math.random()<.22){const r=pick(regs),v=SHOP.reg[r.id].v||0;G.regSeen[r.id]=1;G.custN++;
+    let max=(30+(r.o.top!=='none'?3:0))*PATM;
+    G.slots[i]={id:G.custN,order:Object.assign({},r.o),pat:max,max,look:{skin:r.skin,hair:r.hair},mood:-1,price:BASES[r.o.base].price+(r.o.top!=='none'?10:0),qty:1,left:1,vip:false,reg:r.id,rn:r.n,hide:v>=1};
+    renderSlot(i);buzz(10);return true;}
+  const order=makeOrder(prog);
+  const vip=Math.random()<lerp(.06,.14,prog),qty=(!vip&&Math.random()<lerp(.05,.2,prog))?2:1;
+  let max=(lerp(34,23,prog)+(order.top!=='none'?3:0))*PATM;if(qty===2)max+=9;if(vip)max*=.8;
+  const unit=BASES[order.base].price+(order.top!=='none'?10:0)+(order.base==='sb'&&G.jam?20:0);
+  G.custN++;
+  G.slots[i]={id:G.custN,order,pat:max,max,look:{skin:pick(SKIN),hair:pick(HAIR)},mood:-1,price:Math.round(unit*(vip?1.8:1)),qty,left:qty,vip};
+  renderSlot(i);buzz(10);return true;
+}
+function renderSlot(i){
+  const el=$('#queue').children[i],c=G&&G.slots[i];
+  if(!c){el.className='cust empty';el.innerHTML='等待客人';el.removeAttribute('aria-label');el.disabled=true;return;}
+  const o=c.order;el.className='cust'+(c.vip?' vip':'');el.disabled=false;
+  el.setAttribute('aria-label','出餐給這位客人：'+(c.reg?'常客'+c.rn+'，':'')+(c.vip?'VIP，':'')+(c.qty>1?'要 '+c.left+' 杯，':'')+(c.hide?'老樣子':BASES[o.base].name+'，'+SUGAR[o.sugar]+'，'+ICE[o.ice]+'，'+TOPS[o.top]));
+  el.innerHTML='<div class="who"><span class="fc">'+faceSVG(c.look,0)+'</span>'+(c.reg?'<span class="regb">'+c.rn+'</span>':'')+(c.vip?'<span class="vipb">VIP</span>':'')+(c.qty>1?'<span class="qty">×'+c.left+'</span>':'')+'<span class="price">$'+c.price+'</span></div>'+
+    (c.hide?'<div class="ticket"><b>老樣子</b><span class="dim">（記得嗎？）</span></div>':'<div class="ticket"><b>'+BASES[o.base].name+'</b><span>'+SUGAR[o.sugar]+'</span><span>'+ICE[o.ice]+'</span><span'+(o.top==='none'?' class="dim"':'')+'>'+TOPS[o.top]+'</span></div>')+
+    '<div class="pat"><i></i></div>';
+  c.mood=0;
+}
+function buildQueue(){
+  const q=$('#queue');q.innerHTML='';
+  for(let i=0;i<3;i++){const b=document.createElement('button');b.type='button';b.className='cust empty';b.textContent='等待客人';b.disabled=true;b.addEventListener('click',()=>serve(i));q.appendChild(b);}
+}
+function floatText(i,text,color){
+  const el=$('#queue').children[i];const f=document.createElement('span');f.className='float';f.textContent=text;f.style.color=color;el.appendChild(f);setTimeout(()=>f.remove(),950);
+}
+function leave(i){
+  const el=$('#queue').children[i];G.slots[i]=null;el.classList.add('leave');el.disabled=true;
+  setTimeout(()=>{if(G&&!G.slots[i]){renderSlot(i);el.classList.remove('leave');}},320);
+}
+function loseHeart(){
+  G.hearts--;G.angry++;buzz([40,40,40]);updateHud();
+  if(G.hearts<=0)setTimeout(()=>endGame(true),500);
+}
+
+/* ---------- actions ---------- */
+let toastTimer=0;
+function toast(m,k){const t=$('#toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.className='toast',1200);}
+function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
+function live(){return G&&!G.over&&!G.paused&&screen==='game';}
+function startPour(tea){
+  if(!live())return false;const cup=G.cup;if(!cup.sealed&&cup.fill<100)gsfx('pour');
+  if(cup.sealed){toast('已經封膜了，倒掉重做或先出餐');return false;}
+  if(cup.fill>=100){toast('杯子滿了');return false;}
+  if(cup.base&&cup.base!==tea)cup.mixed=true;
+  cup.base=tea;G.pouring=tea;return true;
+}
+function stopPour(){if(G)G.pouring=null;}
+function addSugar(){if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}if(c.sugar>=3){toast('糖已經加太多了','bad');return;}c.sugar++;buzz(8);gsfx('sprinkle');if(c.sugar===3)toast('加了三下，太甜了','bad');}
+function addIce(){if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}if(c.ice>=3){toast('冰塞不下了','bad');return;}c.ice++;gsfx('clink');buzz(8);if(c.ice===3)toast('冰加了三匙，太多了','bad');}
+function addTop(k){
+  if(!live())return;const c=G.cup;if(c.sealed){toast('已經封膜了');return;}
+  if(!c.tops.has(k))gsfx('plop');
+  if(c.tops.has(k)){toast('已經加過了');return;}
+  if(k==='pearl'){const p=G.pot;
+    if(p.state==='cooking'){toast('珍珠還在煮');return;}
+    if(p.stock<=0){toast('沒珍珠了，先煮一鍋','bad');return;}
+    p.stock--;if(p.state==='hard')c.hard=true;if(p.stock<=0){p.state='empty';}
+  }
+  c.tops.add(k);buzz(10);
+}
+function cook(){
+  if(!live())return;const p=G.pot;
+  if(p.state==='cooking'){toast('正在煮了');return;}
+  if(p.state==='ready'){toast('鍋裡還有 '+p.stock+' 份');return;}
+  if(p.state==='hard')toast('硬掉的倒掉，重煮一鍋');
+  p.state='cooking';p.t=0;p.stock=0;buzz(10);
+}
+function trash(){if(!live())return;const c=G.cup;if(!c.base&&!c.tops.size&&!c.ice&&!c.sugar){toast('杯子是空的');return;}gsfx('splash');G.cup=newCup();G.pouring=null;toast('倒掉了');}
+function seal(){
+  if(!live())return;const c=G.cup;
+  if(c.sealed){toast('已經封好了，點客人出餐');return;}
+  if(c.fill<=0){toast('先倒茶');return;}
+  G.pouring=null;document.querySelectorAll('.tea.held').forEach(b=>b.classList.remove('held'));
+  c.sealed=true;gsfx('seal');c.sealT=0;buzz(15);toast('封好了，點客人出餐');
+}
+function check(cup,o){
+  const m=[];
+  if(cup.mixed)m.push(['base','兩種茶混在一起了']);
+  else if(cup.base!==o.base)m.push(['base','客人要的是'+BASES[o.base].name]);
+  if(cup.fill<70)m.push(['fill','茶倒太少']);else if(cup.fill>90)m.push(['fill','倒太滿了']);
+  if(cup.sugar!==o.sugar)m.push(['sugar',cup.sugar>2?'太甜了':'客人要'+SUGAR[o.sugar]]);
+  if(cup.ice!==o.ice)m.push(['ice',cup.ice>2?'冰太多了':'客人要'+ICE[o.ice]]);
+  const want=o.top==='none'?[]:[o.top],have=[...cup.tops];
+  if(have.length!==want.length||(want.length&&have[0]!==want[0]))m.push(['top','客人要'+TOPS[o.top]]);
+  return m;
+}
+function serve(i){
+  if(!live())return;const cu=G.slots[i];if(!cu)return;const cup=G.cup;
+  if(cup.fill<=0&&!cup.tops.size){toast('先做一杯飲料');return;}
+  if(!cup.sealed){toast('先封膜再出餐');return;}
+  const m=check(cup,cu.order);G.cup=newCup();
+  if(m.length){
+    G.combo=0;if(cu.reg){regVisit(cu,false);}
+    m.forEach(x=>G.mistakes[x[0]]++);toast(m[0][1],'bad');floatText(i,'做錯了',P.red);leave(i);loseHeart();if(cu.vip)loseHeart();return;
+  }
+  const frac=cu.pat/cu.max;
+  const last=cu.left<=1;const tip=last?Math.round(frac*15)*(cu.vip?2:1):0;
+  if(cup.hard){const pay=Math.round(cu.price/2);G.money+=pay;G.served++;G.mistakes.hard++;G.combo=0;toast('珍珠硬掉了，只收一半','bad');floatText(i,'+$'+pay,P.ink);}
+  else{G.combo++;G.maxCombo=Math.max(G.maxCombo,G.combo);const mul=comboMul();let rb=0;
+    if(cu.reg&&cu.hide){rb=20;G.regBonus+=rb;}
+    const pay=Math.round((cu.price+tip)*mul)+rb;G.money+=pay;G.served++;G.perfect++;
+    toast(rb?'記得'+cu.rn+'的老樣子！+$'+rb:G.combo>=2?G.combo+' 連擊！×'+mul.toFixed(1):cu.vip?'VIP 客人很滿意':tip>=10?'完美，客人很開心':'完美','good');
+    floatText(i,'+$'+pay+(G.combo>=2?' ×'+mul.toFixed(1):''),P.jade);gsfx(G.combo>=3?'sparkle':'coin');buzz(20);}
+  if(cu.reg)regVisit(cu,!cup.hard);
+  if(!last){cu.left--;cu.pat=cu.max;toast('還要 '+cu.left+' 杯，客人會再等你','good');renderSlot(i);updateHud();return;}
+  if(cu.vip)G.vipN=(G.vipN||0)+1;if(cu.qty>1)G.multiN=(G.multiN||0)+1;
+  leave(i);updateHud();
+}
+
+function comboMul(){return G.combo>=2?Math.min(1.5,1+.1*(G.combo-1)):1;}
+function regVisit(cu,ok){const r=SHOP.reg[cu.reg];if(!r)return;r.v=(r.v||0)+1;if(ok)r.ok=(r.ok||0)+1;saveShop();}
+function buildTeas(){
+  const z=$('#teas'),B=(G&&G.bases)||activeBases();z.classList.toggle('two',B.length>3);
+  z.innerHTML='<span class="zl">茶底（按住倒茶）</span>'+B.map(k=>'<button class="btn tea" data-tea="'+k+'" type="button"><span class="dot" style="background:'+BASES[k].color+'"></span>'+BASES[k].name+'</button>').join('');
+  z.querySelectorAll('.tea').forEach(bindTea);
+}
+/* ---------- controls wiring ---------- */
+function bindTea(b){
+  const tea=b.dataset.tea;
+  const end=()=>{if(b.classList.contains('held')){b.classList.remove('held');stopPour();}};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();if(startPour(tea)){b.classList.add('held');try{b.setPointerCapture(e.pointerId);}catch(_){}}});
+  ['pointerup','pointercancel','lostpointercapture','blur'].forEach(n=>b.addEventListener(n,end));
+  b.addEventListener('keydown',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();if(!e.repeat&&startPour(tea))b.classList.add('held');}});
+  b.addEventListener('keyup',e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();end();}});
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+$('#b-sugar').addEventListener('click',addSugar);
+$('#b-ice').addEventListener('click',addIce);
+$('#b-pearl').addEventListener('click',()=>addTop('pearl'));
+$('#b-coco').addEventListener('click',()=>addTop('coco'));
+$('#b-cook').addEventListener('click',cook);
+$('#b-trash').addEventListener('click',trash);
+$('#b-seal').addEventListener('click',seal);
+
+/* ---------- hud ---------- */
+function fmt(s){s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function updateHud(){
+  $('#time').textContent=fmt(DUR-G.t)+(G.rush?' 尖峰':'');$('#time').style.color=G.rush?'var(--red)':'';$('#money').innerHTML='$'+G.money+(G.combo>=2?'<span class="combo">'+G.combo+'連擊</span>':'');
+  const hh=Math.max(0,G.hearts),mh=G.maxHearts;$('#hearts').textContent=mh>5?'♥ '+hh+' / '+mh:'♥'.repeat(hh)+'♡'.repeat(mh-hh);
+  $('#hearts').setAttribute('aria-label','剩下 '+Math.max(0,G.hearts)+' 次失誤機會');
+  const p=G.pot;const cb=$('#b-cook');
+  cb.textContent=p.state==='cooking'?'煮中…':p.state==='hard'?'重煮珍珠':'煮珍珠';
+  $('#b-pearl').textContent=p.stock>0?'珍珠 '+p.stock:'珍珠';
+}
+
+/* ---------- update ---------- */
+function gl(id,on){try{window.GC&&GC.loop(id,on);}catch(e){}}
+function stopAllLoops(){try{window.GC&&GC.stopLoops();}catch(e){}}
+function update(dt){
+  if(!live()){gl('pour',false);gl('boil',false);return;}
+  gl('pour',!!G.pouring);gl('boil',G.pot.state==='cooking');
+  G.t+=dt;
+  if(G.t>=DUR){G.t=DUR;updateHud();endGame(false);return;}
+  if(G.pouring){const c=G.cup;c.fill+=RATE*dt;
+    if(c.fill>=100){c.fill=100;stopPour();document.querySelectorAll('.tea.held').forEach(b=>b.classList.remove('held'));toast('滿出來了','bad');buzz(30);}}
+  if(G.cup.sealed)G.cup.sealT+=dt;
+  const inRush=(G.t>=32&&G.t<46)||(G.t>=84&&G.t<98);if(inRush!==G.rush){G.rush=inRush;if(inRush)gsfx('alarm');toast(inRush?'尖峰時段！客人變多了':'尖峰結束',inRush?'bad':'good');buzz(inRush?[20,40,20]:10);}
+  const p=G.pot;
+  if(p.state==='cooking'){p.t+=dt;if(p.t>=COOK){p.state='ready';p.stock=STOCK;p.fresh=FRESH;gsfx('ding');toast('珍珠煮好了','good');buzz(15);}}
+  else if(p.state==='ready'){p.fresh-=dt;if(p.fresh<=0){p.state='hard';toast('珍珠放太久，變硬了','bad');}}
+  if(G.t>=G.nextSpawn){
+    const prog=G.t/DUR;
+    if(G.t<DUR-6&&spawn())G.nextSpawn=G.t+(lerp(8,4.2,prog)+rnd(-1,1))*(G.rush?.5:1);else G.nextSpawn=G.t+1;
+  }
+  G.slots.forEach((c,i)=>{if(!c)return;c.pat-=dt;const f=clamp(c.pat/c.max,0,1);
+    const el=$('#queue').children[i];const bar=el.querySelector('.pat i');
+    if(bar){bar.style.width=(f*100)+'%';bar.style.background=f>.5?'var(--jade)':f>.25?'#E8A31C':'var(--red)';}
+    if(c.hide&&f<.5){c.hide=false;renderSlot(i);floatText(i,'我要'+BASES[c.order.base].name+'…',P.ink);}
+    const mood=f>.5?0:f>.25?1:2;
+    if(mood!==c.mood){c.mood=mood;const fc=el.querySelector('.fc');if(fc)fc.innerHTML=faceSVG(c.look,mood);}
+    if(c.pat<=0){G.combo=0;if(c.reg)regVisit(c,false);G.mistakes.late++;toast('客人等太久，走掉了','bad');floatText(i,'走掉了',P.red);leave(i);loseHeart();if(c.vip)loseHeart();}
+  });
+  updateHud();
+}
+
+/* ---------- canvas ---------- */
+const cv=$('#cv'),ctx=cv.getContext('2d'),work=$('#work');
+let W=0,H=0,DPR=1,SC={s:1,ox:0,oy:0};
+function resize(){const r=work.getBoundingClientRect();DPR=Math.min(window.devicePixelRatio||1,2.5);W=r.width;H=r.height;
+  cv.width=Math.max(1,Math.round(W*DPR));cv.height=Math.max(1,Math.round(H*DPR));const s=Math.min(W/100,H/64);SC={s,ox:(W-100*s)/2,oy:(H-64*s)/2-7*s};}
+try{new ResizeObserver(resize).observe(work);}catch(e){addEventListener('resize',resize);}
+function txt(c,s,x,y,size,color,align,weight){const m=c.getTransform();c.save();c.setTransform(1,0,0,1,0,0);
+  c.font=(weight||900)+' '+(size*m.a).toFixed(2)+'px '+FONT;c.fillStyle=color;c.textAlign=align||'center';c.textBaseline='middle';
+  c.fillText(s,m.a*x+m.c*y+m.e,m.b*x+m.d*y+m.f);c.restore();}
+function rr(c,x,y,w,h,r){r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+const PEARLS=Array.from({length:16},(_,i)=>({dx:(i%8)/7,row:Math.floor(i/8),j:Math.random()}));
+const ICEPOS=Array.from({length:9},()=>({dx:Math.random(),dy:Math.random(),r:Math.random()*.6-.3}));
+const POTP=Array.from({length:24},()=>({x:Math.random(),y:Math.random(),ph:Math.random()*6}));
+let NOW=0;
+
+function drawCup(c){
+  const cup=G.cup,cx=44,top=12,bot=63,tw=15,bw=11.5;
+  const xAt=(y,side)=>cx+side*lerp(bw,tw,(bot-y)/(bot-top));
+  const fy=f=>bot-f/100*(bot-top-3);
+  const cupPath=()=>{c.beginPath();c.moveTo(cx-tw,top);c.lineTo(cx-bw,bot);c.lineTo(cx+bw,bot);c.lineTo(cx+tw,top);c.closePath();};
+  // shadow
+  c.fillStyle=rgba(P.ink,.12);c.beginPath();c.ellipse(cx,bot+1.2,bw+3,1.6,0,0,Math.PI*2);c.fill();
+  cupPath();c.fillStyle='rgba(255,255,255,.55)';c.fill();
+  c.save();cupPath();c.clip();
+  // target band
+  c.fillStyle=rgba(P.jade,.16);c.fillRect(cx-tw-1,fy(90),tw*2+2,fy(70)-fy(90));
+  // liquid
+  const ly=fy(cup.fill);
+  if(cup.fill>0){
+    const col=cup.mixed?'#7E6A48':BASES[cup.base].color;
+    c.beginPath();c.moveTo(xAt(ly,-1),ly);c.lineTo(cx-bw,bot);c.lineTo(cx+bw,bot);c.lineTo(xAt(ly,1),ly);c.closePath();c.fillStyle=col;c.fill();
+    c.fillStyle='rgba(255,255,255,.18)';c.fillRect(cx-tw,ly,tw*2,1.1);
+  }
+  // toppings
+  let floor=bot;
+  if(cup.tops.has('pearl')){PEARLS.forEach(p=>{const x=cx-bw+2+p.dx*(bw*2-4),y=bot-1.7-p.row*2.7+Math.sin(NOW*2+p.j*6)*.15;c.beginPath();c.arc(x,y,1.35,0,Math.PI*2);c.fillStyle=cup.hard?'#7A6E64':'#2B1D16';c.fill();c.fillStyle='rgba(255,255,255,.35)';c.beginPath();c.arc(x-.4,y-.4,.35,0,Math.PI*2);c.fill();});floor=bot-6;}
+  if(cup.tops.has('coco')){for(let i=0;i<8;i++){const x=cx-bw+2+(i%4)*((bw*2-4)/3),y=floor-1.8-Math.floor(i/4)*2.6;rr(c,x-1.1,y-1.1,2.2,2.2,.5);c.fillStyle='rgba(255,252,235,.9)';c.fill();c.lineWidth=.25;c.strokeStyle=rgba('#1D1A16',.5);c.stroke();}floor-=5.5;}
+  // ice
+  const n=cup.ice*3;
+  for(let i=0;i<n;i++){const q=ICEPOS[i];const base=cup.fill>12?ly+1.8+q.dy*4:floor-2-Math.floor(i/3)*3.4;const y=Math.min(base,bot-2);const half=lerp(bw,tw,(bot-y)/(bot-top))-2.6;const x=cx-half+q.dx*half*2;
+    c.save();c.translate(x,y);c.rotate(q.r);rr(c,-1.7,-1.7,3.4,3.4,.7);c.fillStyle='rgba(225,243,255,.85)';c.fill();c.lineWidth=.3;c.strokeStyle='rgba(29,26,22,.5)';c.stroke();c.restore();}
+  c.restore();
+  // pour stream
+  if(G.pouring){const col=BASES[G.pouring].color;c.fillStyle=col;c.fillRect(cx-1.1,-2,2.2,ly+2);}
+  // target line
+  const ty=fy(80);c.setLineDash([1.2,1]);c.beginPath();c.moveTo(xAt(ty,-1)-2,ty);c.lineTo(xAt(ty,1)+2,ty);c.lineWidth=.45;c.strokeStyle=P.ink;c.stroke();c.setLineDash([]);
+  txt(c,'八分滿',xAt(ty,-1)-2.5,ty,3.8,P.ink,'right');
+  // cup outline and shine
+  cupPath();c.lineWidth=.8;c.lineJoin='round';c.strokeStyle='#1D1A16';c.stroke();
+  c.beginPath();c.moveTo(cx-tw+2.4,top+3);c.lineTo(cx-bw+1.8,bot-4);c.lineWidth=.8;c.strokeStyle='rgba(255,255,255,.7)';c.stroke();
+  rr(c,cx-tw-1,top-1.6,tw*2+2,2.4,1);c.fillStyle='rgba(255,255,255,.8)';c.fill();c.lineWidth=.6;c.strokeStyle='#1D1A16';c.stroke();
+  // seal + straw
+  if(cup.sealed){
+    const k=clamp(cup.sealT/.25,0,1);
+    rr(c,cx-tw-1,top-2.2,(tw*2+2)*k,3.2,1);c.fillStyle='#E5483A';c.fill();c.lineWidth=.6;c.strokeStyle='#1D1A16';c.stroke();
+    if(k>=1){txt(c,'搖搖',cx,top-.6,2.2,'#FFFFFF');
+      c.beginPath();c.moveTo(cx+5,top-13);c.lineTo(cx+1.5,top-1);c.lineCap='round';c.lineWidth=3.2;c.strokeStyle='#1D1A16';c.stroke();c.lineWidth=2.2;c.strokeStyle='#17936F';c.stroke();}
+  }
+}
+function drawCounters(c){
+  const cup=G.cup;
+  txt(c,'糖',3,30,5,P.ink,'left');
+  for(let i=0;i<3;i++){c.beginPath();c.arc(12.5+i*5.4,30,2.2,0,Math.PI*2);c.lineWidth=.6;c.strokeStyle=P.ink;if(i<cup.sugar){c.fillStyle=i===2?P.red:P.ink;c.fill();}c.stroke();}
+  txt(c,'冰',3,40,5,P.ink,'left');
+  for(let i=0;i<3;i++){rr(c,10.3+i*5.4,37.8,4.4,4.4,.8);c.lineWidth=.6;c.strokeStyle=P.ink;if(i<cup.ice){c.fillStyle=i===2?P.red:'#9FD3F2';c.fill();}c.stroke();}
+  txt(c,'料',3,50,5,P.ink,'left');
+  const tops=[...cup.tops].map(k=>k==='pearl'?'珍珠':'椰果');
+  if(!tops.length)txt(c,'無',10.5,50,4.2,P.soft,'left',500);
+  tops.forEach((t,i)=>txt(c,t,10.5,50+i*5.6,4.2,P.ink,'left',700));
+}
+function drawPot(c){
+  const p=G.pot,cx=82,top=42;
+  // flame
+  if(p.state==='cooking'){for(let i=0;i<4;i++){const x=cx-5+i*3.3,h=2.6+Math.sin(NOW*16+i)*.8;c.beginPath();c.moveTo(x,60-h);c.quadraticCurveTo(x+1.4,59,x,60.5);c.quadraticCurveTo(x-1.4,59,x,60-h);c.fillStyle='#4F9FEA';c.fill();}}
+  rr(c,cx-11,60,22,2.2,1);c.fillStyle='#4A4540';c.fill();
+  // body
+  c.beginPath();c.moveTo(cx-10,top);c.lineTo(cx-10,56);c.quadraticCurveTo(cx-10,59,cx-7,59);c.lineTo(cx+7,59);c.quadraticCurveTo(cx+10,59,cx+10,56);c.lineTo(cx+10,top);c.closePath();
+  c.fillStyle='#9AA4AA';c.fill();c.lineWidth=.8;c.strokeStyle='#1D1A16';c.stroke();
+  c.fillStyle='rgba(255,255,255,.35)';c.fillRect(cx-8,top+2,1.6,13);
+  rr(c,cx-13.5,top+2,3.5,1.8,.9);c.fillStyle='#1D1A16';c.fill();rr(c,cx+10,top+2,3.5,1.8,.9);c.fill();
+  c.beginPath();c.ellipse(cx,top,10,2.6,0,0,Math.PI*2);c.fillStyle=p.state==='empty'?'#6F777C':'#3A2A20';c.fill();c.lineWidth=.8;c.strokeStyle='#1D1A16';c.stroke();
+  if(p.state!=='empty'){c.save();c.beginPath();c.ellipse(cx,top,9.2,2.1,0,0,Math.PI*2);c.clip();
+    const n=Math.min(POTP.length,p.state==='cooking'?10:Math.max(2,p.stock*2));
+    for(let i=0;i<n;i++){const q=POTP[i];const bob=p.state==='cooking'?Math.sin(NOW*6+q.ph)*.5:0;c.beginPath();c.arc(cx-8+q.x*16,top-1.5+q.y*3+bob,1.1,0,Math.PI*2);c.fillStyle=p.state==='hard'?'#7A6E64':'#1A100B';c.fill();}
+    c.restore();}
+  if(p.state==='cooking'){for(let i=0;i<3;i++){c.beginPath();for(let j=0;j<=6;j++){const y=top-3-j*1.3,x=cx-4+i*4+Math.sin(NOW*3+j*.7+i)*.7;j?c.lineTo(x,y):c.moveTo(x,y);}c.lineWidth=.45;c.strokeStyle=rgba(P.soft,.5);c.stroke();}}
+  // status ring
+  const ry=31;c.beginPath();c.arc(cx,ry,4.2,0,Math.PI*2);c.lineWidth=1.4;c.strokeStyle=P.track;c.stroke();
+  let f=0,col=P.ink,label='';
+  if(p.state==='cooking'){f=p.t/COOK;col='#E8A31C';label='煮中';}
+  else if(p.state==='ready'){f=p.fresh/FRESH;col=f>.3?P.jade:P.red;label='可用 '+p.stock+' 份';}
+  else if(p.state==='hard'){f=1;col=P.red;label='變硬了';}
+  else label='鍋是空的';
+  if(f>0){c.beginPath();c.arc(cx,ry,4.2,-Math.PI/2,-Math.PI/2+Math.PI*2*f);c.strokeStyle=col;c.stroke();}
+  txt(c,p.state==='cooking'?Math.ceil(COOK-p.t)+'':p.state==='ready'?Math.ceil(p.fresh)+'':p.state==='hard'?'!':'–',cx,ry,4,col);
+  txt(c,label,cx,66.5,4,p.state==='hard'?P.red:P.ink);
+  txt(c,'珍珠鍋',cx,23,3.8,P.soft,'center',700);
+}
+function render(){
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.setTransform(DPR*SC.s,0,0,DPR*SC.s,DPR*SC.ox,DPR*SC.oy);ctx.lineCap='round';
+  // counter top
+  ctx.fillStyle=rgba(P.ink,.08);ctx.fillRect(-60,62,220,40);
+  drawCounters(ctx);drawCup(ctx);drawPot(ctx);
+}
+
+/* ---------- flow ---------- */
+function show(n){screen=n;if(n!=='game')stopAllLoops();['title','game','result'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
+let LIVES=3;try{const v=parseInt(GCStore.getItem('teashop-lives'),10);if(v>=1&&v<=10)LIVES=v;}catch(e){}
+function renderLives(){$('#lv-v').textContent=LIVES<=5?'♥'.repeat(LIVES):'♥ × '+LIVES;$('#lv-v').setAttribute('aria-label',LIVES+' 次');$('#lv-m').disabled=LIVES<=1;$('#lv-p').disabled=LIVES>=10;}
+$('#lv-m').addEventListener('click',()=>{LIVES=Math.max(1,LIVES-1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+$('#lv-p').addEventListener('click',()=>{LIVES=Math.min(10,LIVES+1);try{GCStore.setItem('teashop-lives',LIVES);}catch(e){}renderLives();});
+renderLives();
+
+function renderShopBtn(){const oc=offCount();$('#shop-open').textContent='店舖（點數 '+SHOP.coins+'）';
+  const jl=$('#jamline'),j=jamCount();
+  if(SHOP.own.sb&&SHOP.menu.sb&&j>0){jl.hidden=false;jl.innerHTML='<span>小菜園的草莓果醬 ×'+j+'：草莓果茶每杯 +$20（開店用 1 罐）</span><button class="btn tg" type="button" id="jam-tg" aria-pressed="'+SHOP.useJam+'">'+(SHOP.useJam?'使用':'不用')+'</button>';
+    $('#jam-tg').onclick=()=>{SHOP.useJam=!SHOP.useJam;saveShop();renderShopBtn();};}
+  else jl.hidden=true;
+  if(oc)$('#shop-open').textContent+='・挑戰 +'+oc*10+'%';
+}
+let shopTab='eq';
+function closeShop(){$('#shopmod').hidden=true;renderShopBtn();}
+function openShopMod(tab){
+  if(typeof tab==='string')shopTab=tab;
+  const oc=offCount();
+  $('#shop-coins').textContent='店面點數 '+SHOP.coins+'。營業額的十分之一會變成點數。';
+  $('#shop-tabs').innerHTML=[['eq','設備'],['menu','菜單'],['reg','常客']].map(([k,n])=>'<button type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('');
+  let h='';
+  if(shopTab==='eq'){
+    h='<p class="sub2">升級過的設備可以切回原本的。<b>每關掉一項，營業的點數多 10%</b>'+(oc?'（目前 +'+oc*10+'%）':'')+'。</p>'+
+    UPG.map(u=>{const l=SHOP.lv[u.k],max=l>=u.c.length,off=!!SHOP.off[u.k];
+      return '<div class="upr"><div class="tx"><b>'+u.n+'　'+l+'/'+u.c.length+'</b><span>'+u.d+(l&&off?'（現在用原本的）':'')+'</span></div>'+
+        (l?'<button class="btn tg" type="button" data-off="'+u.k+'" aria-pressed="'+!off+'">'+(off?'原本':'升級版')+'</button>':'')+
+        (max?'':'<button class="btn" type="button" data-up="'+u.k+'"'+(SHOP.coins<u.c[l]?' disabled':'')+'>'+u.c[l]+' 點</button>')+'</div>';}).join('');
+  }else if(shopTab==='menu'){
+    h='<p class="sub2">用點數學新飲料。學會後可以決定要不要放上菜單，菜單上的飲料客人才會點。</p>'+
+    EXTRA_B.map(k=>{const b=BASES[k],own=!!SHOP.own[k],on=!!SHOP.menu[k];
+      return '<div class="upr"><div class="tx"><b><span class="dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;background:'+b.color+'"></span>'+b.name+'　$'+b.price+'</b><span>'+b.d+'</span></div>'+
+        (own?'<button class="btn tg" type="button" data-menu="'+k+'" aria-pressed="'+on+'">'+(on?'在菜單上':'沒放')+'</button>':'<button class="btn" type="button" data-learn="'+k+'"'+(SHOP.coins<b.cost?' disabled':'')+'>'+b.cost+' 點</button>')+'</div>';}).join('');
+  }else{
+    h='<p class="sub2">請常客來店裡。常客每次點同一杯，第二次起只會說「老樣子」，憑記憶做對多 $20；等太久他才會說出來。</p>'+
+    REGS.map(r=>{const x=SHOP.reg[r.id];
+      return '<div class="upr"><div class="tx"><b>'+r.n+'</b><span>'+r.d+(x?'<br>常點：'+orderText(r.o)+'<br>來過 '+(x.v||0)+' 次，做對 '+(x.ok||0)+' 次':'')+'</span></div>'+
+        (x?'':'<button class="btn" type="button" data-reg="'+r.id+'"'+(SHOP.coins<r.cost?' disabled':'')+'>'+r.cost+' 點</button>')+'</div>';}).join('');
+  }
+  $('#shop-list').innerHTML=h;
+  $('#shopmod').hidden=false;
+}
+$('#shop-open').addEventListener('click',()=>{openShopMod();const f=$('#shop-tabs button[aria-pressed="true"]');try{f.focus();}catch(e){}});
+$('#shop-close').addEventListener('click',closeShop);
+$('#shopmod').addEventListener('click',e=>{if(e.target.id==='shopmod'){closeShop();return;}
+  const t=e.target.closest('[data-tab],[data-up],[data-off],[data-learn],[data-menu],[data-reg]');if(!t||t.disabled)return;const d=t.dataset;
+  if(d.tab){openShopMod(d.tab);return;}
+  if(d.up){const u=UPG.find(x=>x.k===d.up),l=SHOP.lv[u.k];if(SHOP.coins<u.c[l])return;SHOP.coins-=u.c[l];SHOP.lv[u.k]++;delete SHOP.off[u.k];}
+  else if(d.off){if(SHOP.off[d.off])delete SHOP.off[d.off];else SHOP.off[d.off]=1;}
+  else if(d.learn){const b=BASES[d.learn];if(SHOP.coins<b.cost)return;SHOP.coins-=b.cost;SHOP.own[d.learn]=1;SHOP.menu[d.learn]=1;toast('學會了'+b.name);}
+  else if(d.menu){if(SHOP.menu[d.menu])delete SHOP.menu[d.menu];else SHOP.menu[d.menu]=1;}
+  else if(d.reg){const r=REGS.find(x=>x.id===d.reg);if(SHOP.coins<r.cost)return;SHOP.coins-=r.cost;SHOP.reg[r.id]={v:0,ok:0};}
+  saveShop();applyShop();buzz(15);gsfx('pop');openShopMod();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#shopmod').hidden)closeShop();});
+renderShopBtn();
+function start(){newGame();buildQueue();buildTeas();updateHud();show('game');toast(G.jam?'開店了！今天有自家果醬':'開店了！');renderShopBtn();}
+$('#open').addEventListener('click',start);$('#again').addEventListener('click',start);
+
+function loadBest(){try{const v=GCStore.getItem('teashop-best');return v?JSON.parse(v):null;}catch(e){return null;}}
+function saveBest(o){try{GCStore.setItem('teashop-best',JSON.stringify(o));}catch(e){}}
+function showBest(){const b=loadBest();$('#best').textContent=b&&typeof b.money==='number'?'最佳營業額 $'+b.money+'，'+b.title+(b.lives?'（'+b.lives+' 次失誤機會）':''):'';}
+showBest();
+
+const TITLES=[[1000,'排隊名店','門口排到轉角，今天的手速是專業級。'],[700,'巷口人氣店','熟客越來越多，再快一點就要排隊了。'],[400,'穩定營業中','節奏抓到了，下次試著同時顧好珍珠鍋。'],[150,'新手老闆','慢慢來，先記熟每位客人的單再動手。'],[0,'今天先休息','每家名店都有手忙腳亂的第一天。']];
+function endGame(early){
+  if(!G||G.over)return;G.over=true;G.pouring=null;
+  try{window.GC&&GC.report('bubble-tea',{money:G.money,served:G.served,perfect:G.perfect,angry:G.angry,combo:G.maxCombo,lives:G.maxHearts,hardMoney:G.maxHearts<=1?G.money:0,vip:G.vipN||0,multi:G.multiN||0});}catch(e){}
+  const base0=Math.floor(G.money/10)+(G.perfect>=10?5:0),oc=offCount(),gainP=Math.round(base0*(1+.1*oc));SHOP.coins+=gainP;saveShop();
+  const t=TITLES.find(x=>G.money>=x[0]);
+  $('#r-title').textContent=t[1];
+  $('#r-sub').textContent=(early?'失誤次數用完，提早打烊了。':'兩分鐘營業結束。')+t[2];
+  $('#r-rev').textContent='$'+G.money;$('#r-served').textContent=G.served;$('#r-perfect').textContent=G.perfect;$('#r-angry').textContent=G.angry;
+  const m=G.mistakes,tips=[];
+  const worst=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];
+  const TIP={base:'最常做錯茶種，動手前先看清楚單上的第一行。',fill:'茶倒得不準，盯著八分滿的虛線放手。',sugar:'甜度常出錯，無糖不按、半糖一下、全糖兩下。',ice:'冰塊常出錯，去冰不加、少冰一匙、正常冰兩匙。',top:'配料常放錯，看清楚是珍珠、椰果還是不加。',late:'客人常等太久，試著先煮好珍珠，空檔時就備料。',hard:'珍珠常放到變硬，鍋邊的圈圈快變紅前就要用完或重煮。'};
+  $('#r-tip').textContent=worst&&worst[1]>0?TIP[worst[0]]:'一杯都沒出錯，可以挑戰更高的營業額。';
+  $('#r-coins').textContent='獲得店面點數 +'+gainP+(oc?'（挑戰 +'+oc*10+'%）':'')+'，共 '+SHOP.coins+(G.maxCombo>=2?'。最高 '+G.maxCombo+' 連擊':'')+(G.regBonus?'，記得老樣子 +$'+G.regBonus:'');
+  const best=loadBest();
+  if(G.money>0&&(!best||G.money>best.money)){saveBest({money:G.money,title:t[1],lives:G.maxHearts});$('#r-best').textContent=best?'新紀錄！比上次多 $'+(G.money-best.money):'第一筆紀錄已存下';}
+  else $('#r-best').textContent=best?'最佳營業額 $'+best.money:'';
+  setTimeout(()=>{show('result');showBest();},early?300:600);
+  if(!early)toast('打烊了');
+}
+
+let last=performance.now();
+function pauseGame(){
+  if(!G||G.over||G.paused||screen!=='game')return;
+  if(G.pouring){try{stopPour();}catch(e){}}
+  G.paused=true;stopAllLoops();
+  const t=Math.max(0,Math.ceil(DUR-G.t));$('#pz-t').textContent='還剩 '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+'，營業額 $'+G.money+'。客人會等你回來。';
+  $('#pause').hidden=false;setTimeout(()=>{try{$('#pz-go').focus();}catch(e){}},30);
+}
+function resumeGame(){if(!G||!G.paused)return;G.paused=false;$('#pause').hidden=true;last=performance.now();gsfx('pop');}
+$('#b-pause').addEventListener('click',pauseGame);
+$('#pz-go').addEventListener('click',resumeGame);
+$('#pz-re').addEventListener('click',()=>{$('#pause').hidden=true;if(G)G.over=true;stopAllLoops();start();});
+$('#pz-home').addEventListener('click',()=>{$('#pause').hidden=true;if(G)G.over=true;stopAllLoops();showBest();show('title');});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pauseGame();});
+document.addEventListener('keydown',e=>{if(screen!=='game'||!G||G.over)return;if(e.key==='Escape'||e.key==='p'||e.key==='P'){e.preventDefault();G.paused?resumeGame():pauseGame();}});
+function loop(now){const dt=Math.min(.05,Math.max(0,(now-last)/1000));last=now;NOW+=dt;
+  if(screen==='game'&&G){update(dt);if(W>0&&H>0)render();}
+  requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
