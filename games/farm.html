@@ -68,6 +68,8 @@ button{font:inherit;color:inherit}
 .sheet{position:absolute;inset:0;z-index:6;display:flex;align-items:flex-end;background:rgba(20,30,20,.45)}
 .sheet[hidden]{display:none}
 .sbox{width:100%;max-height:84%;overflow-y:auto;background:var(--surface);border-radius:20px 20px 0 0;padding:14px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.barnart{display:block;width:100%;height:auto;max-height:150px;border-radius:14px;margin:0 0 8px;touch-action:manipulation}
+.barnart .smoke{animation:smk 2.4s ease-in-out infinite}@keyframes smk{50%{transform:translateY(-3px);opacity:.5}}@media (prefers-reduced-motion:reduce){.barnart .smoke{animation:none}}
 .shead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .shead h3{margin:0;flex:1;font-weight:400;font-size:1.25rem}
 .soft{color:var(--soft);font-size:.9rem;line-height:1.6;margin:0 0 8px}
@@ -142,7 +144,7 @@ function pan(){if(hasPan())try{return GC.pantry();}catch(e){}return Object.assig
 function panAdd(id,n){if(hasPan())try{GC.stock(id,n);return;}catch(e){}F.goods=F.goods||{};F.goods[id]=(F.goods[id]||0)+n;}
 function panTake(id,n){if(hasPan())try{return GC.take(id,n);}catch(e){}F.goods=F.goods||{};if((F.goods[id]||0)<n)return false;F.goods[id]-=n;return true;}
 function kitSlots(){return F.up.kitchen2?2:1;}
-const GOODS={pickle:['醃蘿蔔',70],ketchup:['番茄醬',120],jam:['草莓果醬',380],egg:['雞蛋',15],fish:['吳郭魚',30],milkfish:['虱目魚',55]};
+const GOODS={pickle:['醃蘿蔔',70,'夜市人生'],ketchup:['番茄醬',120,'夜市人生'],jam:['草莓果醬',380,'搖搖茶舖（草莓果茶）'],egg:['雞蛋',15,'舒芙蕾、三味廚房、夜市人生'],fish:['吳郭魚',30,'夜市人生'],milkfish:['虱目魚',55,'夜市人生']};
 /* 雞舍：餵飽的雞每 4 小時下一顆蛋；池塘：每 30 分鐘補一條魚，最多 5 條 */
 const EGG_MS=4*60*MIN,FED_MS=12*60*MIN,POND_MS=30*MIN,POND_MAX=5;
 function hens(){return F.up.coop2?4:F.up.coop?2:0;}
@@ -158,10 +160,10 @@ const UPS=[
   {id:'plots2',n:'擴建農田（9 塊）',cost:400,lv:4,d:'田地增加到 9 塊',need:s=>s.up.plots===6},
   {id:'fert',n:'有機肥料',cost:500,lv:4,d:'所有作物長得快 25%',need:s=>!s.up.fert},
   {id:'sprinkler',n:'自動灑水器',cost:700,lv:3,d:'田地永遠是濕的，不用再澆水',need:s=>!s.up.sprinkler},
-  {id:'coop',n:'雞舍（2 隻雞）',cost:250,lv:2,d:'餵飽的雞會下蛋，蛋可以給舒芙蕾、三味廚房、夜市人生用',need:s=>!s.up.coop},
-  {id:'pond',n:'池塘',cost:350,lv:3,d:'可以釣魚，魚可以給夜市人生用',need:s=>!s.up.pond},
-  {id:'coop2',n:'雞舍擴建（4 隻雞）',cost:450,lv:4,d:'多養兩隻雞，蛋變兩倍',need:s=>s.up.coop&&!s.up.coop2},
-  {id:'kitchen2',n:'加工坊第二口鍋',cost:400,lv:3,d:'可以同時加工兩批',need:s=>!s.up.kitchen2},
+  {id:'coop',n:'雞舍（2 隻雞）',cost:250,lv:2,d:'餵飽的雞會下蛋，蛋可以給舒芙蕾、三味廚房、夜市人生用',barn:'hen',need:s=>!s.up.coop},
+  {id:'pond',n:'池塘',cost:350,lv:3,d:'可以釣魚，魚可以給夜市人生用',barn:'pond',need:s=>!s.up.pond},
+  {id:'coop2',n:'雞舍擴建（4 隻雞）',cost:450,lv:4,d:'多養兩隻雞，蛋變兩倍',barn:'hen',need:s=>s.up.coop&&!s.up.coop2},
+  {id:'kitchen2',n:'加工坊第二口鍋',cost:400,lv:3,d:'可以同時加工兩批',barn:'kit',need:s=>!s.up.kitchen2},
   {id:'plots3',n:'擴建農田（12 塊）',cost:900,lv:6,d:'田地增加到 12 塊',need:s=>s.up.plots===9}
 ];
 const VILLAGERS=['王奶奶','隔壁阿伯','便當店老闆娘','小學老師','咖啡館店長','麵店阿姨','社區志工','路過的旅人'];
@@ -378,7 +380,7 @@ function openShop(tab){
   let body='';
   if(shopTab==='sell'){
     const items=CK.concat(EK).filter(k=>(F.stock[k]||0)>0),G=pan();
-    const goods=Object.keys(GOODS).filter(k=>G[k]>0).map(k=>'<div class="row"><div class="tx"><b>'+GOODS[k][0]+' ×'+G[k]+'</b><span>共用倉庫・價錢 $'+GOODS[k][1]+'</span></div><div class="btns"><button class="btn" type="button" data-gsell="'+k+':1">賣 1</button><button class="btn main" type="button" data-gsell="'+k+':all">全賣</button></div></div>').join('');
+    const goods=Object.keys(GOODS).filter(k=>G[k]>0).map(k=>'<div class="row"><div class="tx"><b>'+GOODS[k][0]+' ×'+G[k]+'</b><span>共用倉庫・價錢 $'+GOODS[k][1]+'<br>可用於：'+GOODS[k][2]+'</span></div><div class="btns"><button class="btn" type="button" data-gsell="'+k+':1">賣 1</button><button class="btn main" type="button" data-gsell="'+k+':all">全賣</button></div></div>').join('');
     body=goods+(items.length?items.map(k=>{const t=trend(k);return '<div class="row"><div class="tx"><b>'+nameOf(k)+' ×'+F.stock[k]+'</b><span>'+(EXTRA[k]?'可以拿去餵毛孩，也能賣掉。':'')+'今日價 $'+price(k)+(t==='up'?' <i class="up">行情好</i>':t==='down'?' <i class="down">行情差</i>':'')+'</span></div><div class="btns"><button class="btn" type="button" data-sell="'+k+':1">賣 1</button><button class="btn main" type="button" data-sell="'+k+':all">全賣</button></div></div>';}).join(''):goods?'':'<p class="soft">背包裡沒有東西。收成後可以在這裡賣掉，也可以留著完成村民的訂單。拔掉的雜草和抓到的蟋蟀，也可以留著餵毛孩。</p>');
   }else if(shopTab==='seed'){
     body=CK.map(k=>{const c=CROPS[k],lock=c.lv>lv;return '<div class="row"><div class="tx"><b>'+c.n+'　$'+c.seed+(lock?'':'')+'</b><span>'+(lock?'Lv'+c.lv+' 解鎖':'約 '+(c.grow>=60*MIN?(c.grow/60/MIN)+' 小時':(c.grow/MIN)+' 分鐘')+'長大，賣 $'+c.sell+' 左右，有 '+(F.seeds[k]||0)+' 包')+'</span></div><div class="btns"><button class="btn" type="button" data-buy="'+k+':1"'+(lock||coins()<c.seed?' disabled':'')+'>買 1</button><button class="btn main" type="button" data-buy="'+k+':5"'+(lock||coins()<c.seed*5?' disabled':'')+'>買 5</button></div></div>';}).join('');
@@ -389,10 +391,10 @@ function openShop(tab){
       '<div class="row"><div class="tx"><b>共用幣 → 金幣</b><span>1 共用幣換 '+EX_TO_FARM+' 金幣</span></div><div class="btns"><button class="btn" type="button" data-ex="f:10"'+(w<10||!canPay()?' disabled':'')+'>用 10</button><button class="btn main" type="button" data-ex="f:50"'+(w<50||!canPay()?' disabled':'')+'>用 50</button></div></div>'+
       (canPay()?'':'<p class="soft">共用幣換金幣需要最新版的合集共用模組（gc.js）。</p>');
   }else{
-    const list=UPS.filter(u=>u.need(F));
-    body=list.length?list.map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-up="'+u.id+'"'+(lock||coins()<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join(''):'<p class="soft">所有升級都完成了。</p>';
+    const list=UPS.filter(u=>!u.barn&&u.need(F));
+    body='<p class="soft">雞舍、池塘、加工坊的鍋子改到「農舍」裡蓋。</p>'+(list.length?list.map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-up="'+u.id+'"'+(lock||coins()<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join(''):'<p class="soft">農田的升級都完成了。</p>');
   }
-  sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">金幣 '+coins()+'　共用幣 '+wallet()+'</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
+  sheet('<div class="shead"><h3>商店</h3><button class="btn" type="button" data-close>關閉</button></div><p class="soft">金幣 '+coins()+'　共用幣 '+wallet()+'<br>'+EX_TO_SHARED+' 金幣 = 1 共用幣（在「兌換」換）</p><div class="tabs">'+tabs.map(([k,n])=>'<button class="tab" type="button" data-tab="'+k+'" aria-pressed="'+(shopTab===k)+'">'+n+'</button>').join('')+'</div>'+body,b=>{
     b.querySelectorAll('[data-tab]').forEach(x=>x.addEventListener('click',()=>openShop(x.dataset.tab)));
     b.querySelectorAll('[data-sell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.sell.split(':');const q=n==='all'?(F.stock[k]||0):1;if(!q)return;F.stock[k]-=q;gsfx('cash');const g=price(k)*q;addCoins(g);F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
     b.querySelectorAll('[data-gsell]').forEach(x=>x.addEventListener('click',()=>{const[k,n]=x.dataset.gsell.split(':');const r=GOODS[k];const q=n==='all'?(pan()[k]||0):1;if(!r||!q||!panTake(k,q))return;gsfx('cash');const g=r[1]*q;addCoins(g);F.stats.earned+=g;GCadd('farm','earned',g);buzz(8);save();updateHud();const y=$('#sbox').scrollTop;openShop();$('#sbox').scrollTop=y;}));
@@ -401,11 +403,12 @@ function openShop(tab){
       if(d==='s'){const q=n==='all'?Math.floor(F.coins/EX_TO_SHARED):+n;if(q<1||F.coins<q*EX_TO_SHARED)return;F.coins-=q*EX_TO_SHARED;try{GC.give?GC.give(q):GC.earn(q);}catch(e){}toast('換到 '+q+' 共用幣');}
       else{const q=+n;if(!canPay()||!GC.pay(q)){toast('共用幣不夠');return;}F.coins+=q*EX_TO_FARM;toast('換到 '+q*EX_TO_FARM+' 金幣');}
       gsfx('cash');save();updateHud();openShop('ex');}));
-    b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{const u=UPS.find(z=>z.id===x.dataset.up);if(!u||!payCoins(u.cost)){toast('幣不夠');return;}
-      if(u.id==='coop'){F.hen.t=Date.now();}if(u.id==='pond'){F.pond={n:POND_MAX,t:Date.now()};}if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
-      toast('升級完成：'+u.n);buzz([15,30,15]);GCmax({plots:F.up.plots,upgrades:(F.up.sprinkler?1:0)+(F.up.scarecrow?1:0)+(F.up.fert?1:0)});save();updateHud();openShop();}));
+    b.querySelectorAll('[data-up]').forEach(x=>x.addEventListener('click',()=>{if(buyUp(x.dataset.up))openShop();}));
   });
 }
+function buyUp(id){const u=UPS.find(z=>z.id===id);if(!u||!u.need(F)||u.lv>level())return false;if(!payCoins(u.cost)){toast('幣不夠');return false;}
+  if(u.id==='coop'){F.hen.t=Date.now();}if(u.id==='pond'){F.pond={n:POND_MAX,t:Date.now()};}if(u.id.indexOf('plots')===0)F.up.plots=PLOTS[PLOTS.indexOf(F.up.plots)+1];else F.up[u.id==='fert'?'fert':u.id]=true;makeLayout();
+  toast((u.barn?'蓋好了：':'升級完成：')+u.n);gsfx('great');buzz([15,30,15]);GCmax({plots:F.up.plots,upgrades:(F.up.sprinkler?1:0)+(F.up.scarecrow?1:0)+(F.up.fert?1:0)});save();updateHud();return true;}
 $('#b-shop').addEventListener('click',()=>openShop('sell'));
 function canFill(o){return Object.keys(o.need).every(k=>(F.stock[k]||0)>=o.need[k]);}
 function openOrders(){
@@ -418,27 +421,55 @@ function openOrders(){
 }
 $('#b-order').addEventListener('click',openOrders);
 let barnTab='kit',fishT=[];
+/* 農舍插畫：雞舍、加工坊、池塘，還沒蓋的變淡，點建築可以切換分頁 */
+function barnArt(){const hen=hens(),pond=!!F.up.pond,now=Date.now(),cooking=(F.kit||[]).some(k=>k&&now<k.end),ready=(F.kit||[]).some(k=>k&&now>=k.end);
+  const ck=(x,y)=>'<g transform="translate('+x+','+y+')"><ellipse cx="0" cy="0" rx="7" ry="5.5" fill="#FFF"/><circle cx="5" cy="-5" r="3.6" fill="#FFF"/><path d="M4-9.5l1.5-2 1.5 2z" fill="#E5483A"/><path d="M8.3-5.2l2.6 1-2.6 1z" fill="#F2B23A"/><circle cx="6" cy="-5.6" r=".8" fill="#333"/></g>';
+  const lab=(x,t,on)=>(on?'<rect x="'+(x-26)+'" y="113" width="52" height="16" rx="8" fill="#FFF" opacity=".9"/>':'')+'<text x="'+x+'" y="125" text-anchor="middle" font-size="11" font-weight="'+(on?'700':'400')+'" fill="#33402B">'+t+'</text>';
+  const sign=(x,y,t)=>'<g><rect x="'+(x-20)+'" y="'+(y-9)+'" width="40" height="16" rx="4" fill="#FFF8E6" stroke="#B88A4A"/><text x="'+x+'" y="'+(y+3)+'" text-anchor="middle" font-size="10" fill="#7A5A2E">'+t+'</text></g>';
+  let s='<svg class="barnart" viewBox="0 0 320 132" aria-hidden="true">'+
+    '<rect width="320" height="132" fill="#DDF0FA"/><circle cx="292" cy="22" r="11" fill="#FFE08A"/>'+
+    '<path d="M0 92Q80 80 160 90T320 88V132H0z" fill="#A8D58A"/>';
+  // 雞舍
+  s+='<g data-btab="hen" style="cursor:pointer"><g opacity="'+(hen?1:.35)+'"><rect x="28" y="66" width="60" height="34" rx="2" fill="#F4E3C3" stroke="#B88A4A"/><path d="M22 68L58 44L94 68z" fill="#C9553F"/><path d="M50 100v-16a8 8 0 0 1 16 0v16z" fill="#7A5A2E"/>'+
+    (hen?ck(32,106)+ck(90,108)+(hen>2?ck(14,100)+ck(104,100):''):'')+'</g>'+(hen?'':sign(58,82,'Lv2 蓋'))+lab(58,'雞舍',barnTab==='hen')+'</g>';
+  // 加工坊
+  s+='<g data-btab="kit" style="cursor:pointer"><rect x="184" y="26" width="9" height="20" fill="#7A3A2E"/>'+
+    (cooking?'<g class="smoke" fill="#FFF" opacity=".85"><circle cx="189" cy="18" r="5"/><circle cx="196" cy="9" r="4"/><circle cx="191" cy="1" r="3"/></g>':'')+
+    '<rect x="120" y="54" width="80" height="48" fill="#C9453B"/><path d="M112 58L160 24L208 58z" fill="#8E2F28"/><circle cx="160" cy="44" r="6" fill="#F4E3C3"/>'+
+    '<rect x="144" y="72" width="32" height="30" fill="#F4E3C3"/><path d="M144 72L176 102M176 72L144 102" stroke="#C9453B" stroke-width="2.5"/>'+
+    (F.up.kitchen2?'<g fill="#555"><rect x="126" y="92" width="12" height="9" rx="2"/><rect x="182" y="92" width="12" height="9" rx="2"/></g>':'<rect x="126" y="92" width="12" height="9" rx="2" fill="#555"/>')+
+    (ready?'<g><circle cx="200" cy="56" r="8" fill="#E5483A"/><text x="200" y="60" text-anchor="middle" font-size="11" font-weight="700" fill="#FFF">!</text></g>':'')+
+    lab(160,'加工坊',barnTab==='kit')+'</g>';
+  // 池塘
+  s+='<g data-btab="pond" style="cursor:pointer"><g opacity="'+(pond?1:.35)+'"><ellipse cx="264" cy="99" rx="44" ry="13" fill="#5AAED6" stroke="#3E86AE"/><ellipse cx="256" cy="98" rx="14" ry="3" fill="none" stroke="#FFF" opacity=".7"/>'+
+    (pond?'<path d="M276 100q6-5 12 0q-6 5-12 0zM288 100l4-3v6z" fill="#F08A2E"/>':'')+
+    '<g stroke="#4F8A3A" stroke-width="2" stroke-linecap="round"><path d="M226 98v-16M231 98v-12M302 96v-15"/></g><g fill="#7A5A2E"><rect x="224" y="78" width="4" height="8" rx="2"/><rect x="300" y="77" width="4" height="8" rx="2"/></g></g>'+
+    (pond?'':sign(264,96,'Lv3 挖'))+lab(264,'池塘',barnTab==='pond')+'</g>';
+  return s+'</svg>';}
+function barnHead(){return '<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnArt()+barnTabs();}
+function buildRows(tab){const lv=level();return UPS.filter(u=>u.barn===tab&&u.need(F)).map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-bup="'+u.id+'"'+(lock||coins()<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join('');}
 function barnTabs(){return '<div class="tabs">'+[['kit','加工坊'],['hen','雞舍'],['pond','池塘']].map(([k,n])=>'<button class="tab" type="button" data-btab="'+k+'" aria-pressed="'+(barnTab===k)+'">'+n+'</button>').join('')+'</div>';}
-function bindTabs(b){b.querySelectorAll('[data-btab]').forEach(x=>x.addEventListener('click',()=>openBarn(x.dataset.btab)));}
+function bindTabs(b){b.querySelectorAll('[data-btab]').forEach(x=>x.addEventListener('click',()=>openBarn(x.dataset.btab)));
+  b.querySelectorAll('[data-bup]').forEach(x=>x.addEventListener('click',()=>{if(buyUp(x.dataset.bup))openBarn();}));}
 function openBarn(tab){fishT.forEach(clearTimeout);fishT=[];if(tab)barnTab=tab;sim(Date.now());if(barnTab==='hen')return openHen();if(barnTab==='pond')return openPond();openKitchen();}
 function openHen(){
   const n=hens(),h=F.hen,now=Date.now(),fed=h.fed>now,food=(F.stock.dandelion||0)+(F.stock.cricket||0);
   let body;
-  if(!n)body='<p class="soft">還沒有雞舍。到商店的「升級」蓋雞舍（Lv2 解鎖），雞吃飽了會下蛋。</p>';
+  if(!n)body='<p class="soft">還沒有雞舍。蓋好之後，雞吃飽了會下蛋。</p>'+buildRows('hen');
   else body='<div class="row"><div class="tx"><b>'+n+' 隻雞・'+(fed?'吃飽了':'肚子餓了')+'</b><span>'+(fed?'還能飽 '+fmtLeft(h.fed-now)+'，大約每 4 小時每隻下一顆蛋':'餓著的時候不會下蛋')+'</span>'+(fed?'<span class="pbar"><i style="width:'+Math.round((h.prog||0)/EGG_MS*100)+'%"></i></span>':'')+'</div>'+
       '<button class="btn main" type="button" id="hen-feed">'+(fed?'再餵一次':'餵飼料')+'</button></div>'+
       '<p class="soft">餵一次可以飽 12 小時，每隻雞吃一份：先用拔下來的蒲公英和抓到的蟋蟀（現在有 '+food+' 份），不夠的每份 $4。</p>'+
-      '<div class="row"><div class="tx"><b>雞蛋 ×'+(h.eggs||0)+'</b><span>撿起來放進共用倉庫，舒芙蕾、三味廚房、夜市人生都能用</span></div><button class="btn main" type="button" id="hen-take"'+(h.eggs>0?'':' disabled')+'>撿蛋</button></div>';
-  sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+body,b=>{bindTabs(b);
+      '<div class="row"><div class="tx"><b>雞蛋 ×'+(h.eggs||0)+'</b><span>撿起來放進共用倉庫，舒芙蕾、三味廚房、夜市人生都能用</span></div><button class="btn main" type="button" id="hen-take"'+(h.eggs>0?'':' disabled')+'>撿蛋</button></div>'+buildRows('hen');
+  sheet(barnHead()+body,b=>{bindTabs(b);
     const fb=b.querySelector('#hen-feed');if(fb)fb.addEventListener('click',()=>{let need=hens(),cost=0;
       ['dandelion','cricket'].forEach(k=>{const u=Math.min(need,F.stock[k]||0);F.stock[k]=(F.stock[k]||0)-u;need-=u;});cost=need*4;
       if(cost&&!payCoins(cost)){toast('金幣不夠買飼料');return;}F.hen.t=Date.now();F.hen.fed=Date.now()+FED_MS;gsfx('munch');buzz(8);toast('雞吃飽了'+(cost?'（飼料 $'+cost+'）':''));save();updateHud();openHen();});
     const tb=b.querySelector('#hen-take');if(tb)tb.addEventListener('click',()=>{const e=F.hen.eggs||0;if(!e)return;panAdd('egg',e);F.hen.eggs=0;gain(e);GCadd('farm','eggs',e);gsfx('pop');buzz([8,20,8]);toast('撿到 '+e+' 顆蛋，放進共用倉庫');save();updateHud();openHen();});});
 }
 function openPond(){
-  if(!F.up.pond){sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+'<p class="soft">還沒有池塘。到商店的「升級」挖池塘（Lv3 解鎖），就可以釣魚。</p>',bindTabs);return;}
+  if(!F.up.pond){sheet(barnHead()+'<p class="soft">還沒有池塘。挖好之後就可以釣魚。</p>'+buildRows('pond'),bindTabs);return;}
   const p=F.pond,G=pan();
-  sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+
+  sheet(barnHead()+
     '<p class="soft">池塘裡有 <b id="pd-n">'+p.n+'</b> 條魚，每 30 分鐘補一條（最多 '+POND_MAX+' 條）。拋竿後等浮標往下沉、出現「！」再拉竿，太早拉會把魚嚇跑。</p>'+
     '<div class="pond" id="pond" role="img" aria-label="池塘"><span class="bob"></span><span class="ex">！</span><span class="msg" id="pd-msg"></span></div>'+
     '<button class="btn main" type="button" id="pd-go" style="width:100%;padding:14px"'+(p.n<1?' disabled':'')+'>'+(p.n<1?'魚被釣光了，等一下再來':'拋竿')+'</button>'+
@@ -469,9 +500,9 @@ function openKitchen(){
     return '<div class="row"><div class="tx"><b>'+r.n+(lock?'':'　$'+r.sell)+'</b><span>'+(lock?'Lv'+r.lv+' 解鎖':CROPS[r.in].n+' ×'+r.q+' → 1 罐，'+fmtLeft(r.time)+'（有 '+have+' 個）')+'</span></div>'+
       (lock?'':'<div class="btns"><button class="btn" type="button" data-make="'+r.id+':1"'+(fi<0||max<1?' disabled':'')+'>做 1</button><button class="btn main" type="button" data-make="'+r.id+':'+max+'"'+(fi<0||max<2?' disabled':'')+'>做 '+Math.max(2,max)+'</button></div>')+'</div>';}).join('');
   const inv=Object.keys(GOODS).filter(k=>G[k]>0).map(k=>GOODS[k][0]+' ×'+G[k]).join('、');
-  sheet('<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnTabs()+'<p class="soft">把作物做成加工品，賣得比直接賣菜貴。做好的東西會放進<b>共用倉庫</b>，之後其他遊戲也能用。</p>'+slots+
+  sheet(barnHead()+'<p class="soft">把作物做成加工品，賣得比直接賣菜貴。做好的東西會放進<b>共用倉庫</b>，之後其他遊戲也能用。</p>'+slots+
     '<p class="soft" style="margin-top:12px">'+(fi<0?'鍋子都在忙，做好再來。':'要做什麼？一次最多 5 罐。')+'</p>'+recs+
-    '<p class="soft" style="margin-top:12px">共用倉庫：'+(inv||'還是空的')+'。可以到商店的「賣出」賣掉。</p>',b=>{bindTabs(b);
+    buildRows('kit')+'<p class="soft" style="margin-top:12px">共用倉庫：'+(inv||'還是空的')+'。可以到商店的「賣出」賣掉。</p>',b=>{bindTabs(b);
     b.querySelectorAll('[data-make]').forEach(x=>x.addEventListener('click',()=>{const[id,q0]=x.dataset.make.split(':');const r=recipe(id),q=+q0,i=free();
       if(!r||i<0||q<1||(F.stock[r.in]||0)<r.q*q)return;F.stock[r.in]-=r.q*q;const t=Date.now();F.kit[i]={r:id,q,start:t,end:t+r.time*q};
       gsfx('plop');buzz(8);toast('開始做'+r.n+' ×'+q);save();updateHud();openKitchen();}));
