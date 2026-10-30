@@ -329,7 +329,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   }
   function musApply() {
     var el = MU.el; if (!el) return;
-    var go = MU.want && soundOn() && musicOn() && !MU.paused && !document.hidden && MU.blobs[MU.want];
+    var go = MU.want && musicOn() && !MU.paused && !document.hidden && MU.blobs[MU.want];
     if (!go) { if (!el.paused) { try { el.pause(); } catch (e) {} } return; }
     if (MU.cur !== MU.want) { el.src = MU.blobs[MU.want]; MU.cur = MU.want; try { el.currentTime = 0; } catch (e) {} }
     if (el.paused) { try { var p = el.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
@@ -343,9 +343,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     } else ac();
     musApply();
   }
-  ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (MU.want && (!MU.el || MU.el.paused)) musKick(); }, true); });
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (MU.want && musicOn() && (!MU.el || MU.el.paused || (AC && AC.state !== 'running'))) musKick(); }, true); });
   document.addEventListener('visibilitychange', function () { musApply(); });
-  function bgm(id) { MU.want = id && MUS_FILES[id] ? id : null; if (MU.want) { musLoad(MU.want); if (MU.el) musApply(); } else musApply(); }
+  function bgm(id) { MU.want = id && MUS_FILES[id] ? id : null; if (MU.want) { musLoad(MU.want); if (!MU.el && musicOn()) { try { musKick(); } catch (e) {} } else musApply(); } else musApply(); }
   function bgmPreload(id) { musLoad(id); }
   var lastS = {};
   function sfx(n) { if (!soundOn()) return; var now = Date.now(); if (lastS[n] && now - lastS[n] < 45) return; lastS[n] = now; try { SFX[n] && SFX[n](); } catch (e) {} }
@@ -563,10 +563,10 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     sfx: sfx, soundOn: soundOn, bgm: bgm, bgmPreload: bgmPreload, musicOn: musicOn, loop: loop, loopParam: loopParam, stopLoops: stopLoops,
     settings: function () { return { sound: soundOn(), music: musicOn(), vol: vol(), vib: setting('vib', '1') !== '0', rm: setting('rm', '0') === '1' }; },
     setVolume: function (v) { v = Math.max(0, Math.min(1, v)); try { localStorage.setItem('gc:vol', String(v)); } catch (e) {} if (MG) MG.gain.value = v; },
-    setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} if (k === 'music') musApply(); },
+    setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} if (k === 'music') { musApply(); try { window.dispatchEvent(new CustomEvent('gc-music', { detail: !!on })); } catch (e) {} } },
     errors: function () { try { return JSON.parse(localStorage.getItem(EKEY) || '[]'); } catch (e) { return []; } },
     clearErrors: function () { try { localStorage.removeItem(EKEY); } catch (e) {} },
-    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } else stopLoops(); musApply(); try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
+    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } else stopLoops(); try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
     own: function (id) { return !!load().own[id]; },
     eq: function (slot) { var p = load(), id = p.eq[slot]; return id && p.own[id] ? id : null; },
     val: function (slot) { var id = this.eq(slot), d = id && collDef(id); return d ? d.val : null; },
@@ -784,7 +784,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     '#gc-bar a:focus-visible{outline:2px solid #3B6EF5}' +
     '#gc-bar .snd{display:flex;align-items:center;gap:4px;margin-left:0;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;opacity:.8}' +
     '#gc-bar .snd:focus-visible{outline:2px solid #3B6EF5}' +
-    '#gc-bar > a + .snd{margin-left:auto}#gc-bar #gc-help{font-weight:700;font-size:16px;min-width:32px;justify-content:center;padding:6px 4px}' +
+    '#gc-bar > a + .snd{margin-left:auto}#gc-bar #gc-mp{margin-left:auto}#gc-bar #gc-mp + .snd{margin-left:0}#gc-bar #gc-help{font-weight:700;font-size:16px;min-width:32px;justify-content:center;padding:6px 4px}' +
     '#gc-pause{position:fixed;inset:0;z-index:2147483002;display:flex;align-items:center;justify-content:center;background:rgba(20,22,28,.6);padding:24px}#gc-pause[hidden]{display:none}' +
     '#gc-pause .gp-card{width:100%;max-width:320px;background:#FFFDF8;color:#1F2A37;border-radius:20px;padding:22px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;font:500 15px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}' +
     '#gc-pause b{font-size:1.4rem}#gc-pause span{color:#5B6472}' +
@@ -808,6 +808,14 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       sp.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>' + (on ? '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6M22 9l-5 6"/>') + '</svg><span>' + (on ? '音效' : '靜音') + '</span>'; };
     paint(); sp.addEventListener('click', function () { window.GC.setSound(!soundOn()); });
     window.addEventListener('gc-sound', paint);
+    var mp = null;
+    if (GNAME === 'latte-art' || GNAME === 'cafe') {
+      mp = document.createElement('button'); mp.type = 'button'; mp.className = 'snd'; mp.id = 'gc-mp';
+      var paintM = function () { var on = musicOn(); mp.setAttribute('aria-label', on ? '音樂開著，點一下關閉' : '音樂關著，點一下打開'); mp.setAttribute('aria-pressed', String(on)); mp.style.opacity = on ? '' : '.5';
+        mp.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="16.5" cy="16" r="2.5" fill="currentColor"/>' + (on ? '' : '<path d="M3 3l18 18"/>') + '</svg><span>' + (on ? '音樂' : '音樂關') + '</span>'; };
+      paintM(); mp.addEventListener('click', function () { window.GC.setSetting('music', !musicOn()); });
+      window.addEventListener('gc-music', paintM);
+    }
     b.appendChild(a);
     if (CAN_PAUSE) {
       var pz = document.createElement('button'); pz.type = 'button'; pz.className = 'snd'; pz.id = 'gc-pz'; pz.setAttribute('aria-label', '暫停遊戲');
@@ -818,6 +826,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       document.body.appendChild(ov); document.getElementById('gc-resume').addEventListener('click', resumeGame);
     }
     if (TOURS[GNAME]) { var hp = document.createElement('button'); hp.type = 'button'; hp.className = 'snd'; hp.id = 'gc-help'; hp.setAttribute('aria-label', '玩法說明'); hp.textContent = '？'; hp.addEventListener('click', openTour); b.appendChild(hp); }
+    if (mp) b.appendChild(mp);
     b.appendChild(sp); b.appendChild(w); document.body.appendChild(b);
     if (TOURS[GNAME] && !lsGet(TOUR_KEY)) setTimeout(function () { if (!document.hidden && !tourEl) openTour(); }, 700);
     // automatic sounds: tapping buttons, and good / bad messages
