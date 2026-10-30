@@ -342,10 +342,12 @@ function settingsSheet(){
   const tog=(id,on)=>'<button class="btn'+(on?' main':'')+'" type="button" id="'+id+'" aria-pressed="'+on+'">'+(on?'開':'關')+'</button>';
   sheet('<div class="shead"><h2>設定</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">這些設定存在這台裝置上，所有玩家和所有遊戲共用。</p>'+
     '<div class="setr"><div class="tx"><b>遊戲音效</b><span>每款遊戲上方的喇叭按鈕也能切換</span></div>'+tog('st-snd',S.sound)+'</div>'+
+    '<div class="setr"><div class="tx"><b>背景音樂</b><span>拉一杯花、一杯好咖啡有背景音樂。關掉「遊戲音效」時音樂也會一起關</span></div>'+tog('st-mus',S.music)+'</div>'+
     '<div class="setr" style="flex-direction:column;align-items:stretch"><div class="tx"><b>音量　<span id="st-vv" style="display:inline">'+Math.round(S.vol*100)+'%</span></b></div><input type="range" id="st-vol" min="0" max="100" step="5" value="'+Math.round(S.vol*100)+'" aria-label="音量"></div>'+
     '<div class="setr"><div class="tx"><b>震動回饋</b><span>按到東西或出錯時手機會輕輕震動（iPhone 的網頁通常不支援）</span></div>'+tog('st-vib',S.vib)+'</div>'+
     '<div class="setr"><div class="tx"><b>減少動畫</b><span>減少閃動和晃動，容易頭暈時可以打開。下次打開遊戲時生效</span></div>'+tog('st-rm',S.rm)+'</div>',b=>{
     b.querySelector('#st-snd').addEventListener('click',()=>{GC.setSound(!GC.soundOn());settingsSheet();});
+    b.querySelector('#st-mus').addEventListener('click',()=>{GC.setSetting('music',!GC.settings().music);settingsSheet();});
     const r=b.querySelector('#st-vol');r.addEventListener('input',()=>{GC.setVolume(r.value/100);b.querySelector('#st-vv').textContent=r.value+'%';});r.addEventListener('change',()=>GC.sfx('good'));
     b.querySelector('#st-vib').addEventListener('click',()=>{const on=!GC.settings().vib;GC.setSetting('vib',on);if(on){try{navigator.vibrate&&navigator.vibrate(30);}catch(e){}}settingsSheet();});
     b.querySelector('#st-rm').addEventListener('click',()=>{GC.setSetting('rm',!GC.settings().rm);settingsSheet();});
@@ -366,7 +368,7 @@ function reportText(desc){
   const errs=GC.errors().slice(0,10).map(e=>{const t=new Date(e.t);return '- '+(t.getMonth()+1)+'/'+t.getDate()+' '+pad(t.getHours())+':'+pad(t.getMinutes())+' '+e.p+'：'+e.m+(e.s?'（'+e.s+'）':'');});
   return '【小遊戲合集 問題回報】\n發生的狀況：'+(desc||'（沒有填寫）')+'\n版本：v'+C.version+'\n時間：'+d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes())+
     '\n裝置：'+deviceInfo()+'\n畫面：'+innerWidth+'×'+innerHeight+'，縮放 '+(window.devicePixelRatio||1)+'\n玩家：'+(p?p.name:'（沒有）')+'\n最近玩的遊戲：'+(m.lastGame?(gameName(m.lastGame)||m.lastGame):'（沒有）')+
-    '\n音效：'+(S.sound?'開':'關')+'，音量 '+Math.round(S.vol*100)+'%'+'\n最近的錯誤紀錄：'+(errs.length?'\n'+errs.join('\n'):'沒有');
+    '\n音效：'+(S.sound?'開':'關')+'，音樂：'+(S.music?'開':'關')+'，音量 '+Math.round(S.vol*100)+'%'+'\n最近的錯誤紀錄：'+(errs.length?'\n'+errs.join('\n'):'沒有');
 }
 function reportSheet2(){
   sheet('<div class="shead"><h2>回報問題</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">寫下發生了什麼事，按「複製回報內容」，再貼到對話裡給我。裝置、版本和最近的錯誤會自動附上，不包含遊戲存檔。</p>'+

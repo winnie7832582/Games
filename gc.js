@@ -308,6 +308,45 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   }
   function stopLoops() { for (var k in LOOPS) loop(k, false); }
   document.addEventListener('visibilitychange', function () { if (document.hidden) stopLoops(); });
+
+  /* ================= 背景音樂 ================= */
+  /* 歌放在根目錄的 audio 資料夾。先用 fetch 抓成 blob 再播（離線也能播，iPhone 的 Service Worker 也不會擋）。
+     同一個 audio 元素一直換歌，第一次點畫面時才開始播（瀏覽器規定）。音量走和音效同一個總音量，再乘上 MUS_LEVEL。 */
+  var MUS_FILES = { 'latte-art': 'audio/bgm-latte-art.mp3', 'cafe': 'audio/bgm-cafe.mp3', 'cafe-contest': 'audio/bgm-cafe-contest.mp3' };
+  var MUS_LEVEL = 0.4;
+  var MU = { el: null, want: null, cur: null, blobs: {}, loading: {}, paused: false, gain: null };
+  var MBASE = (function () { try { return new URL(src, location.href).href.replace(/[^\/]*$/, ''); } catch (e) { return ''; } })();
+  function musicOn() { return setting('music', '1') !== '0'; }
+  function musLoad(id) {
+    if (!MUS_FILES[id] || MU.blobs[id] || MU.loading[id]) return;
+    MU.loading[id] = true;
+    try {
+      fetch(MBASE + MUS_FILES[id]).then(function (r) { if (!r.ok) throw new Error('audio ' + r.status); return r.blob(); })
+        .then(function (b) { MU.blobs[id] = URL.createObjectURL(b); })
+        .catch(function () {})
+        .then(function () { delete MU.loading[id]; musApply(); });
+    } catch (e) { delete MU.loading[id]; }
+  }
+  function musApply() {
+    var el = MU.el; if (!el) return;
+    var go = MU.want && soundOn() && musicOn() && !MU.paused && !document.hidden && MU.blobs[MU.want];
+    if (!go) { if (!el.paused) { try { el.pause(); } catch (e) {} } return; }
+    if (MU.cur !== MU.want) { el.src = MU.blobs[MU.want]; MU.cur = MU.want; try { el.currentTime = 0; } catch (e) {} }
+    if (el.paused) { try { var p = el.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
+  }
+  function musKick() {
+    if (!MU.el) {
+      var el = new Audio(); el.loop = true; el.preload = 'auto'; MU.el = el;
+      var a = ac();
+      try { var s = a.createMediaElementSource(el); MU.gain = a.createGain(); MU.gain.gain.value = MUS_LEVEL; s.connect(MU.gain); MU.gain.connect(MG); }
+      catch (e) { el.volume = MUS_LEVEL; }
+    } else ac();
+    musApply();
+  }
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (MU.want && (!MU.el || MU.el.paused)) musKick(); }, true); });
+  document.addEventListener('visibilitychange', function () { musApply(); });
+  function bgm(id) { MU.want = id && MUS_FILES[id] ? id : null; if (MU.want) { musLoad(MU.want); if (MU.el) musApply(); } else musApply(); }
+  function bgmPreload(id) { musLoad(id); }
   var lastS = {};
   function sfx(n) { if (!soundOn()) return; var now = Date.now(); if (lastS[n] && now - lastS[n] < 45) return; lastS[n] = now; try { SFX[n] && SFX[n](); } catch (e) {} }
   document.addEventListener('pointerdown', function () { if (soundOn()) ac(); }, true);
@@ -521,13 +560,13 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     /* 累加某個數量，例如餵食次數 */
     add: function (game, metric, n) { var m = {}; m[metric] = typeof n === 'number' ? n : 1; record(game, m, 'add'); },
     ACH: ACH, QUESTS: QUESTS, COLL: COLL, THEMES: THEMES,
-    sfx: sfx, soundOn: soundOn, loop: loop, loopParam: loopParam, stopLoops: stopLoops,
-    settings: function () { return { sound: soundOn(), vol: vol(), vib: setting('vib', '1') !== '0', rm: setting('rm', '0') === '1' }; },
+    sfx: sfx, soundOn: soundOn, bgm: bgm, bgmPreload: bgmPreload, musicOn: musicOn, loop: loop, loopParam: loopParam, stopLoops: stopLoops,
+    settings: function () { return { sound: soundOn(), music: musicOn(), vol: vol(), vib: setting('vib', '1') !== '0', rm: setting('rm', '0') === '1' }; },
     setVolume: function (v) { v = Math.max(0, Math.min(1, v)); try { localStorage.setItem('gc:vol', String(v)); } catch (e) {} if (MG) MG.gain.value = v; },
-    setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} },
+    setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} if (k === 'music') musApply(); },
     errors: function () { try { return JSON.parse(localStorage.getItem(EKEY) || '[]'); } catch (e) { return []; } },
     clearErrors: function () { try { localStorage.removeItem(EKEY); } catch (e) {} },
-    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } else stopLoops(); try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
+    setSound: function (on) { try { localStorage.setItem(SKEY, on ? '1' : '0'); } catch (e) {} if (on) { ac(); sfx('pop'); } else stopLoops(); musApply(); try { window.dispatchEvent(new CustomEvent('gc-sound', { detail: !!on })); } catch (e) {} },
     own: function (id) { return !!load().own[id]; },
     eq: function (slot) { var p = load(), id = p.eq[slot]; return id && p.own[id] ? id : null; },
     val: function (slot) { var id = this.eq(slot), d = id && collDef(id); return d ? d.val : null; },
@@ -586,11 +625,11 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     held = {};
   }
   function pauseGame(silent) {
-    if (!CAN_PAUSE || paused) return; paused = true; releaseHeld(); stopLoops();
+    if (!CAN_PAUSE || paused) return; paused = true; releaseHeld(); stopLoops(); MU.paused = true; musApply();
     var ov = document.getElementById('gc-pause'); if (ov && silent !== true) { ov.hidden = false; setTimeout(function () { try { document.getElementById('gc-resume').focus(); } catch (e) {} }, 30); }
   }
   function resumeGame() {
-    if (!paused) return; paused = false; var ov = document.getElementById('gc-pause'); if (ov) ov.hidden = true;
+    if (!paused) return; paused = false; MU.paused = false; musApply(); var ov = document.getElementById('gc-pause'); if (ov) ov.hidden = true;
     var q = rafQ; rafQ = []; q.forEach(function (cb) { oRAF(cb); }); sfx('pop');
   }
   if (CAN_PAUSE) {

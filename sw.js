@@ -1,7 +1,7 @@
 /* 離線快取。
    ★ 每次更新都要把下面的 BUILD 改成新版本號，並且上傳這個檔案。
    （iPhone 的 Safari 只看 sw.js 本身有沒有變，sw.js 沒變就不會更新，舊裝置會一直用舊檔案。） */
-var BUILD = '1.15.1';
+var BUILD = '1.16.0';
 importScripts('./config.js?v=' + BUILD);
 var CACHE = 'gc-app-' + BUILD, FONT = 'gc-fonts';
 var SHELL = ['./', './index.html', './config.js', './gc.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png']
@@ -22,6 +22,11 @@ self.addEventListener('fetch', function (e) {
   }
   if (url.origin !== location.origin) return;
   if (url.pathname.endsWith('/sw.js')) return;
+  /* 背景音樂：存在獨立的快取，更新版本時不用重新下載 */
+  if (/\/audio\/.+\.mp3$/.test(url.pathname)) {
+    e.respondWith(caches.open('gc-audio').then(function (c) { return c.match(req, { ignoreSearch: true }).then(function (hit) { return hit || fetch(req).then(function (res) { if (res.status === 200) c.put(req, res.clone()); return res; }); }); }));
+    return;
+  }
   /* 圖示：先用快取。網頁、程式、設定：有網路就拿最新的，沒網路才用快取 */
   if (/\/icons\//.test(url.pathname)) {
     e.respondWith(caches.open(CACHE).then(function (c) { return c.match(req, { ignoreSearch: true }).then(function (hit) { return hit || fetch(req); }); }));
