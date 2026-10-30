@@ -38,9 +38,17 @@ button{font:inherit;color:inherit}
 .seedbar button{flex:none;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:6px 12px;cursor:pointer;font-size:.92rem;white-space:nowrap}
 .seedbar button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
 .seedbar button:disabled{opacity:.4}
-.quick{display:flex;gap:8px;padding:8px 12px 0}
-.quick button{flex:1;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 4px;cursor:pointer;font-size:.9rem}
-.tools{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:8px 8px 12px}
+.quick{display:flex;gap:6px;padding:8px 10px 0}
+.quick button{flex:1;min-width:0;border:2px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 2px;cursor:pointer;font-size:.84rem;white-space:nowrap}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px 0}
+.tools .tool{flex-direction:row;justify-content:center;gap:6px;padding:9px 4px;font-size:.98rem;font-weight:700}
+.tools .tool svg{width:22px;height:22px}
+.manage{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px 12px}
+.manage button{position:relative;border:2px dashed var(--line);background:transparent;color:inherit;border-radius:12px;padding:7px 2px;cursor:pointer;font-size:.9rem;white-space:nowrap;touch-action:manipulation}
+.manage button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.manage .bd{position:absolute;right:4px;top:-6px;background:var(--bad);color:#fff;border-radius:999px;font-size:.7rem;min-width:16px;height:16px;line-height:16px;text-align:center}
+.pc-crop{display:flex;align-items:baseline;gap:10px;margin:2px 0 6px}.pc-crop b{font-size:1.2rem}
+.pc-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.pc-btns .btn{width:100%;padding:12px 8px}
 .pond{position:relative;height:130px;border-radius:14px;background:linear-gradient(#8FD0E8,#4A9CC0);overflow:hidden;margin:8px 0;touch-action:manipulation}
 .pond::before{content:"";position:absolute;inset:auto -10% -30% -10%;height:60%;background:radial-gradient(ellipse at 50% 0,rgba(255,255,255,.25),transparent 60%)}
 .pond .bob{position:absolute;left:50%;top:48%;width:20px;height:20px;margin:-10px;border-radius:50%;background:radial-gradient(circle at 50% 30%,#fff 0 38%,#E5483A 40%);box-shadow:0 2px 0 rgba(0,0,0,.2);transition:transform .12s;display:none}
@@ -89,15 +97,9 @@ button{font:inherit;color:inherit}
     <div class="tip" id="tip"></div>
   </div>
   <div class="seedbar" id="seedbar" hidden></div>
-  <div class="quick"><button type="button" id="q-water">全部澆水</button><button type="button" id="q-harvest">全部收成</button><button type="button" id="q-care">全部除草驅蟲</button></div>
-  <div class="tools" id="tools">
-    <button class="tool" type="button" data-tool="plant" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V14M16 14c0-5-4-8-9-8 0 5 4 8 9 8zM16 18c0-4 3-7 8-7 0 4-3 7-8 7z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>種植</span></button>
-    <button class="tool" type="button" data-tool="water" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C11 12 8 16 8 20a8 8 0 0 0 16 0c0-4-3-8-8-16z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>澆水</span></button>
-    <button class="tool" type="button" data-tool="harvest" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 14h20l-2 12H8zM10 14c0-6 3-9 6-9s6 3 6 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>收成</span></button>
-    <button class="tool" type="button" id="b-shop"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12l2-6h18l2 6M6 12v14h20V12M5 12h22M13 26v-7h6v7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>商店</span></button>
-    <button class="tool" type="button" id="b-order"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 4h16v24H8zM12 11h8M12 16h8M12 21h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>訂單</span><span class="bd" id="ord-bd" hidden></span></button>
-    <button class="tool" type="button" id="b-kit"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 14h18v8a6 6 0 0 1-6 6h-6a6 6 0 0 1-6-6zM4 14h24M12 10c0-2 2-2 2-4M18 10c0-2 2-2 2-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>農舍</span><span class="bd" id="kit-bd" hidden></span></button>
-  </div>
+  <div class="quick"><button type="button" id="q-water">全部澆水</button><button type="button" id="q-harvest">全部收成</button><button type="button" id="q-care">全部除草抓蟲</button></div>
+  <div class="tools" id="tools"><button class="tool" type="button" data-tool="plant" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V14M16 14c0-5-4-8-9-8 0 5 4 8 9 8zM16 18c0-4 3-7 8-7 0 4-3 7-8 7z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>種植</span></button><button class="tool" type="button" data-tool="water" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C11 12 8 16 8 20a8 8 0 0 0 16 0c0-4-3-8-8-16z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>澆水</span></button><button class="tool" type="button" data-tool="harvest" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 14h20l-2 12H8zM10 14c0-6 3-9 6-9s6 3 6 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>收成</span></button></div>
+  <div class="manage"><button type="button" id="b-shop">商店</button><button type="button" id="b-order">訂單<span class="bd" id="ord-bd" hidden></span></button><button type="button" id="b-kit">農舍<span class="bd" id="kit-bd" hidden></span></button></div>
   <div class="sheet" id="sheet" hidden><div class="sbox" id="sbox" role="dialog" aria-modal="true"></div></div>
 </div>
 <script>
@@ -250,7 +252,7 @@ function updateHud(){
   const kr=(F.kit||[]).filter(k=>k&&Date.now()>=k.end).length+(F.hen.eggs>0?1:0);const kb=$('#kit-bd');kb.hidden=!kr;kb.textContent=kr;
   const ready=F.plots.slice(0,F.up.plots).some(p=>p.c&&progress(p)>=1);
   $('#q-harvest').style.borderColor=ready?'var(--accent)':'';
-  const tips={plant:seedSel?'點空的田地種下'+CROPS[seedSel].n:'先選一種種子',water:'點田地澆水，可以一路滑過去',harvest:'點成熟的作物收成',  '':'點「種植」開始，田地需要澆水才會長大'};
+  const tips={plant:seedSel?'點空的田地種下'+CROPS[seedSel].n:'先選一種種子',water:'點田地澆水，可以一路滑過去',harvest:'點成熟的作物收成',  '':'點一下照顧田地，按住可以看這塊田的狀態'};
   $('#tip').textContent=tips[tool]||'';
 }
 function renderSeedbar(){
@@ -303,6 +305,66 @@ function bulk(kind){
   }
   if(!n){toast(kind==='water'?'沒有需要澆水的田':kind==='harvest'?'還沒有成熟的作物':'田裡很乾淨');return;}
   toast(kind==='water'?'澆了 '+n+' 塊田':kind==='harvest'?'收成了 '+n+' 塊田':'處理了 '+n+' 塊田');save();updateHud();
+}
+/* ---------- 單格資訊卡（預設模式按住田地打開） ---------- */
+const STG=['剛種下','長大中','快成熟','可以收成了'];
+let pcI=-1,pcSig='';
+function plotEta(p,now){
+  if(progress(p)>=1)return '已經可以收成了';
+  const C=CROPS[p.c],slow=(p.weed||p.bug)?.55:1,rate=slow*(F.up.fert?1.25:1);
+  const need=(C.grow-p.g)/rate,wetLeft=F.up.sprinkler?Infinity:Math.max(0,p.w-now);
+  if(wetLeft>=need)return '約 '+fmtLeft(need)+' 後可以收成';
+  return wetLeft>0?'濕潤結束前長不完，之後要再澆水':'田乾了，要先澆水才會繼續長大';
+}
+function plotWater(p,now){
+  if(progress(p)>=1)return '';
+  if(F.up.sprinkler)return '自動灑水器讓田地一直濕潤';
+  return isWet(p,now)?'濕潤，還能撐 '+fmtLeft(p.w-now):'乾燥，現在不會長大';
+}
+function plotSig(p,now){
+  return [p.c||'',p.c?stageOf(p):'',p.c?(isWet(p,now)?1:0):'',p.weed?1:0,p.bug?1:0,progress(p)>=1?1:0,F.up.sprinkler?1:0,p.c?'':(seedSel||''),p.c?'':((F.seeds[seedSel]||0)>0?1:0)].join('|');
+}
+function plotCardHTML(i,now){
+  const p=F.plots[i],head='<div class="shead"><h3>第 '+(i+1)+' 塊田</h3><button class="btn" type="button" data-close>關閉</button></div>';
+  if(!p.c){
+    const can=!!seedSel&&(F.seeds[seedSel]||0)>0;
+    const hint=can?'選好的種子是「'+CROPS[seedSel].n+'」，點下面可以直接種下。':(CK.some(k=>(F.seeds[k]||0)>0)?'先在上方選一種有庫存的種子，再點「種植」。':'沒有種子了，到商店買一包再來。');
+    return head+'<p class="soft">這塊田是空的。'+hint+'</p>'+(can?'<div class="pc-btns"><button class="btn main" type="button" data-pc="plant">種下'+CROPS[seedSel].n+'</button></div>':'');
+  }
+  const C=CROPS[p.c],st=stageOf(p),ready=progress(p)>=1,y=Math.max(1,2-(p.weed?1:0)-(p.bug?1:0));
+  const pct=Math.round(progress(p)*100),pests=(p.weed?'有雜草':'')+(p.weed&&p.bug?'、':'')+(p.bug?'有蟲':'');
+  const btns=[];
+  if(!ready&&!F.up.sprinkler&&!isWet(p,now))btns.push('<button class="btn main" type="button" data-pc="water">澆水</button>');
+  if(p.weed||p.bug)btns.push('<button class="btn" type="button" data-pc="care">'+(p.weed?'拔草':'抓蟲')+'</button>');
+  if(ready)btns.push('<button class="btn main" type="button" data-pc="harvest">收成</button>');
+  const w=plotWater(p,now);
+  return head+
+    '<div class="pc-crop"><b>'+C.n+'</b><span class="soft" id="pc-stage">'+STG[st]+'</span></div>'+
+    '<span class="pbar"><i id="pc-bar" style="width:'+pct+'%"></i></span>'+
+    '<p class="soft" id="pc-time">'+esc(plotEta(p,now))+'</p>'+
+    '<p class="soft" id="pc-water"'+(w?'':' hidden')+'>'+esc(w)+'</p>'+
+    '<p class="soft" id="pc-yield">'+(ready?'可收成 '+y+' 個':'收成約 '+y+' 個')+(pests?'（'+pests+'，處理掉會多收）':'')+'</p>'+
+    (btns.length?'<div class="pc-btns">'+btns.join('')+'</div>':'');
+}
+function renderPlotCard(i){
+  const now=Date.now();pcI=i;pcSig=plotSig(F.plots[i],now);
+  sheet(plotCardHTML(i,now),b=>{b.querySelectorAll('[data-pc]').forEach(x=>x.addEventListener('click',()=>plotAct(i,x.dataset.pc)));});
+}
+function plotAct(i,k){
+  let did=false;
+  if(k==='water')did=doWater(i);else if(k==='care')did=doCare(i);else if(k==='harvest')did=doHarvest(i);else if(k==='plant')did=doPlant(i);
+  if(did){save();updateHud();}
+  renderPlotCard(i);
+}
+function refreshPlotCard(){
+  if(pcI<0)return;
+  if(!$('#pc-time')||$('#sheet').hidden||pcI>=F.up.plots){pcI=-1;return;}
+  const p=F.plots[pcI],now=Date.now();
+  if(plotSig(p,now)!==pcSig){renderPlotCard(pcI);return;}
+  $('#pc-time').textContent=plotEta(p,now);
+  const st=$('#pc-stage');if(st)st.textContent=STG[stageOf(p)];
+  const bar=$('#pc-bar');if(bar)bar.style.width=Math.round(progress(p)*100)+'%';
+  const w=plotWater(p,now),wel=$('#pc-water');if(wel){wel.textContent=w;wel.hidden=!w;}
 }
 $('#q-water').addEventListener('click',()=>bulk('water'));
 $('#q-harvest').addEventListener('click',()=>bulk('harvest'));
@@ -492,17 +554,38 @@ function render(){
   }
 }
 /* pointer */
-let down=false,visited=null;
+let down=false,visited=null,holdT=0,holdI=-1,holdOn=false,holdXY=null;
 function pos(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
-cv.addEventListener('pointerdown',e=>{e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(_){}down=true;visited=new Set();const p=pos(e),i=plotAt(p.x,p.y);if(i>=0){visited.add(i);tapPlot(i);}});
-cv.addEventListener('pointermove',e=>{if(!down||tool==='')return;const p=pos(e),i=plotAt(p.x,p.y);if(i>=0&&!visited.has(i)){visited.add(i);tapPlot(i);}});
-['pointerup','pointercancel','lostpointercapture'].forEach(n=>cv.addEventListener(n,()=>{down=false;}));
+cv.addEventListener('pointerdown',e=>{
+  e.preventDefault();try{cv.setPointerCapture(e.pointerId);}catch(_){}
+  down=true;visited=new Set();const p=pos(e),i=plotAt(p.x,p.y);
+  if(tool===''){
+    /* 預設模式：點一下照顧，按住約 0.45 秒看這塊田的狀態（按住時不會照顧） */
+    clearTimeout(holdT);holdT=0;holdOn=false;holdI=i;holdXY=p;
+    if(i>=0)holdT=setTimeout(()=>{holdT=0;holdOn=true;buzz(6);renderPlotCard(i);},450);
+    return;
+  }
+  if(i>=0){visited.add(i);tapPlot(i);}
+});
+cv.addEventListener('pointermove',e=>{
+  if(!down)return;const p=pos(e);
+  if(tool===''){if(holdXY&&Math.hypot(p.x-holdXY.x,p.y-holdXY.y)>10){clearTimeout(holdT);holdT=0;holdI=-1;}return;}
+  const i=plotAt(p.x,p.y);if(i>=0&&!visited.has(i)){visited.add(i);tapPlot(i);}
+});
+['pointerup','pointercancel','lostpointercapture'].forEach(n=>cv.addEventListener(n,()=>{
+  if(tool===''){
+    clearTimeout(holdT);holdT=0;
+    if(n==='pointerup'&&holdI>=0&&!holdOn)tapPlot(holdI);
+    holdI=-1;holdOn=false;
+  }
+  down=false;
+}));
 
 /* ---------- loop ---------- */
 let last=performance.now(),acc=0,saveT=0;
 function loop(t){
   const dt=Math.min(.05,Math.max(0,(t-last)/1000));last=t;NOW+=dt;
-  acc+=dt;if(acc>=1){acc=0;sim(Date.now());genOrders();updateHud();if(!tool)renderSeedbar();}
+  acc+=dt;if(acc>=1){acc=0;sim(Date.now());genOrders();updateHud();if(!tool)renderSeedbar();refreshPlotCard();}
   saveT+=dt;if(saveT>10){saveT=0;save();}
   fx.forEach(f=>f.t+=dt);for(let i=fx.length-1;i>=0;i--)if(fx[i].t>1)fx.splice(i,1);
   if(W>0&&H>0)render();requestAnimationFrame(loop);
