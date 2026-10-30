@@ -514,6 +514,34 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   /* ================= 遊戲頁面的小工具 ================= */
   if (!IS_GAME) return;
 
+  /* ================= 通用暫停（限時遊戲） ================= */
+  var GNAME = location.pathname.split('/').pop().replace(/\.html$/, '');
+  var PAUSABLE = { 'night-market': 1, 'cafe': 1, 'latte-art': 1, 'souffle': 1, 'sanwei-kitchen': 1 };
+  var CAN_PAUSE = !!PAUSABLE[GNAME], paused = false, rafQ = [], held = {};
+  var oRAF = window.requestAnimationFrame.bind(window);
+  if (CAN_PAUSE) window.requestAnimationFrame = function (cb) { if (paused) { rafQ.push(cb); return 0; } return oRAF(cb); };
+  document.addEventListener('pointerdown', function (e) { held[e.pointerId] = e.target; }, true);
+  document.addEventListener('pointerup', function (e) { delete held[e.pointerId]; }, true);
+  document.addEventListener('pointercancel', function (e) { delete held[e.pointerId]; }, true);
+  function releaseHeld() {
+    Object.keys(held).forEach(function (id) { var el = held[id]; if (!el || (el.closest && (el.closest('#gc-bar') || el.closest('#gc-pause')))) return;
+      ['pointerup', 'pointercancel'].forEach(function (t) { try { el.dispatchEvent(new PointerEvent(t, { bubbles: true, pointerId: +id })); window.dispatchEvent(new PointerEvent(t, { pointerId: +id })); } catch (e) {} }); });
+    held = {};
+  }
+  function pauseGame() {
+    if (!CAN_PAUSE || paused) return; paused = true; releaseHeld(); stopLoops();
+    var ov = document.getElementById('gc-pause'); if (ov) { ov.hidden = false; setTimeout(function () { try { document.getElementById('gc-resume').focus(); } catch (e) {} }, 30); }
+  }
+  function resumeGame() {
+    if (!paused) return; paused = false; var ov = document.getElementById('gc-pause'); if (ov) ov.hidden = true;
+    var q = rafQ; rafQ = []; q.forEach(function (cb) { oRAF(cb); }); sfx('pop');
+  }
+  if (CAN_PAUSE) {
+    document.addEventListener('visibilitychange', function () { if (document.hidden) pauseGame(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && paused) { e.preventDefault(); resumeGame(); } else if ((e.key === 'p' || e.key === 'P') && !/INPUT|TEXTAREA/.test((e.target && e.target.tagName) || '')) { paused ? resumeGame() : pauseGame(); } });
+  }
+  window.GC.pause = pauseGame; window.GC.resume = resumeGame; window.GC.isPaused = function () { return paused; };
+
   function touch() {
     try {
       var mk = ns('__meta'), m = JSON.parse(localStorage.getItem(mk) || '{}');
@@ -533,6 +561,14 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     '#gc-bar a:focus-visible{outline:2px solid #3B6EF5}' +
     '#gc-bar .snd{display:flex;align-items:center;gap:4px;margin-left:auto;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:6px 8px;border-radius:8px;cursor:pointer;opacity:.8}' +
     '#gc-bar .snd:focus-visible{outline:2px solid #3B6EF5}' +
+    '#gc-bar #gc-pz{margin-left:auto}#gc-bar #gc-pz + .snd{margin-left:0}' +
+    '#gc-pause{position:fixed;inset:0;z-index:2147483002;display:flex;align-items:center;justify-content:center;background:rgba(20,22,28,.6);padding:24px}#gc-pause[hidden]{display:none}' +
+    '#gc-pause .gp-card{width:100%;max-width:320px;background:#FFFDF8;color:#1F2A37;border-radius:20px;padding:22px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;font:500 15px/1.5 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}' +
+    '#gc-pause b{font-size:1.4rem}#gc-pause span{color:#5B6472}' +
+    '#gc-pause button{border:0;border-radius:14px;padding:14px;background:#1F2A37;color:#fff;font:inherit;font-size:1.05rem;font-weight:700;cursor:pointer}' +
+    '#gc-pause a{color:#3B6EF5;text-decoration:none;padding:8px}' +
+    '#gc-pause button:focus-visible,#gc-pause a:focus-visible{outline:3px solid #3B6EF5;outline-offset:2px}' +
+    '@media (prefers-color-scheme:dark){#gc-pause .gp-card{background:#222833;color:#E8EDF4}#gc-pause span{color:#A9B3C1}#gc-pause button{background:#E8EDF4;color:#1F2A37}}' +
     '#gc-bar .who{margin-left:4px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}' +
     '@media (prefers-color-scheme:dark){#gc-bar{background:rgba(22,26,34,.92);color:#E8EDF4;border-bottom-color:rgba(255,255,255,.08)}}' +
     'html,body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}input,textarea{-webkit-user-select:text;user-select:text}';
@@ -549,7 +585,16 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       sp.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/>' + (on ? '<path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M17 9l5 6M22 9l-5 6"/>') + '</svg><span>' + (on ? '音效' : '靜音') + '</span>'; };
     paint(); sp.addEventListener('click', function () { window.GC.setSound(!soundOn()); });
     window.addEventListener('gc-sound', paint);
-    b.appendChild(a); b.appendChild(sp); b.appendChild(w); document.body.appendChild(b);
+    b.appendChild(a);
+    if (CAN_PAUSE) {
+      var pz = document.createElement('button'); pz.type = 'button'; pz.className = 'snd'; pz.id = 'gc-pz'; pz.setAttribute('aria-label', '暫停遊戲');
+      pz.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg><span>暫停</span>';
+      pz.addEventListener('click', pauseGame); b.appendChild(pz);
+      var ov = document.createElement('div'); ov.id = 'gc-pause'; ov.hidden = true; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', '暫停中');
+      ov.innerHTML = '<div class="gp-card"><b>暫停中</b><span>時間停住了，回來時會從剛才的地方繼續。</span><button type="button" id="gc-resume">繼續</button><a href="../index.html">回到遊戲合集</a></div>';
+      document.body.appendChild(ov); document.getElementById('gc-resume').addEventListener('click', resumeGame);
+    }
+    b.appendChild(sp); b.appendChild(w); document.body.appendChild(b);
     // automatic sounds: tapping buttons, and good / bad messages
     document.addEventListener('click', function (e) { if (window.GC_OWN_SFX) return; var t = e.target.closest && e.target.closest('button'); if (!t || t.disabled || t.closest('#gc-bar')) return; sfx('tap'); }, true);
     var watched = document.querySelectorAll('#toast, .toast');
