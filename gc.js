@@ -240,27 +240,71 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     heart: function () { tone(880, 0.07, 'sine', 0.04); tone(1175, 0.09, 'sine', 0.04, 0.06); },
     cash: function () { tone(1568, 0.05, 'square', 0.025); tone(2093, 0.18, 'square', 0.025, 0.05); noise(0.05, 0.04, 6000, 0.02); }
   };
-  /* 持續音：按住倒茶、煮珍珠、磨豆、蒸奶、烤箱、油鍋等，開始時 GC.loop(名稱, true)、結束時 GC.loop(名稱, false) */
+  /* 持續音：按住倒茶、煮珍珠、磨豆、蒸奶、烤箱、油鍋等，開始時 GC.loop(名稱, true)、結束時 GC.loop(名稱, false)。
+     每種持續音由「底噪」加上隨機的小顆粒聲（水滴、氣泡、劈啪聲）組成，聽起來比較像真的。
+     GC.loopParam(名稱, {...}) 可以即時改變聲音，例如打奶泡時依噴嘴位置切換 zone: 'roll' | 'stretch' | 'air'。 */
   var LDEF = {
-    pour: { f: 900, q: 0.8, v: 0.05 }, stream: { f: 1400, q: 0.6, v: 0.035 }, boil: { f: 300, q: 1.5, v: 0.05, tr: 6 },
-    sizzle: { f: 4200, q: 0.4, v: 0.03, tr: 11 }, steam: { f: 2600, q: 0.4, v: 0.05 }, grind: { f: 500, q: 2.2, v: 0.06, tr: 15 },
-    hiss: { f: 1700, q: 0.7, v: 0.04 }, scrub: { f: 2000, q: 1, v: 0.04, tr: 8 }, stir: { f: 700, q: 1.4, v: 0.04, tr: 3 },
-    oven: { f: 160, q: 3, v: 0.05, tr: 0.7 }, rain: { f: 1200, q: 0.4, v: 0.025 }, crowd: { f: 450, q: 0.6, v: 0.02, tr: 0.4 }
+    pour: { f: 900, q: 0.8, v: 0.045, g: { t: 'drop', p: 0.18 } },
+    stream: { f: 1400, q: 0.7, v: 0.03, g: { t: 'drop', p: 0.12 } },
+    boil: { f: 260, q: 1.2, v: 0.035, tr: 5, g: { t: 'bubble', p: 0.4 } },
+    sizzle: { f: 4200, q: 0.4, v: 0.025, tr: 9, g: { t: 'crackle', p: 0.55 } },
+    steam: { custom: 'steam' },
+    grind: { f: 520, q: 2, v: 0.045, tr: 14, g: { t: 'crunch', p: 0.7 } },
+    hiss: { f: 1700, q: 0.7, v: 0.035, g: { t: 'drop', p: 0.05 } },
+    scrub: { f: 2000, q: 1, v: 0.035, tr: 8, g: { t: 'crackle', p: 0.15 } },
+    stir: { f: 700, q: 1.4, v: 0.03, tr: 3, g: { t: 'scrape', p: 0.18 } },
+    oven: { f: 160, q: 3, v: 0.05, tr: 0.7, g: { t: 'tick', p: 0.02 } },
+    rain: { f: 1200, q: 0.4, v: 0.022, g: { t: 'drop', p: 0.35 } },
+    crowd: { f: 450, q: 0.6, v: 0.02, tr: 0.4, g: { t: 'murmur', p: 0.04 } }
   };
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function grain(t, k) {
+    k = k || 1;
+    if (t === 'drop') tone(rnd(900, 1700), rnd(0.03, 0.06), 'sine', 0.025 * k, 0, rnd(300, 600));
+    else if (t === 'bubble') tone(rnd(160, 420), rnd(0.04, 0.08), 'sine', 0.045 * k, 0, rnd(500, 900));
+    else if (t === 'crackle') noise(rnd(0.006, 0.016), 0.06 * k, rnd(3500, 7000));
+    else if (t === 'crunch') noise(rnd(0.012, 0.03), 0.05 * k, rnd(900, 2200));
+    else if (t === 'scrape') noise(rnd(0.05, 0.1), 0.025 * k, rnd(500, 900));
+    else if (t === 'tick') tone(rnd(1800, 2200), 0.015, 'square', 0.008 * k);
+    else if (t === 'murmur') tone(rnd(180, 320), rnd(0.12, 0.25), 'triangle', 0.012 * k, 0, rnd(160, 300));
+    else if (t === 'chirp') noise(rnd(0.008, 0.02), 0.07 * k, rnd(4500, 8000));
+    else if (t === 'sputter') { noise(rnd(0.03, 0.07), 0.08 * k, rnd(500, 1100)); if (Math.random() < 0.5) tone(rnd(250, 500), 0.05, 'sine', 0.05 * k, 0, rnd(700, 1100)); }
+    else if (t === 'gurgle') tone(rnd(110, 220), rnd(0.06, 0.12), 'sine', 0.03 * k, 0, rnd(160, 280));
+  }
   var LOOPS = {}, NBUF = null;
+  function nbuf(a) { if (!NBUF) { var n = a.sampleRate * 2; NBUF = a.createBuffer(1, n, a.sampleRate); var ch = NBUF.getChannelData(0); for (var i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1; } return NBUF; }
+  function layer(a, type, f, q) { var src = a.createBufferSource(); src.buffer = nbuf(a); src.loop = true; src.loopStart = Math.random(); var fl = a.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; var g = a.createGain(); g.gain.value = 0.0001; src.connect(fl); fl.connect(g); g.connect(out()); src.start(); return { src: src, fl: fl, g: g }; }
+  var STEAM = { roll: { hf: 2200, hv: 0.022, rv: 0.05, gt: 'gurgle', gp: 0.12 }, stretch: { hf: 4200, hv: 0.04, rv: 0.02, gt: 'chirp', gp: 0.75 }, air: { hf: 1400, hv: 0.05, rv: 0.025, gt: 'sputter', gp: 0.45 } };
+  function setSteam(L, zone, temp) {
+    var a = ac(), z = STEAM[zone] || STEAM.roll, warm = Math.max(0, Math.min(1, ((temp || 20) - 20) / 50));
+    L.layers[0].fl.frequency.setTargetAtTime(z.hf * (1 - warm * 0.25), a.currentTime, 0.08);
+    L.layers[0].g.gain.setTargetAtTime(z.hv, a.currentTime, 0.08);
+    L.layers[1].g.gain.setTargetAtTime(z.rv * (0.7 + warm * 0.6), a.currentTime, 0.12);
+    L.gt = z.gt; L.gp = z.gp;
+  }
   function loop(id, on) {
     var L = LOOPS[id];
-    if (!on || !soundOn()) { if (L) { try { var a0 = ac(); L.g.gain.setTargetAtTime(0.0001, a0.currentTime, 0.05); L.src.stop(a0.currentTime + 0.3); } catch (e) {} delete LOOPS[id]; } return; }
+    if (!on || !soundOn()) {
+      if (L) { try { var a0 = ac(); L.layers.forEach(function (ly) { ly.g.gain.setTargetAtTime(0.0001, a0.currentTime, 0.05); ly.src.stop(a0.currentTime + 0.3); if (ly.lfo) ly.lfo.stop(a0.currentTime + 0.3); }); } catch (e) {} if (L.timer) clearInterval(L.timer); delete LOOPS[id]; }
+      return;
+    }
     if (L || !LDEF[id]) return;
     var a = ac(); if (!a) return; var d = LDEF[id];
-    if (!NBUF) { var n = a.sampleRate * 2; NBUF = a.createBuffer(1, n, a.sampleRate); var ch = NBUF.getChannelData(0); for (var i = 0; i < n; i++) ch[i] = Math.random() * 2 - 1; }
-    var src = a.createBufferSource(); src.buffer = NBUF; src.loop = true;
-    var fl = a.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = d.f; fl.Q.value = d.q;
-    var g = a.createGain(); g.gain.value = 0.0001; g.gain.setTargetAtTime(d.v, a.currentTime, 0.06);
-    src.connect(fl); fl.connect(g);
-    if (d.tr) { var lfo = a.createOscillator(), lg = a.createGain(), mg = a.createGain(); lfo.frequency.value = d.tr; lg.gain.value = 0.5; mg.gain.value = 0.5; lfo.connect(lg); lg.connect(mg.gain); g.connect(mg); mg.connect(out()); lfo.start(); }
-    else g.connect(out());
-    src.start(); LOOPS[id] = { src: src, g: g };
+    L = { layers: [], gt: null, gp: 0 };
+    if (d.custom === 'steam') {
+      L.layers.push(layer(a, 'bandpass', 2200, 0.5)); L.layers.push(layer(a, 'lowpass', 320, 0.7)); setSteam(L, 'roll', 20);
+    } else {
+      var ly = layer(a, 'bandpass', d.f, d.q); ly.g.gain.setTargetAtTime(d.v, a.currentTime, 0.06);
+      if (d.tr) { var lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = d.tr; lg.gain.value = d.v * 0.45; lfo.connect(lg); lg.connect(ly.g.gain); lfo.start(); ly.lfo = lfo; }
+      L.layers.push(ly); if (d.g) { L.gt = d.g.t; L.gp = d.g.p; }
+    }
+    L.timer = setInterval(function () { if (!LOOPS[id] || !L.gt) return; if (Math.random() < L.gp) grain(L.gt); }, 30);
+    LOOPS[id] = L;
+  }
+  function loopParam(id, o) {
+    var L = LOOPS[id]; if (!L || !o) return;
+    if (id === 'steam') { if (o.zone !== L.zone || Math.abs((o.temp || 0) - (L.temp || 0)) > 3) { L.zone = o.zone; L.temp = o.temp; setSteam(L, o.zone, o.temp); } }
+    else { if (o.gp != null) L.gp = o.gp; if (o.gt) L.gt = o.gt; }
   }
   function stopLoops() { for (var k in LOOPS) loop(k, false); }
   document.addEventListener('visibilitychange', function () { if (document.hidden) stopLoops(); });
@@ -468,7 +512,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     /* 累加某個數量，例如餵食次數 */
     add: function (game, metric, n) { var m = {}; m[metric] = typeof n === 'number' ? n : 1; record(game, m, 'add'); },
     ACH: ACH, QUESTS: QUESTS, COLL: COLL, THEMES: THEMES,
-    sfx: sfx, soundOn: soundOn, loop: loop, stopLoops: stopLoops,
+    sfx: sfx, soundOn: soundOn, loop: loop, loopParam: loopParam, stopLoops: stopLoops,
     settings: function () { return { sound: soundOn(), vol: vol(), vib: setting('vib', '1') !== '0', rm: setting('rm', '0') === '1' }; },
     setVolume: function (v) { v = Math.max(0, Math.min(1, v)); try { localStorage.setItem('gc:vol', String(v)); } catch (e) {} if (MG) MG.gain.value = v; },
     setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} },
