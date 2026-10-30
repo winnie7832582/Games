@@ -67,7 +67,7 @@
   A('la2', 'latte-art', '愛心誕生', '愛心課拿到 70 分以上', ['max', 'latte-art', 's_heart', 70]);
   A('la3', 'latte-art', '鬱金香盛開', '三層鬱金香拿到 70 分以上', ['max', 'latte-art', 's_tulip', 70]);
   A('la4', 'latte-art', '葉子飄落', '葉子課拿到 70 分以上', ['max', 'latte-art', 's_leaf', 70]);
-  A('la5', 'latte-art', '自由創作', '用自由創作拉一杯', ['sum', 'latte-art', 'free', 1]);
+  A('la5', 'latte-art', '熟能生巧', '完成 10 杯拉花', ['plays', 'latte-art', 10]);
   A('la6', 'latte-art', '拉花大師', '八堂課全部拿到三顆星', ['max', 'latte-art', 'totalStars', 24], 1);
   A('nm1', 'night-market', '第一晚', '完成第一個晚上的營業', ['plays', 'night-market', 1]);
   A('nm2', 'night-market', '賺錢了', '單晚淨利 $1500 以上', ['max', 'night-market', 'dayProfit', 1500]);
