@@ -918,6 +918,7 @@ function soundTick(){
   gl('stream',!!(on&&((k==='bloom'&&st.holding)||(k==='pour'&&st.pouring)||(k==='art'&&p&&(p.pouring||p.high)))));
   gl('hiss',!!(on&&k==='shot'&&!st.done));
   gl('steam',!!(on&&k==='steam'&&!st.done));
+  if(on&&k==='steam'&&!st.done){try{window.GC&&GC.loopParam&&GC.loopParam('steam',{zone:st.zone,temp:st.temp});}catch(e){}}
 }
 function startBreak(){
   gsfx('alarm');stopAllLoops();

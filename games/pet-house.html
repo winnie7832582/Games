@@ -670,8 +670,8 @@ function drawPet(c,x,y,s,face){
   ell(c,x,y+.3,9*s,1.8*s,'rgba(0,0,0,.14)');
   c.save();c.translate(x,y-jump);c.scale(s*face,s*(1+breath)*sq);
   const L=OUT,lw=.6;
-  if(sp==='gecko'){drawGecko(c,C,m,sleeping);c.restore();return;}
-  if(sp==='hamster'){drawHamster(c,C,m,sleeping);c.restore();return;}
+  if(sp==='gecko'){drawGecko(c,C,m,sleeping);if(m==='sick')sickFX(c,9.6,-6.6,5);c.restore();return;}
+  if(sp==='hamster'){drawHamster(c,C,m,sleeping);if(m==='sick')sickFX(c,0,-15.4,7.2);c.restore();return;}
   if(sleeping){ // curled up
     ell(c,0,-5,11,5.5,C.main,L,lw);
     if(sp==='cat'){c.beginPath();c.moveTo(9,-3);c.quadraticCurveTo(12,2,2,1.5);c.lineWidth=2.6;c.strokeStyle=L;c.stroke();c.lineWidth=1.6;c.strokeStyle=C.main;c.stroke();}
@@ -710,7 +710,7 @@ function drawPet(c,x,y,s,face){
   face_(c,sp,m);
   accessory(c,false);
   c.restore();
-  if(m==='sick'){ell(c,-5.4,-15.5,1.6,.9,'rgba(120,170,220,.6)');}
+  if(m==='sick')sickFX(c,0,-19,7.6);
   c.restore();
 }
 
@@ -833,13 +833,34 @@ const HDIRT=[[-5,-8],[3,-5],[6,-10],[-2,-3],[-7,-5],[1,-12],[7,-4],[-4,-14],[4,-
 function dirtSet(){return P.species==='gecko'?GDIRT:P.species==='hamster'?HDIRT:DIRT;}
 const GDIRT=[[-4,-6],[1,-7.2],[5,-5.6],[-10,-4.2],[9,-8],[2,-3.6],[-2,-4],[-14,-3.2],[11,-5.2],[-7,-6.6]];
 function dirtCount(){return clamp(Math.ceil((100-P.clean)/10),0,10);}
+/* 髒污畫成一撇一撇的污痕（不用圓點），守宮的舊皮畫成細長的碎片 */
+function smudge(c,x,y,a,seed){
+  c.save();c.lineCap='round';c.strokeStyle='rgba(122,86,56,'+a+')';c.lineWidth=.42;
+  const tilt=((seed*37)%10)/10*.6-.3;
+  for(let k=0;k<3;k++){const ox=x-1.1+k*.95,len=1.5+((seed+k)%3)*.25;c.beginPath();c.moveTo(ox-len*.35+tilt,y+len*.5);c.quadraticCurveTo(ox+.1,y,ox+len*.35+tilt,y-len*.5);c.stroke();}
+  c.restore();
+}
+function flake(c,x,y,a,seed){
+  c.save();c.translate(x,y);c.rotate(((seed*53)%10)/10*1.2-.6);c.beginPath();c.moveTo(-1.5,.2);c.quadraticCurveTo(-.4,-.7,1.4,-.3);c.quadraticCurveTo(.6,.5,-1.5,.2);
+  c.fillStyle='rgba(255,255,255,'+(.7*a+.15)+')';c.fill();c.lineWidth=.18;c.strokeStyle='rgba(90,80,70,'+(.45*a)+')';c.stroke();c.restore();
+}
 function drawDirt(c){
   const gk=P.species==='gecko';
-  if(game&&game.type==='clean'){game.spots.forEach(sp=>{if(sp.done)return;const a=1-sp.rub/sp.need;if(gk)ell(c,sp.x,sp.y,1.8,1.1,'rgba(255,255,255,'+(.75*a+.15)+')','rgba(90,80,70,'+(.4*a)+')',.25);else ell(c,sp.x,sp.y,1.6,1.2,'rgba(120,85,55,'+(.55*a+.1)+')');});return;}
-  if(gk){const n=P.clean<70?dirtCount():0;for(let i=0;i<n;i++){const[d1,d2]=GDIRT[i];ell(c,d1,d2,1.6,1,'rgba(255,255,255,.7)','rgba(90,80,70,.3)',.2);}return;}
-  const n=P.clean<70?dirtCount():0;for(let i=0;i<n;i++){const[d1,d2]=dirtSet()[i];if(d2<-15)continue;ell(c,d1,d2,1.4,1,'rgba(120,85,55,.45)');}
+  if(game&&game.type==='clean'){game.spots.forEach((sp,i)=>{if(sp.done)return;const a=1-sp.rub/sp.need;if(gk)flake(c,sp.x,sp.y,a,i);else smudge(c,sp.x,sp.y,.6*a+.12,i);});return;}
+  const n=P.clean<70?dirtCount():0;
+  if(gk){for(let i=0;i<n;i++){const[d1,d2]=GDIRT[i];flake(c,d1,d2,.8,i);}return;}
+  for(let i=0;i<n;i++){const[d1,d2]=dirtSet()[i];if(d2<-15)continue;smudge(c,d1,d2,.5,i);}
 }
-
+/* 生病：額頭冰袋、發燒的臉頰、汗滴、頭上的暈眩線 */
+function sickFX(c,hx,hy,r){
+  const t=NOW;
+  c.save();c.translate(hx,hy);
+  ell(c,-r*.62,r*.18,r*.3,r*.16,'rgba(235,90,90,.38)');ell(c,r*.62,r*.18,r*.3,r*.16,'rgba(235,90,90,.38)');
+  rr(c,-r*.62,-r*.98,r*1.24,r*.42,r*.18);fs(c,'#BFE3F7',OUT,.35);c.strokeStyle='rgba(255,255,255,.8)';c.lineWidth=.25;for(let k=1;k<4;k++){c.beginPath();c.moveTo(-r*.62+k*r*.31,-r*.92);c.lineTo(-r*.62+k*r*.31,-r*.62);c.stroke();}
+  const sy=-r*.25+((t*1.3)%1)*r*.35;c.beginPath();c.moveTo(r*.95,sy-r*.22);c.quadraticCurveTo(r*1.12,sy,r*.95,sy+r*.08);c.quadraticCurveTo(r*.78,sy,r*.95,sy-r*.22);c.fillStyle='rgba(120,180,235,.85)';c.fill();
+  c.strokeStyle='rgba(110,110,140,.75)';c.lineWidth=.35;c.beginPath();for(let k=0;k<=24;k++){const a=k/24*Math.PI*2*1.6+t*3,rad=r*.12+k*r*.012;const x=Math.cos(a)*rad,y=-r*1.45+Math.sin(a)*rad*.45;k?c.lineTo(x,y):c.moveTo(x,y);}c.stroke();
+  c.restore();
+}
 /* ---------- interaction: petting / tapping ---------- */
 let ptr={down:false,x:0,y:0,sx:0,sy:0,moved:0,t:0,rub:0};
 function toScene(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left-T.ox)/T.s,y:(e.clientY-r.top-T.oy)/T.s};}
