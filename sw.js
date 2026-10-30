@@ -1,7 +1,9 @@
-/* 離線快取。版本號來自 config.js，更版時不用改這個檔案。 */
-importScripts('./config.js');
-var V = self.GC_CONFIG.version;
-var CACHE = 'gc-app-' + V, FONT = 'gc-fonts';
+/* 離線快取。
+   ★ 每次更新都要把下面的 BUILD 改成新版本號，並且上傳這個檔案。
+   （iPhone 的 Safari 只看 sw.js 本身有沒有變，sw.js 沒變就不會更新，舊裝置會一直用舊檔案。） */
+var BUILD = '1.15.1';
+importScripts('./config.js?v=' + BUILD);
+var CACHE = 'gc-app-' + BUILD, FONT = 'gc-fonts';
 var SHELL = ['./', './index.html', './config.js', './gc.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png']
   .concat(self.GC_CONFIG.games.map(function (g) { return './' + g.file; }));
 self.addEventListener('install', function (e) {
@@ -20,9 +22,13 @@ self.addEventListener('fetch', function (e) {
   }
   if (url.origin !== location.origin) return;
   if (url.pathname.endsWith('/sw.js')) return;
+  /* 圖示：先用快取。網頁、程式、設定：有網路就拿最新的，沒網路才用快取 */
+  if (/\/icons\//.test(url.pathname)) {
+    e.respondWith(caches.open(CACHE).then(function (c) { return c.match(req, { ignoreSearch: true }).then(function (hit) { return hit || fetch(req); }); }));
+    return;
+  }
   e.respondWith(caches.open(CACHE).then(function (c) {
-    return c.match(req, { ignoreSearch: true }).then(function (hit) {
-      return hit || fetch(req).then(function (res) { if (res.ok) c.put(req, res.clone()); return res; });
-    });
-  }).catch(function () { return fetch(req); }));
+    return fetch(req, { cache: 'no-cache' }).then(function (res) { if (res.ok) c.put(req, res.clone()); return res; })
+      .catch(function () { return c.match(req, { ignoreSearch: true }).then(function (hit) { return hit || Response.error(); }); });
+  }));
 });

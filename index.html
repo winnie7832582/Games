@@ -533,9 +533,10 @@ function reportSheet(){
 async function openAbout(){
   let usage='';try{if(navigator.storage&&navigator.storage.estimate){const e=await navigator.storage.estimate();usage='這台裝置已用 '+(e.usage/1048576).toFixed(1)+' MB';}}catch(e){}
   let persisted='';try{if(navigator.storage&&navigator.storage.persisted)persisted=(await navigator.storage.persisted())?'，資料已設為長期保存':'';}catch(e){}
-  sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button>'+
+  sheet('<div class="shead"><h2>'+esc(C.title)+'</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">目前版本 v'+esc(C.version)+'。'+usage+persisted+'</p><button class="btn main" type="button" id="ab-up">檢查更新</button><button class="btn" type="button" id="ab-hard" style="margin-top:8px">重新下載最新版（進度會保留）</button>'+
     '<button class="mrow" type="button" id="ab-snd"><span>設定（音效、音量、震動、動畫）</span><span aria-hidden="true">›</span></button>'+'<button class="mrow" type="button" id="ab-log"><span>更新紀錄</span><span aria-hidden="true">›</span></button><button class="mrow" type="button" id="ab-rep"><span>成績回報檢查</span><span aria-hidden="true">›</span></button>'+
     '<h3 class="danger">危險區</h3><p class="soft">以下操作無法復原。</p><button class="btn warn" type="button" id="ab-clear">清除這台裝置的所有遊戲資料</button>',b=>{
+    b.querySelector('#ab-hard').addEventListener('click',hardRefresh);
     b.querySelector('#ab-log').addEventListener('click',logSheet);
     b.querySelector('#ab-snd').addEventListener('click',settingsSheet);
     b.querySelector('#ab-rep').addEventListener('click',reportSheet);
@@ -544,11 +545,24 @@ async function openAbout(){
       Object.keys(localStorage).filter(k=>k.indexOf('gc:')===0).forEach(k=>localStorage.removeItem(k));closeSheet();render();})));});
 }
 $('#b-about').addEventListener('click',openAbout);
+/* 清掉離線快取、重新下載所有檔案。只動快取，不動 localStorage 的進度 */
+async function hardRefresh(){
+  try{toast('重新下載中…');}catch(e){}
+  try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.filter(k=>k.indexOf('gc-app-')===0).map(k=>caches.delete(k)));}}catch(e){}
+  try{if(navigator.serviceWorker){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}}catch(e){}
+  location.replace(location.pathname+'?r='+Date.now());
+}
+/* 保險：直接問伺服器的版本號，跟手上的不一樣就提示更新（舊裝置的快取卡住時也抓得到） */
+async function checkVersion(){
+  try{const t=await (await fetch('config.js?t='+Date.now(),{cache:'no-store'})).text();const m=t.match(/version:\s*'([^']+)'/);
+    if(m&&m[1]!==C.version){$('#upd-t').textContent='有新版本 v'+m[1]+' 可以更新';$('#upd').hidden=false;$('#upd').dataset.hard='1';}}catch(e){}
+}
 async function showUpdate(){
   let v='';try{const t=await (await fetch('config.js',{cache:'no-store'})).text();const m=t.match(/version:\s*'([^']+)'/);if(m)v=m[1];}catch(e){}
   $('#upd-t').textContent=v?'有新版本 v'+v+' 可以更新':'有新版本可以更新';$('#upd').hidden=false;
 }
-$('#upd-b').addEventListener('click',()=>{if(REG&&REG.waiting){REG.waiting.postMessage('skip');$('#upd-t').textContent='更新中…';}else location.reload();});
+$('#upd-b').addEventListener('click',()=>{if($('#upd').dataset.hard==='1'&&!(REG&&REG.waiting)){hardRefresh();return;}if(REG&&REG.waiting){REG.waiting.postMessage('skip');$('#upd-t').textContent='更新中…';}else location.reload();});
+if(location.protocol!=='file:'){setTimeout(checkVersion,1500);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkVersion();});}
 if('serviceWorker' in navigator&&location.protocol!=='file:'){
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{REG=reg;
     if(reg.waiting&&navigator.serviceWorker.controller)showUpdate();
