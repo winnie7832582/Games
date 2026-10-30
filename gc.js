@@ -387,10 +387,19 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     var p; try { p = JSON.parse(lsGet('__prog') || 'null'); } catch (e) { p = null; }
     if (!p || p.v !== 1) p = blank();
     p.s = p.s || {}; p.ach = p.ach || {}; p.q = p.q || [];
-    p.wallet = p.wallet || 0; p.own = p.own || {}; p.eq = p.eq || {}; p.dc = p.dc || { day: '', n: 0 };
+    p.wallet = p.wallet || 0; p.own = p.own || {}; p.eq = p.eq || {}; p.dc = p.dc || { day: '', n: 0 }; p.pan = p.pan || {};
     return p;
   }
   function save(p) { lsSet('__prog', JSON.stringify(p)); }
+  /* 共用倉庫：各遊戲做出來的東西放這裡，其他遊戲可以拿去用 */
+  var PANTRY = {
+    pickle: { n: '醃蘿蔔', from: 'farm' },
+    ketchup: { n: '番茄醬', from: 'farm' },
+    jam: { n: '草莓果醬', from: 'farm' },
+    egg: { n: '雞蛋', from: 'farm' },
+    fish: { n: '吳郭魚', from: 'farm' },
+    milkfish: { n: '虱目魚', from: 'farm' }
+  };
   function ensureQuests(p) {
     var t = today();
     if (p.qday !== t) { p.qday = t; p.q = pickQuests(t).map(function (d) { return { id: d.id, pr: 0, done: false }; }); }
@@ -529,6 +538,10 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     give: function (n) { var p = load(); p.wallet = (p.wallet || 0) + Math.max(0, Math.round(n)); save(p); return p.wallet; },
     pay: function (n) { var p = load(); n = Math.round(n); if ((p.wallet || 0) < n) return false; p.wallet -= n; save(p); return true; },
     wallet: function () { return load().wallet || 0; },
+    pantry: function () { var p = load(), o = {}; for (var k in p.pan) if (p.pan[k] > 0) o[k] = p.pan[k]; return o; },
+    pantryName: function (id) { return PANTRY[id] ? PANTRY[id].n : id; },
+    stock: function (id, n) { var p = load(); n = Math.max(0, Math.round(n || 1)); p.pan[id] = (p.pan[id] || 0) + n; save(p); return p.pan[id]; },
+    take: function (id, n) { var p = load(); n = Math.max(0, Math.round(n || 1)); if ((p.pan[id] || 0) < n) return false; p.pan[id] -= n; if (!p.pan[id]) delete p.pan[id]; save(p); return true; },
     buy: function (id) {
       var p = load(), d = collDef(id); if (!d) return { ok: false, msg: '找不到這個商品' };
       if (p.own[id]) return { ok: false, msg: '已經擁有了' };
@@ -604,7 +617,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       { t: '營業兩分鐘', d: '客人點什麼就做什麼。客人生氣的次數用完會提早打烊，這裡可以調。', el: '.lives' },
       { t: '照順序做', d: '茶倒到八分滿，糖和冰照次數加，珍珠要先煮，放太久會變硬。' },
       { t: '封膜出餐', d: '封膜後點客人就能出餐。按鈕分成茶底、加料、動作三區。' },
-      { t: '升級店面', d: '賺到的錢可以升級店面，做起來更快。', el: '#shop-open' }
+      { t: '店舖', d: '點數可以升級設備、學新飲料、請常客。連續做對還有連擊加成。', el: '#shop-open' }
     ],
     'cafe': [
       { t: '四位客人', d: '每次開店有四位客人，豆子、口味、奶種和拉花都不一樣。', el: '#start' },
@@ -646,7 +659,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       { t: '真實時間種菜', d: '作物照真實時間長大，關掉遊戲也會繼續長。先送你 4 包小白菜種子，3 分鐘就能收成。' },
       { t: '種植和澆水', d: '點「種植」選種子，再點空的田。田要澆水才會長，水乾了就會停。', el: '#tools' },
       { t: '雜草和蟲', d: '偶爾會長雜草、跑出蟲，點一下就清掉，不處理收成會變少。這三顆可以一次全部處理。', el: '.quick' },
-      { t: '訂單和商店', d: '村民大約 20 分鐘來一位；商店可以買種子，也能兌換共用幣。', el: '#b-order' }
+      { t: '訂單和農舍', d: '村民大約 20 分鐘來一位。農舍有加工坊、雞舍和池塘，雞蛋和魚可以拿到其他遊戲用。', el: '#b-kit' }
     ]
   };
   var TOUR_KEY = '__tour:' + GNAME, tourEl = null, tourI = 0, tourPaused = false, tourSteps = null;
