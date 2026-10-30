@@ -417,7 +417,7 @@ function boot(){
   const d=today();let bonus=0;if(F.daily!==d){F.daily=d;if(!first){bonus=15;addCoins(bonus);}}
   save();makeLayout();updateHud();resize();
   GCmax({level:level(),plots:F.up.plots});
-  if(first){setTimeout(()=>sheet('<div class="shead"><h3>歡迎來到小菜園</h3></div><p class="soft">這裡的時間是真的：種下去的菜，就算你關掉遊戲也會繼續長。</p><p class="soft">1. 點「種植」，選種子，再點空的田。<br>2. 田地要<b>澆水</b>才會長，水乾了就會停。<br>3. 偶爾會長雜草、跑出蟲，點一下就清掉，不處理收成會變少。<br>4. 長好了點一下收成，到商店賣掉，或完成村民的訂單。</p><p class="soft">先送你 4 包小白菜種子，3 分鐘就能收成。</p><button class="btn main" type="button" data-close style="width:100%">開始種菜</button>'),300);}
+  if(first){/* 第一次的說明改由 gc.js 的新手教學顯示 */}
   else if(away>3*MIN||bonus){setTimeout(()=>{const m=Math.round(away/MIN);const t=(m>=60?Math.floor(m/60)+' 小時 '+(m%60)+' 分鐘':m+' 分鐘');
     sheet('<div class="shead"><h3>歡迎回來</h3></div><p class="soft">離開了 '+t+'。'+(afterReady>0?'有 '+afterReady+' 塊田的作物可以收成了。':'作物還在慢慢長大。')+(bonus?'<br>今日第一次來，送你 $'+bonus+'。':'')+'</p><button class="btn main" type="button" data-close style="width:100%">去看看</button>');},300);}
   requestAnimationFrame(loop);

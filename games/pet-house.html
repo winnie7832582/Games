@@ -71,6 +71,7 @@ button,input{font:inherit;color:inherit}
 .toast{position:absolute;left:50%;top:10px;transform:translate(-50%,-6px);opacity:0;padding:6px 14px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:.95rem;white-space:nowrap;pointer-events:none;transition:opacity .15s,transform .15s;z-index:2;max-width:92%;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 .gamehud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;z-index:2;pointer-events:none}
+.gamehud span,.gamehud button{white-space:nowrap}
 .gamehud span{background:rgba(255,255,255,.85);color:#3B2F2F;border-radius:999px;padding:4px 12px;font-variant-numeric:tabular-nums}
 .gamehud button{pointer-events:auto;background:rgba(255,255,255,.9);color:#3B2F2F;border:2px solid #3B2F2F;border-radius:999px;padding:4px 12px;cursor:pointer}
 .gamehud[hidden]{display:none}
@@ -445,9 +446,10 @@ $('#a-clean').addEventListener('click',()=>{
 /* play */
 $('#a-play').addEventListener('click',()=>{
   if(P.sleeping){toast(P.name+'在睡覺');return;}
-  sheetHTML('<h3>玩耍</h3><p class="soft">精力 '+Math.round(P.energy)+'。'+(P.sick?'生病的時候不能玩。':P.energy<15?'太累了，先讓牠睡一下。':'')+'</p><div class="grid2"><button class="btn" type="button" id="pl-toy"'+(P.sick||P.energy<15?' disabled':'')+'>逗牠玩</button><button class="btn" type="button" id="pl-catch"'+(P.sick||P.energy<15?' disabled':'')+'>接零食</button></div><p class="soft">逗牠玩：拖著玩具讓牠追，撲到越多次越開心。<br>接零食：左右移動接住掉下來的零食，可以賺金幣。小心洋蔥和巧克力，對毛孩有害。</p><button class="btn close" type="button" data-close>關閉</button>',box=>{
+  sheetHTML('<h3>玩耍</h3><p class="soft">精力 '+Math.round(P.energy)+'。'+(P.sick?'生病的時候不能玩。':P.energy<15?'太累了，先讓牠睡一下。':'')+'</p><div class="grid2"><button class="btn" type="button" id="pl-toy"'+(P.sick||P.energy<15?' disabled':'')+'>逗牠玩</button><button class="btn" type="button" id="pl-catch"'+(P.sick||P.energy<15?' disabled':'')+'>接零食</button><button class="btn" type="button" id="pl-walk" style="grid-column:1/-1"'+(P.sick||P.energy<25?' disabled':'')+'>帶出門散步</button></div><p class="soft">逗牠玩：拖著玩具讓牠追，撲到越多次越開心。<br>接零食：左右移動接住掉下來的零食，可以賺金幣。小心洋蔥和巧克力，對毛孩有害。<br>散步：點水坑跳過去、點花聞一聞、點狗狗打招呼'+(P.species==='gecko'||P.species==='hamster'?'，'+SPECIES[P.species].n+'坐推車出門':'')+'。精力 25 以上才能出門。</p><button class="btn close" type="button" data-close>關閉</button>',box=>{
     box.querySelector('#pl-toy').addEventListener('click',()=>{closeSheet();startGame('toy');});
-    box.querySelector('#pl-catch').addEventListener('click',()=>{closeSheet();startGame('catch');});});
+    box.querySelector('#pl-catch').addEventListener('click',()=>{closeSheet();startGame('catch');});
+    box.querySelector('#pl-walk').addEventListener('click',()=>{closeSheet();startGame('walk');});});
 });
 /* sleep */
 $('#a-sleep').addEventListener('click',()=>{
@@ -906,20 +908,23 @@ function startGame(type){
   if(type==='clean'){const n=Math.max(3,dirtCount());const spots=dirtSet().slice(0,n).map(([x,y])=>({x,y,rub:0,need:24,done:false}));game={type,spots,time:0,dur:40};}
   if(type==='toy'){game={type,time:0,dur:20,tx:70,ty:60,tvx:0,tvy:0,pounce:0,cool:0,hits:0};pet.target=pet.x;}
   if(type==='catch'){game={type,time:0,dur:25,items:[],score:0,spawn:0,px:50};}
+  if(type==='walk'){game={type,time:0,dur:30,off:0,objs:[],spawn:1.4,flowers:0,greets:0,jumps:0,splash:0,ox:pet.x};pet.x=30;pet.face=1;pet.anim='';bubble=null;}
   $('#ghud').hidden=false;updateGameHud();updateUI();
-  toast(type==='clean'?(P.species==='dog'?'用手指在髒污上來回刷洗':'用手指在毛上來回梳'):type==='toy'?'拖著玩具讓'+P.name+'追':'左右移動，接住零食');
+  toast(type==='clean'?(P.species==='dog'?'用手指在髒污上來回刷洗':'用手指在毛上來回梳'):type==='toy'?'拖著玩具讓'+P.name+'追':type==='walk'?'點水坑跳過、點花聞一聞、點狗狗打招呼':'左右移動，接住零食');
 }
 function updateGameHud(){
   if(!game)return;const left=Math.max(0,Math.ceil(game.dur-game.time));
   if(game.type==='clean'){const d=game.spots.filter(s=>s.done).length;$('#g-l').textContent='乾淨 '+d+' / '+game.spots.length;}
   if(game.type==='toy')$('#g-l').textContent='撲到 '+game.hits+' 次';
   if(game.type==='catch')$('#g-l').textContent='得分 '+game.score;
+  if(game.type==='walk')$('#g-l').textContent='花'+game.flowers+'・狗'+game.greets+'・跳'+game.jumps;
   $('#g-r').textContent=left+' 秒';
 }
 $('#g-end').addEventListener('click',()=>endGame());
 function endGame(){
   if(!game)return;const g=game;game=null;$('#ghud').hidden=true;
-  try{if(window.GC){var ok=g.type==='clean'?g.spots.some(function(s){return s.done;}):(g.type==='toy'?g.hits>0:g.score>0)||g.time>=8;if(ok)GC.add('pet-house',g.type==='clean'?'cleaned':'played',1);}}catch(e){}
+  try{if(window.GC&&g.type==='walk'&&g.time>=8)GC.add('pet-house','walked',1);}catch(e){}
+  try{if(window.GC&&g.type!=='walk'){var ok=g.type==='clean'?g.spots.some(function(s){return s.done;}):(g.type==='toy'?g.hits>0:g.score>0)||g.time>=8;if(ok)GC.add('pet-house',g.type==='clean'?'cleaned':'played',1);}}catch(e){}
   const toyOwned=has(TOYOF[P.species]);
   if(g.type==='clean'){const frac=g.spots.filter(s=>s.done).length/g.spots.length;P.clean=clamp(Math.max(P.clean,P.clean+(100-P.clean)*frac),0,100);if(frac>=1)P.clean=100;
     let m=P.species==='dog'?3:P.species==='gecko'?4:5;if(P.pers==='neat')m+=6;P.mood=clamp(P.mood+m*frac,0,100);P.bond+=Math.round(3*frac);
@@ -928,6 +933,7 @@ function endGame(){
     toast('撲到 '+g.hits+' 次，心情 +'+Math.round(m));if(g.hits>=8)diary('跟'+P.name+'玩得好開心，撲了 '+g.hits+' 次。');}
   if(g.type==='catch'){const coins=Math.max(0,g.score)*2;P.coins+=coins;P.mood=clamp(P.mood+8,0,100);P.energy=clamp(P.energy-10,0,100);P.hunger=clamp(P.hunger+Math.max(0,g.score)*.6,0,100);P.bond+=2;
     toast('接零食得 '+g.score+' 分，賺 '+coins+' 金幣');}
+  if(g.type==='walk')endWalk(g);
   save();updateUI();
 }
 function stepGame(dt){
@@ -953,16 +959,117 @@ function stepGame(dt){
       if(it.kind==='bad'){gsfx('bad');g.score-=2;toast(P.species==='gecko'?'守宮不能吃'+it.label+'！':it.label+'對毛孩有害！');pet.anim='confused';pet.animT=0;buzz(30);}else{gsfx(it.kind==='gold'?'sparkle':'pop');g.score+=it.kind==='gold'?3:1;pet.anim='happy';pet.animT=0;fx.hearts.push({x:pet.x,y:pet.y-22,t:0});buzz(6);}}});
     g.items=g.items.filter(it=>!it.done&&it.y<80);
   }
+  if(g.type==='walk')stepWalk(g,dt);
   if(g.time>=g.dur&&game)endGame();
   else updateGameHud();
 }
-function gameDown(x,y){if(!game)return;if(game.type==='toy'){game.tx=x;game.ty=y;}if(game.type==='catch')game.px=clamp(x,8,92);}
+function gameDown(x,y){if(!game)return;if(game.type==='walk'){walkTap(x,y);return;}if(game.type==='toy'){game.tx=x;game.ty=y;}if(game.type==='catch')game.px=clamp(x,8,92);}
 function gameMove(x,y,d){
   const g=game;if(!g)return;
   if(g.type==='clean'&&ptr.down){const s=petScale();g.spots.forEach(sp=>{if(sp.done)return;const wx=pet.x+sp.x*s*pet.face,wy=pet.y+sp.y*s;if(Math.hypot(x-wx,y-wy)<3.2*s+1.5){sp.rub+=d;if(Math.random()<.12)gsfx('swish');if(sp.rub>=sp.need){sp.done=true;buzz(8);gsfx('sparkle');}}});}
   if(g.type==='toy'&&ptr.down){g.tvx=(x-g.tx)*60;g.tvy=(y-g.ty)*60;g.tx=clamp(x,4,96);g.ty=clamp(y,20,72);}
   if(g.type==='catch'&&ptr.down)g.px=clamp(x,8,92);
 }
+
+/* ---------- 散步 ---------- */
+const CART=()=>P.species==='gecko'||P.species==='hamster';
+const DOGCOL=[['#D99A55','#FBEEDD'],['#F2EEE6','#FFFFFF'],['#3A3533','#EDE6DC'],['#B88A5E','#F2E2CC'],['#8E8A86','#E9E6E2']];
+const DOGNAME=['柴柴','小白','黑糖','布朗','灰灰','豆花','麻吉'];
+function stepWalk(g,dt){
+  const sp=18;g.off+=sp*dt;
+  g.spawn-=dt;
+  if(g.spawn<=0&&g.time<g.dur-3){g.spawn=rnd(1.5,2.4);const r=Math.random(),last=g.objs[g.objs.length-1];
+    const kind=g.time<2?'flower':(last&&last.kind==='puddle'&&r<.4)?'flower':r<.42?'puddle':r<.74?'flower':'dog';
+    const o={kind,x:112,done:false,ok:false,t:0};
+    if(kind==='dog'){const c=pick(DOGCOL);o.col=c;o.name=pick(DOGNAME);o.v=6;o.k=rnd(.95,1.15);}
+    if(kind==='flower'){o.col=pick(['#E76F99','#F2C36B','#B48BE0','#F28C6B','#FFFFFF']);}
+    g.objs.push(o);}
+  g.objs.forEach(o=>{o.t+=dt;o.x-=(sp+(o.v||0))*dt;
+    if(o.kind==='puddle'&&!o.done&&o.x<=pet.x+2){o.done=true;
+      if(o.ok){g.jumps++;gsfx('whoosh');}
+      else{g.splash++;P.clean=clamp(P.clean-(CART()?5:9),0,100);gsfx('splash');buzz(30);toast(CART()?'推車輾過水坑，濺到一點水':'踩到水坑，弄髒了！');pet.anim='confused';pet.animT=0;
+        for(let k=0;k<8;k++)fx.bubbles.push({x:pet.x+rnd(-6,6),y:68+rnd(-3,1),t:rnd(0,.3),mud:1});}}
+    if(o.kind!=='puddle'&&!o.done&&o.x<pet.x-14)o.done=true;});
+  g.objs=g.objs.filter(o=>o.x>-30);
+  // 跳躍：已標記的水坑靠近時自動跳
+  let jp=0;g.objs.forEach(o=>{if(o.kind==='puddle'&&o.ok){const d=o.x-pet.x;if(d<10&&d>-8){const u=(10-d)/18;jp=Math.max(jp,Math.sin(clamp(u,0,1)*Math.PI)*(CART()?4:6));}}});
+  pet.jump=Math.max(jp,Math.abs(Math.sin(NOW*9))*.7);pet.walk=true;
+}
+function walkTap(x,y){
+  const g=game,s=petScale();let best=null,bd=1e9;
+  g.objs.forEach(o=>{if(o.done||o.ok||o.x<pet.x-6)return;const oy=o.kind==='puddle'?70:o.kind==='flower'?55:63;const d=Math.hypot(x-o.x,(y-oy)*.8);if(d<bd){bd=d;best=o;}});
+  if(best&&bd<14){hitWalk(best);return;}
+  // 沒點中：幫最近的水坑起跳
+  const pd=g.objs.filter(o=>o.kind==='puddle'&&!o.done&&!o.ok&&o.x>pet.x&&o.x<pet.x+40).sort((a,b)=>a.x-b.x)[0];
+  if(pd)hitWalk(pd);
+}
+function hitWalk(o){const g=game;
+  if(o.kind==='puddle'){o.ok=true;gsfx('pop');buzz(6);return;}
+  o.done=true;o.ok=true;pet.anim='happy';pet.animT=0;buzz(8);
+  if(o.kind==='flower'){g.flowers++;P.mood=clamp(P.mood+3,0,100);gsfx('sparkle');fx.hearts.push({x:o.x,y:50,t:0});bubble={text:'（嗅嗅）好香',t:0};}
+  else{g.greets++;P.bond+=2;gsfx({cat:'meow',dog:'bark',rabbit:'chirp',gecko:'chirp',hamster:'squeak'}[P.species]||'bark');fx.hearts.push({x:(o.x+pet.x)/2,y:46,t:0});fx.hearts.push({x:o.x,y:50,t:.2,big:1});bubble={text:'嗨，'+o.name+'！',t:0};}
+}
+function endWalk(g){
+  const f=clamp(g.time/g.dur,0,1),n=P.name;pet.x=g.ox||50;pet.target=pet.x;pet.jump=0;
+  const m=Math.round(f*(8+Math.min(6,g.flowers)*2)),h=Math.round(f*6);
+  P.mood=clamp(P.mood+m,0,100);P.health=clamp(P.health+h,0,100);P.energy=clamp(P.energy-Math.round(15*f),0,100);P.hunger=clamp(P.hunger-Math.round(6*f),0,100);P.bond+=Math.round(2*f);
+  toast('散步回來了：心情 +'+m+'，健康 +'+h);
+  if(g.time>=8){const bits=[];if(g.flowers)bits.push('聞了 '+g.flowers+' 朵花');if(g.greets)bits.push('跟 '+g.greets+' 隻狗狗打招呼');if(g.jumps)bits.push('跳過 '+g.jumps+' 個水坑');
+    diary('帶'+n+(CART()?'坐推車':'')+'出門散步'+(bits.length?'，'+bits.join('、'):'')+'。'+(g.splash?'途中踩到水坑，回家要洗一洗。':'回家時看起來好開心。'));}
+}
+function drawWalk(c,s){
+  const g=game,dp=dayPart(),off=g.off,dark=dp==='night'||dp==='evening';
+  const sky={day:'#BFE3F5',dawn:'#F7C6A8',dusk:'#F4B98A',evening:'#7C88C0',night:'#2A2E58'}[dp];
+  c.fillStyle=sky;c.fillRect(-60,-80,220,140);
+  if(dark){ell(c,78,6,3.4,3.4,'#FFF3C4');ell(c,79.4,5.2,3,3,sky);}else{ell(c,80,8,4,4,'#FFE08A');}
+  // 遠山
+  for(let i=0;i<8;i++){const x=((i*42-off*.15)%336+336)%336-70;ell(c,x,46,30,16,dark?'#4E5A7A':'#A9D3B5');}
+  // 樹和路燈
+  for(let i=0;i<9;i++){const x=((i*34-off*.55)%306+306)%306-60;
+    if(i%3===2){c.fillStyle='#6B6F7A';c.fillRect(x-.5,22,1,30);ell(c,x,22,2.2,1.2,'#6B6F7A');if(dark){const gr=c.createRadialGradient(x,24,1,x,24,12);gr.addColorStop(0,'rgba(255,225,150,.5)');gr.addColorStop(1,'rgba(255,225,150,0)');c.fillStyle=gr;c.fillRect(x-12,12,24,24);}ell(c,x,23.4,1.4,1,'#FFE9A8');}
+    else{c.fillStyle='#8A5A3B';c.fillRect(x-1,36,2,16);ell(c,x,32,8,8,dark?'#3F6B57':'#6BAA75');ell(c,x-4,35,5,4.6,dark?'#3A6250':'#5E9C68');ell(c,x+4,35,5,4.6,dark?'#3A6250':'#5E9C68');}}
+  // 草地與人行道
+  c.fillStyle=dark?'#4F7D55':'#8CC26A';c.fillRect(-60,50,220,9);
+  for(let i=0;i<30;i++){const x=((i*9-off)%270+270)%270-60;ell(c,x,52+(i%3)*2,.8,.8,['#F2C36B','#FFFFFF','#E76F99'][i%3]);}
+  c.fillStyle='#C9B79C';c.fillRect(-60,58,220,1.6);
+  c.fillStyle=dark?'#B9AE9C':'#E8DCC8';c.fillRect(-60,59.6,220,40);
+  c.strokeStyle='rgba(120,90,60,.22)';c.lineWidth=.4;for(let i=0;i<24;i++){const x=((i*12-off)%288+288)%288-60;c.beginPath();c.moveTo(x,59.6);c.lineTo(x-4,90);c.stroke();}
+  c.beginPath();c.moveTo(-60,75);c.lineTo(160,75);c.stroke();
+  // 物件（在毛孩後面的）
+  g.objs.forEach(o=>{if(o.kind==='puddle')drawPuddle(c,o);});
+  g.objs.forEach(o=>{if(o.kind==='flower')drawFlower(c,o);});
+  g.objs.forEach(o=>{if(o.kind==='dog')drawNDog(c,o);});
+  // 毛孩
+  if(CART()){drawCart(c,pet.x,s,true);drawPet(c,pet.x,63-pet.jump*0,s*.85,1);drawCart(c,pet.x,s,false);}
+  else{const nx=pet.x+3*s,ny=pet.y-pet.jump-15*s;c.beginPath();c.moveTo(nx,ny);c.quadraticCurveTo(pet.x-10,ny-6,pet.x-26,ny-22);c.lineWidth=.5;c.strokeStyle='#C0392B';c.stroke();drawPet(c,pet.x,pet.y,s,1);}
+  fx.hearts.forEach(h=>{const a=1-h.t/1.2,k=h.big?1.5:1;c.globalAlpha=Math.max(0,a);heart(c,h.x,h.y-h.t*10,1.4*k);c.globalAlpha=1;});
+  fx.bubbles.forEach(b=>{const a=1-b.t/.8;c.globalAlpha=Math.max(0,a);ell(c,b.x+(b.x-pet.x)*b.t,b.y-b.t*6+b.t*b.t*10,.8,.8,b.mud?'#8A6A4A':'rgba(255,255,255,.7)');c.globalAlpha=1;});
+  if(bubble){const a=bubble.t<1.6?1:Math.max(0,1-(bubble.t-1.6)/.4);c.globalAlpha=a;const m=c.getTransform();c.save();c.setTransform(1,0,0,1,0,0);c.font=(3*m.a)+'px '+FONT;const w=c.measureText(bubble.text).width/m.a+5;c.restore();
+    const bx=clamp(pet.x-w/2,2,98-w),by=(CART()?40:pet.y-37*s)-pet.jump;rr(c,bx,by,w,6.4,3);fs(c,'#FFFFFF',OUT,.4);txt(c,bubble.text,bx+w/2,by+3.3,3,OUT);c.globalAlpha=1;}
+  if(dp==='night'){c.setTransform(1,0,0,1,0,0);c.fillStyle='rgba(20,22,50,.22)';c.fillRect(0,0,cv.width,cv.height);}
+}
+function tapRing(c,o,x,y,r){if(o.done||o.ok)return;const k=.5+.5*Math.sin(NOW*6);c.globalAlpha=.35+.35*k;ell(c,x,y,r+k*1.2,(r+k*1.2)*.42,null,'#FFFFFF',.6);c.globalAlpha=1;}
+function drawPuddle(c,o){const x=o.x;tapRing(c,o,x,70.5,10);ell(c,x,70.5,8.5,2.4,o.done&&!o.ok?'#7DA7C9':'#8EC5E8','rgba(60,110,150,.5)',.4);ell(c,x-2.5,70,3,.7,'rgba(255,255,255,.7)');
+  if(o.ok&&!o.done){c.globalAlpha=.9;txt(c,'跳！',x,64,3,'#2F6FDB');c.globalAlpha=1;}}
+function drawFlower(c,o){const x=o.x,y=56,b=o.done?1+Math.min(1,o.t)*0:1;tapRing(c,o,x,58.4,5);
+  c.beginPath();c.moveTo(x,58.4);c.lineTo(x,y-4);c.lineWidth=.6;c.strokeStyle='#4E9A4B';c.stroke();ell(c,x+1.4,y-1,1.6,.7,'#6BAA75',null,0,-.5);
+  for(let k=0;k<5;k++){const a=k/5*Math.PI*2+(o.done?NOW*2:0);ell(c,x+Math.cos(a)*1.6*b,y-5+Math.sin(a)*1.6*b,1.3,1.3,o.col,'rgba(59,47,47,.3)',.2);}ell(c,x,y-5,1,1,'#F6C445');}
+function drawNDog(c,o){const k=o.k,x=o.x,y=63,[m,bl]=o.col,b=Math.abs(Math.sin(o.t*10))*.5;
+  tapRing(c,o,x,y+.3,9*k);ell(c,x,y+.3,8*k,1.4*k,'rgba(0,0,0,.12)');
+  c.beginPath();c.moveTo(x+2*k,y-9*k);c.lineTo(x+16,y-30);c.lineWidth=.5;c.strokeStyle='#2F6FDB';c.stroke();
+  c.lineWidth=1.2*k;c.strokeStyle=OUT;[[-4,1],[-1.5,-1],[3,1],[5,-1]].forEach(([dx,ph])=>{const sw=Math.sin(o.t*10+ph)*1.2;c.beginPath();c.moveTo(x+dx*k,y-4*k-b);c.lineTo(x+dx*k+sw,y);c.stroke();});
+  c.lineWidth=.9*k;c.strokeStyle=m;[[-4,1],[-1.5,-1],[3,1],[5,-1]].forEach(([dx,ph])=>{const sw=Math.sin(o.t*10+ph)*1.2;c.beginPath();c.moveTo(x+dx*k,y-4*k-b);c.lineTo(x+dx*k+sw,y-.3);c.stroke();});
+  c.beginPath();c.moveTo(x+6.5*k,y-7*k-b);c.quadraticCurveTo(x+10*k,y-11*k-b+Math.sin(o.t*14),x+9*k,y-13*k-b);c.lineWidth=1.2*k;c.strokeStyle=m;c.stroke();
+  ell(c,x+.5*k,y-7*k-b,7*k,3.8*k,m,OUT,.5);ell(c,x,y-6*k-b,4*k,2*k,bl);
+  ell(c,x-6.5*k,y-11.5*k-b,4*k,3.6*k,m,OUT,.5);ell(c,x-9.5*k,y-10.5*k-b,1.8*k,1.3*k,bl,OUT,.3);ell(c,x-11*k,y-11*k-b,.6*k,.5*k,OUT);
+  ell(c,x-5*k,y-14.4*k-b,1.4*k,2.4*k,m,OUT,.4,-.3);ell(c,x-8.6*k,y-12.6*k-b,.5*k,.6*k,OUT);
+  if(o.done&&o.ok){c.globalAlpha=Math.max(0,1-o.t*.2);txt(c,'汪！',x-4,y-20*k,3,OUT);c.globalAlpha=1;}}
+function drawCart(c,x,s,back){const y=66,w=P.species==='gecko'?38:26,ws=game?game.off*.4:0;
+  if(back){c.beginPath();c.moveTo(x-w/2+1,y-6);c.lineTo(x-w/2-6,y-20);c.lineTo(x-w/2-10,y-20);c.lineWidth=1;c.strokeStyle='#5B6472';c.stroke();
+    rr(c,x-w/2,y-12-pet.jump,w,8,3);fs(c,'#F7E3C8','rgba(59,47,47,.4)',.3);return;}
+  const jy=pet.jump;
+  rr(c,x-w/2,y-7-jy,w,8,3);fs(c,'#E76F99',OUT,.5);c.fillStyle='rgba(255,255,255,.35)';c.fillRect(x-w/2+2,y-5.6-jy,w-4,1);
+  [-8,8].forEach(dx=>{ell(c,x+dx,y+2.4-jy,3,3,'#3B2F2F');ell(c,x+dx,y+2.4-jy,1.6,1.6,'#D9D4CE');for(let k=0;k<3;k++){const a=ws+k*2.1;c.beginPath();c.moveTo(x+dx,y+2.4-jy);c.lineTo(x+dx+Math.cos(a)*2.4,y+2.4-jy+Math.sin(a)*2.4);c.lineWidth=.3;c.strokeStyle='#8A8580';c.stroke();}});}
 
 /* ---------- events ---------- */
 let evTimer=rnd(90,180);
@@ -988,8 +1095,9 @@ function stepPet(dt){
 function render(){
   const c=ctx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,cv.width,cv.height);
   c.setTransform(DPR*T.s,0,0,DPR*T.s,DPR*T.ox,DPR*T.oy);c.lineJoin='round';c.lineCap='round';
-  drawRoom(c);
   const s=petScale();
+  if(game&&game.type==='walk'){drawWalk(c,s);return;}
+  drawRoom(c);
   if(game&&game.type==='toy'){const g=game;c.beginPath();c.moveTo(g.tx+8,g.ty-18);c.quadraticCurveTo(g.tx+3,g.ty-10,g.tx,g.ty);c.lineWidth=.5;c.strokeStyle=OUT;c.stroke();
     if(P.species==='hamster'){ell(c,g.tx,g.ty,2.2,1.2,'#5A4A3A',OUT,.3);c.beginPath();c.moveTo(g.tx-1.6,g.ty);c.lineTo(g.tx+1.6,g.ty);c.lineWidth=.3;c.strokeStyle='#E8D8B8';c.stroke();}else if(P.species==='gecko'){ell(c,g.tx,g.ty,2,1,'#7BA05B',OUT,.3);c.beginPath();c.moveTo(g.tx-1,g.ty+.6);c.lineTo(g.tx-2.4,g.ty+1.8);c.moveTo(g.tx+1,g.ty+.6);c.lineTo(g.tx+2.4,g.ty+1.8);c.lineWidth=.3;c.strokeStyle=OUT;c.stroke();}else if(P.species==='dog')ell(c,g.tx,g.ty,2,2,'#E76F51',OUT,.3);else if(P.species==='rabbit')rr(c,g.tx-3,g.ty-.8,6,1.6,.8),fs(c,'#C99A6B',OUT,.3);else{ell(c,g.tx,g.ty,1.8,.8,'#E76F99',null,0,-.5);ell(c,g.tx-1,g.ty+.6,1.4,.6,'#F2C36B',null,0,.4);}}
   drawPet(c,pet.x,pet.y,s,pet.face);

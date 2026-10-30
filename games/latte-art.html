@@ -322,13 +322,67 @@ function drawCup(c,pour,o){
   }
   c.restore();
 }
-const TGT={};
-function drawTarget(c,x,y,r,pat){
-  ell(c,x,y,r+1.2,r+1.2,GLAZE,OUT,.4);ell(c,x,y,r,r,CREMA);
-  if(!TGT[pat]){const pts=[],N=30;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const u=(i+.5)/N*2-1,v=-((j+.5)/N*2-1);const k=pat==='circ'?1.7:1.5;if(ART[pat](u*k,v*k))pts.push([u,-v]);}TGT[pat]=pts;}
-  c.fillStyle=FOAM;const cs=r*2/30+.06;TGT[pat].forEach(([u,v])=>c.fillRect(x+u*r-cs/2,y+v*r-cs/2,cs,cs));
-  if(pat==='tulip'||pat==='tulip5'){const L=pat==='tulip'?[[-.02,.5],[-.45,.387]]:[[.34,.4],[-.02,.36],[-.35,.32],[-.64,.27]];c.strokeStyle='rgba(150,90,45,.9)';c.lineWidth=Math.max(.25,r*.05);L.forEach(([cv,rv])=>{c.beginPath();c.arc(x,y-cv/1.5*r,rv/1.5*r,Math.PI*1.12,Math.PI*1.88);c.stroke();});}
+/* ---------- 拉花向量插畫：目標圖和輔助線（評分仍用遮罩） ---------- */
+function makeLatteVec(MASK){
+  const TAU=Math.PI*2,P2=f=>{const p=new Path2D();f(p);return p;};
+  const circ=(x,y,r)=>P2(p=>p.arc(x,y,r,0,TAU));
+  const wob=(x,y,r,amp,n,ph)=>P2(p=>{const N=120;for(let i=0;i<=N;i++){const a=i/N*TAU,rr=r*(1+amp*Math.sin(a*n+ph));const px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr;i?p.lineTo(px,py):p.moveTo(px,py);}p.closePath();});
+  // 愛心：沿著評分用的愛心曲線描邊，所以形狀跟評分完全一致
+  const heartP=(sc,ox,oy)=>P2(p=>{const N=240;for(let i=0;i<=N;i++){const a=i/N*TAU,dx=Math.sin(a),dy=Math.cos(a);let lo=0,hi=1.6;for(let k=0;k<24;k++){const m=(lo+hi)/2;if(MASK.heart(dx*m,dy*m))lo=m;else hi=m;}const x=ox+dx*lo*sc,y=oy+dy*lo*sc;i?p.lineTo(x,y):p.moveTo(x,y);}p.closePath();});
+  // 葉子：v0 中心、len 半長、wmax 最寬
+  const leafW=(t,wmax)=>Math.abs(t)>=1?0:wmax*Math.pow(1-t*t,.85);
+  const leafP=(v0,len,wmax)=>P2(p=>{const N=80;for(let i=0;i<=N;i++){const t=-1+2*i/N;p[i?'lineTo':'moveTo'](leafW(t,wmax),v0+len*t);}for(let i=N;i>=0;i--){const t=-1+2*i/N;p.lineTo(-leafW(t,wmax),v0+len*t);}p.closePath();});
+  const ribs=(v0,len,wmax,n,top,bot)=>P2(p=>{for(let k=0;k<n;k++){const v=top-(top-bot)*k/(n-1),dv=len*.24,w=leafW((v-dv-v0)/len,wmax)*.9;if(w<.04)continue;p.moveTo(-w,v-dv);p.quadraticCurveTo(-w*.3,v-dv*.15,0,v);p.quadraticCurveTo(w*.3,v-dv*.15,w,v-dv);}});
+  const line=pts=>P2(p=>pts.forEach(([x,y],i)=>i?p.lineTo(x,y):p.moveTo(x,y)));
+  const tail=(w,v0,v1)=>P2(p=>{p.moveTo(-w,v0);p.quadraticCurveTo(-w*.25,(v0+v1)/2,0,v1);p.quadraticCurveTo(w*.25,(v0+v1)/2,w,v0);p.closePath();});
+  const S={};
+  function shape(pat){
+    if(S[pat])return S[pat];let B=[],D=[];
+    if(pat==='circ'){B=[{p:circ(0,0,1)}];D=[{p:circ(0,0,.62),w:.03,a:.25}];}
+    else if(pat==='heart'){B=[{p:heartP(1,0,0)}];D=[{p:heartP(.7,0,.08),w:.035,a:.3},{p:heartP(.42,0,.16),w:.035,a:.3},{p:line([[0,.96],[0,-.7]]),w:.04,a:.55}];}
+    else if(pat==='tulip'){B=[{p:tail(.14,-.6,-1.14)}].concat([[.5,.6],[-.02,.5],[-.45,Math.sqrt(.15)]].map(([v,r])=>({p:heartP(r*.98,0,v-r*.1)})));D=[{p:line([[0,1.08],[0,-.62]]),w:.045,a:.7}];}
+    else if(pat==='tulip5'){const L=[[.72,.42],[.34,.4],[-.02,.36],[-.35,.32],[-.64,.27]];B=[{p:tail(.12,-.84,-1.2)}].concat(L.map(([v,r])=>({p:heartP(r*.98,0,v-r*.1)})));D=[{p:line([[0,1.12],[0,-.86]]),w:.04,a:.7}];}
+    else if(pat==='leaf'){B=[{p:leafP(.05,1.3,.6)}];D=[{p:ribs(.05,1.3,.6,9,1.08,-.92),w:.05,a:.85},{p:line([[0,1.3],[0,-1.38]]),w:.045,a:.8}];}
+    else if(pat==='swan'){
+      const neck=P2(p=>{const N=40,R=[],L=[];for(let i=0;i<=N;i++){const t=i/N,v=-.3+1.15*t,uc=.2+.45*t*t,w=.2-.07*t;R.push([uc+w,v]);L.push([uc-w,v]);}R.forEach(([x,y],i)=>i?p.lineTo(x,y):p.moveTo(x,y));L.reverse().forEach(([x,y])=>p.lineTo(x,y));p.closePath();});
+      B=[{p:P2(p=>{p.moveTo(-.72,-.62);p.quadraticCurveTo(-1.02,-.5,-1.17,-.04);p.quadraticCurveTo(-.95,-.22,-.7,-.3);p.closePath();})},
+         {p:P2(p=>p.ellipse(-.1,-.5,.8,.46,0,0,TAU))},{p:neck,j:1},{p:circ(.7,.92,.2),j:1},{p:P2(p=>{p.moveTo(.84,1.01);p.lineTo(1.12,.92);p.lineTo(.84,.83);p.closePath();}),j:1}];
+      D=[{p:P2(p=>{[[.62,.3],[.44,.24],[.26,.18]].forEach(([rx,ry])=>{p.moveTo(-.18-rx,-.5);p.ellipse(-.18,-.5,rx,ry,0,Math.PI,TAU*.94,false);});}),w:.045,a:.7},{p:circ(.73,.97,.035),w:.06,a:.9}];}
+    else if(pat==='rose'){B=[{p:wob(0,0,1.02,.008,3,0)},{p:wob(0,0,.8,.012,3,1)},{p:wob(0,0,.58,.015,3,2)},{p:wob(0,0,.36,.02,3,3)},{p:circ(0,0,.15)}];}
+    else if(pat==='leafheart'){B=[{p:leafP(-.5,.75,.5)},{p:heartP(.62,0,.52)}];D=[{p:ribs(-.5,.75,.5,6,.08,-1.05),w:.045,a:.85},{p:line([[0,1.12],[0,-1.32]]),w:.04,a:.7}];}
+    else B=[{p:P2(p=>{const N=60;let open=false;for(let j=0;j<N;j++)for(let i=0;i<N;i++){const u=-1.6+3.2*(i+.5)/N,v=1.6-3.2*(j+.5)/N;if(MASK[pat]&&MASK[pat](u,v))p.rect(u-1.6/N,v-1.6/N,3.2/N,3.2/N);}})}];
+    return S[pat]={B,D};
+  }
+  const LINE='rgba(150,88,40,.95)';
+  function target(c,x,y,r,pat){
+    c.save();c.beginPath();c.arc(x,y,r+1.2,0,TAU);c.fillStyle=GLAZE;c.fill();c.lineWidth=.4;c.strokeStyle='#20262B';c.stroke();
+    const g=c.createRadialGradient(x-r*.25,y-r*.25,r*.1,x,y,r);g.addColorStop(0,'#B87444');g.addColorStop(.85,CREMA);g.addColorStop(1,'#7A4520');
+    c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=g;c.fill();c.clip();
+    const k=pat==='circ'?1.7:1.5,sc=r/k,{B,D}=shape(pat);
+    c.translate(x,y);c.scale(sc,-sc);c.lineJoin='round';c.lineCap='round';
+    B.forEach(b=>{if(!b.j){c.lineWidth=.13;c.strokeStyle=LINE;c.stroke(b.p);}c.fillStyle=FOAM;c.fill(b.p);});
+    D.forEach(d=>{c.globalAlpha=d.a==null?1:d.a;c.lineWidth=d.w;c.strokeStyle=LINE;c.stroke(d.p);});
+    c.restore();
+  }
+  const OC={};let ocN=0;
+  // 平滑的虛線輪廓：只畫看得到的邊（後面的層蓋住前面的線）
+  function outline(c,pat,F,o){
+    const cv=c.canvas,m=c.getTransform();if(!cv.width||!cv.height)return;
+    const key=o.cache?pat+'|'+cv.width+'x'+cv.height+'|'+[m.a,m.b,m.c,m.d,m.e,m.f].map(v=>v.toFixed(2)).join(','):null;
+    let oc=key&&OC[key];
+    if(!oc){oc=document.createElement('canvas');oc.width=cv.width;oc.height=cv.height;const g=oc.getContext('2d');g.setTransform(m);
+      const s=15*F.sc;g.translate(CX+F.ox,CY+F.oy);g.scale(s,-s);if(F.mir)g.scale(-1,1);
+      if(F.rot===1)g.transform(0,1,-1,0,0,0);else if(F.rot===2)g.transform(-1,0,0,-1,0,0);else if(F.rot===3)g.transform(0,-1,1,0,0,0);
+      g.lineJoin='round';g.lineCap='round';g.lineWidth=o.lw/s;g.setLineDash(o.dash.map(d=>d/s));g.strokeStyle=o.color;
+      const BB=shape(pat).B;BB.forEach((b,i)=>{g.globalCompositeOperation='destination-out';g.fillStyle='#000';g.fill(b.p);g.globalCompositeOperation='source-over';
+        if(b.j&&i){const cp=new Path2D();cp.rect(-9,-9,18,18);cp.addPath(BB[i-1].p);g.save();g.clip(cp,'evenodd');g.stroke(b.p);g.restore();}else g.stroke(b.p);});
+      if(key){if(++ocN>8){for(const k in OC)delete OC[k];ocN=1;}OC[key]=oc;}}
+    c.save();if(o.clipR){c.beginPath();c.arc(CX,CY,Math.max(0,o.clipR),0,TAU);c.clip();}c.setTransform(1,0,0,1,0,0);c.drawImage(oc,0,0);c.restore();
+  }
+  return{target,outline,shape};
 }
+const LAV=makeLatteVec(ART);
+function drawTarget(c,x,y,r,pat){LAV.target(c,x,y,r,pat);}
 function fit(canvas,vw,vh){const r=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2.5);const w=Math.max(1,r.width),h=Math.max(1,r.height),pw=Math.round(w*dpr),ph=Math.round(h*dpr);
   if(canvas.width!==pw||canvas.height!==ph){canvas.width=pw;canvas.height=ph;}const c=canvas.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,pw,ph);
   const s=Math.min(w/vw,h/vh);const T={s,ox:(w-vw*s)/2,oy:(h-vh*s)/2};c.setTransform(dpr*s,0,0,dpr*s,dpr*T.ox,dpr*T.oy);c.lineJoin='round';c.lineCap='round';return{c,T};}
@@ -541,9 +595,7 @@ $('#sm-menu').addEventListener('click',()=>{MODE='level';show('title');});
 /* ---------- result ---------- */
 function drawResultCanvas(canvas,pr,lv,res,overlay){
   const{c}=fit(canvas,100,100);drawCup(c,pr,{});
-  if(overlay&&lv&&res&&res.fit){c.fillStyle='rgba(47,111,219,.9)';const st=1.1,F=res.fit;
-    for(let y=CY-31;y<=CY+31;y+=st)for(let x=CX-31;x<=CX+31;x+=st){if(Math.hypot(x-CX,y-CY)>32)continue;const m=maskAt(lv.pat,F,x,y);
-      if(m&&(!maskAt(lv.pat,F,x+st,y)||!maskAt(lv.pat,F,x-st,y)||!maskAt(lv.pat,F,x,y+st)||!maskAt(lv.pat,F,x,y-st)))c.fillRect(x-.35,y-.35,.7,.7);}}
+  if(overlay&&lv&&res&&res.fit)LAV.outline(c,lv.pat,res.fit,{color:'rgba(47,111,219,.95)',lw:.7,dash:[1.6,1],clipR:32});
 }
 let showOverlay=true;
 function showResult(){
@@ -643,12 +695,7 @@ function renderPlay(){
 }
 
 function cutReady(){if(!level||pour.cut)return false;if(level.pat==='heart')return pour.vis()>380;if(level.layers)return pour.pours>=level.layers;if(level.pat==='leaf')return pour.wiggles>=level.wiggles;return false;}
-const GHOST={};
-function ghostPts(pat){if(GHOST[pat])return GHOST[pat];const F={sc:1,rot:0,ox:0,oy:0};const pts=[],st=1.25;
-  for(let y=CY-30;y<=CY+30;y+=st)for(let x=CX-30;x<=CX+30;x+=st){if(maskAt(pat,F,x,y)&&(!maskAt(pat,F,x+st,y)||!maskAt(pat,F,x-st,y)||!maskAt(pat,F,x,y+st)||!maskAt(pat,F,x,y-st)))pts.push([x,y]);}
-  return GHOST[pat]=pts;}
-function drawGhost(c,pat,rs){c.fillStyle='rgba(255,255,255,.42)';ghostPts(pat).forEach(([x,y])=>{if(Math.hypot(x-CX,y-CY)<rs-1)c.fillRect(x-.3,y-.3,.6,.6);});
-  if(pat==='tulip'||pat==='tulip5'){const L=pat==='tulip'?[[-.02,.5],[-.45,.387]]:[[.34,.4],[-.02,.36],[-.35,.32],[-.64,.27]];c.save();c.setLineDash([.6,.9]);c.strokeStyle='rgba(255,255,255,.5)';c.lineWidth=.6;L.forEach(([cv,rv])=>{c.beginPath();c.arc(CX,CY-cv*15,rv*15,Math.PI*1.12,Math.PI*1.88);c.stroke();});c.restore();}}
+function drawGhost(c,pat,rs){LAV.outline(c,pat,{sc:1,rot:0,ox:0,oy:0,mir:0},{color:'rgba(255,255,255,.6)',lw:.55,dash:[1.5,1.1],clipR:rs-1,cache:1});}
 function drawCutArrow(c){const now=performance.now()/1000,a=.45+.4*Math.sin(now*4),up=level&&level.pat==='leaf';const y0=up?CY+24:CY-24,y1=up?CY-20:CY+20,d=up?-1:1;
   c.save();c.globalAlpha=a;c.setLineDash([1.6,1.2]);c.beginPath();c.moveTo(CX,y0);c.lineTo(CX,y1);c.lineWidth=.9;c.strokeStyle='#FFFFFF';c.stroke();c.setLineDash([]);
   c.beginPath();c.moveTo(CX-2.6,y1-d*4.5);c.lineTo(CX,y1);c.lineTo(CX+2.6,y1-d*4.5);c.stroke();c.restore();
