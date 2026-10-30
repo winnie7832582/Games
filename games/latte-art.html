@@ -253,6 +253,7 @@ const LEVELS=[
 
 /* ---------- pour engine ---------- */
 function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
+try{window.GC&&GC.bgm('latte-art');}catch(e){}
 class Pour{
   constructor(tq){this.tq=tq==null?1:tq;this.parts=[];this.emit=0;this.layer=0;this.fill=0;this.t=0;this.pours=0;this.pourT=0;this.cut=false;this.cutLen=0;this.wiggles=0;this.revT=[];this.dir=null;
     this.px=CX;this.py=CY;this.tx=CX;this.ty=CY;this.ux=0;this.uy=0;this.active=false;this.pouring=false;this.high=false;this.fresh=false;this.done=false;this.mode='';this.pulled=false;}

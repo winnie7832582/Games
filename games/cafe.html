@@ -533,6 +533,8 @@ const LA_ART={
 const LA_ROTS={swan:1,rose:1,leafheart:1};
 /* ---------- pour engine ---------- */
 function gsfx(n){try{window.GC&&GC.sfx(n);}catch(e){}}
+function gbgm(c){try{window.GC&&GC.bgm(c?'cafe-contest':'cafe');}catch(e){}}
+try{window.GC&&(GC.bgmPreload('cafe-contest'),GC.bgm('cafe'));}catch(e){}
 class LaPour{
   constructor(tq){this.tq=tq==null?1:tq;this.parts=[];this.emit=0;this.layer=0;this.fill=0;this.t=0;this.pours=0;this.pourT=0;this.cut=false;this.cutLen=0;this.wiggles=0;this.revT=[];this.dir=null;
     this.px=CX;this.py=CY;this.tx=CX;this.ty=CY;this.ux=0;this.uy=0;this.active=false;this.pouring=false;this.high=false;this.fresh=false;this.done=false;this.mode='';this.pulled=false;}
@@ -914,7 +916,7 @@ function drawChart(res){
 
 /* ---------- flow ---------- */
 let screen='title',cur=null,curIdx=0,running=false,finishing=false;
-function show(n){screen=n;if(n!=='game')stopAllLoops();['title','game','cup','final'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
+function show(n){screen=n;if(n==='title')gbgm(false);if(n!=='game')stopAllLoops();['title','game','cup','final'].forEach(x=>$('#'+x).classList.toggle('on',x===n));if(n==='game')requestAnimationFrame(resize);}
 let tt=0;function toast(m,k){const t=$('#toast');t.textContent=m;t.className='toast show'+(k?' '+k:'');clearTimeout(tt);tt=setTimeout(()=>t.className='toast',1500);}
 function renderSteps(){$('#steps').innerHTML=R.stages.map((s,i)=>'<li class="'+(i<curIdx?'done':i===curIdx?'now':'')+'"'+(i===curIdx?' aria-current="step"':'')+'>'+s.name+'</li>').join('');}
 function renderControls(specs){
@@ -1027,7 +1029,7 @@ function showFinal(){
 let CONTEST=false;
 const JUDGES=[{n:'評審・阿森',line:'手沖看的是風味的平衡。'},{n:'評審・Mia',line:'拉花要又快又漂亮。'},{n:'評審團長・林老師',line:'最後一杯，讓我們看看你的全部實力。'}];
 const RIVALS=['咖啡師小凱','Barista Lily','阿德','Hana','老陳','Rosa','Jun','麥可'];
-function startGame(contest){CONTEST=contest===true;RESULTS.length=0;seen.clear();makeOrders();
+function startGame(contest){CONTEST=contest===true;gbgm(CONTEST);RESULTS.length=0;seen.clear();makeOrders();
   if(CONTEST){const po=ORDERS.find(o=>o.type==='pour'),la=ORDERS.find(o=>o.type==='latte'),rest=ORDERS.filter(o=>o!==po&&o!==la);ORDERS=[po,la,rest[0]];ORDERS.forEach((o,i)=>{o.who=JUDGES[i];o.contest=true;if(o.brk&&Math.random()<.4)o.brk=null;});}
   newRound(0);show('game');goStage(0);}
 $('#start').addEventListener('click',()=>startGame(false));$('#again').addEventListener('click',()=>startGame(CONTEST));$('#contest').addEventListener('click',()=>{if(!$('#contest').disabled)startGame(true);});
