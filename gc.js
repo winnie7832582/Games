@@ -343,8 +343,13 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     } else ac();
     musApply();
   }
-  ['pointerdown', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (MU.want && musicOn() && (!MU.el || MU.el.paused || (AC && AC.state !== 'running'))) musKick(); }, true); });
+  ['pointerdown', 'touchstart', 'mousedown', 'click', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (MU.want && musicOn() && (!MU.el || MU.el.paused || (AC && AC.state !== 'running'))) musKick(); }, true); });
   document.addEventListener('visibilitychange', function () { musApply(); });
+  /* 換頁（返回、進入別的頁面、重新整理）時先切斷音樂；從上一頁快取回來時再接著播 */
+  function musCut() { MU.last = MU.want || MU.last; MU.want = null; try { if (MU.el) MU.el.pause(); } catch (e) {} }
+  document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a[href]'); if (a && !/^#|^javascript:/i.test(a.getAttribute('href') || '') && a.target !== '_blank') musCut(); }, true);
+  window.addEventListener('pagehide', musCut);
+  window.addEventListener('pageshow', function (e) { if (e.persisted && MU.last) { MU.want = MU.last; musApply(); } });
   function bgm(id) { MU.want = id && MUS_FILES[id] ? id : null; if (MU.want) { musLoad(MU.want); if (!MU.el && musicOn()) { try { musKick(); } catch (e) {} } else musApply(); } else musApply(); }
   function bgmPreload(id) { musLoad(id); }
   var lastS = {};
