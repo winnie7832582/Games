@@ -109,7 +109,6 @@ button{font:inherit;color:inherit}
   </div>
   <div class="seedbar" id="seedbar" hidden></div>
   <div class="quick"><button type="button" id="q-water">全部澆水</button><button type="button" id="q-harvest">全部收成</button><button type="button" id="q-care">全部除草抓蟲</button></div>
-  <div class="tools" id="tools"><button class="tool" type="button" data-tool="plant" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 28V14M16 14c0-5-4-8-9-8 0 5 4 8 9 8zM16 18c0-4 3-7 8-7 0 4-3 7-8 7z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>種植</span></button><button class="tool" type="button" data-tool="water" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4C11 12 8 16 8 20a8 8 0 0 0 16 0c0-4-3-8-8-16z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>澆水</span></button><button class="tool" type="button" data-tool="harvest" aria-pressed="false"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 14h20l-2 12H8zM10 14c0-6 3-9 6-9s6 3 6 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/></svg><span>收成</span></button></div>
   <div class="manage"><button type="button" id="b-shop">商店</button><button type="button" id="b-order">訂單<span class="bd" id="ord-bd" hidden></span></button><button type="button" id="b-kit">農舍<span class="bd" id="kit-bd" hidden></span></button></div>
   <div class="sheet" id="sheet" hidden><div class="sbox" id="sbox" role="dialog" aria-modal="true"></div></div>
 </div>
@@ -312,12 +311,11 @@ function updateHud(){
   const kr=(F.kit||[]).filter(k=>k&&Date.now()>=k.end).length+(F.hen.eggs>0?1:0);const kb=$('#kit-bd');kb.hidden=!kr;kb.textContent=kr;
   const ready=F.plots.slice(0,F.up.plots).some(p=>p.c&&progress(p)>=1);
   $('#q-harvest').style.borderColor=ready?'var(--accent)':'';
-  const tips={plant:seedSel?'點空的田地種下'+CROPS[seedSel].n:'先選一種種子',water:'點田地澆水，可以一路滑過去',harvest:'點成熟的作物收成',  '':'點一下照顧田地，按住可以看這塊田的狀態'};
+  const tips={plant:seedSel?'點空的田地種下'+CROPS[seedSel].n:'先選一種種子',water:'點田地澆水，可以一路滑過去',harvest:'點成熟的作物收成',  '':(seedSel?'點空地種「'+CROPS[seedSel].n+'」，點作物澆水／收成／除草，按住看狀態':'先在下方選種子，再點空地種下')};
   $('#tip').textContent=tips[tool]||'';
 }
 function renderSeedbar(){
   const bar=$('#seedbar');
-  if(tool!=='plant'){bar.hidden=true;return;}
   const lv=level();const have=CK.filter(k=>CROPS[k].lv<=lv);
   bar.innerHTML=have.map(k=>'<button type="button" data-seed="'+k+'" aria-pressed="'+(seedSel===k)+'"'+((F.seeds[k]||0)<=0?' disabled':'')+'>'+CROPS[k].n+' ×'+(F.seeds[k]||0)+'</button>').join('');
   bar.hidden=false;
@@ -325,7 +323,7 @@ function renderSeedbar(){
   bar.querySelectorAll('[data-seed]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.seed===seedSel)));
 }
 $('#seedbar').addEventListener('click',e=>{const b=e.target.closest('[data-seed]');if(!b||b.disabled)return;seedSel=b.dataset.seed;renderSeedbar();updateHud();});
-$('#tools').addEventListener('click',e=>{
+if($('#tools'))$('#tools').addEventListener('click',e=>{
   const b=e.target.closest('[data-tool]');if(!b)return;
   tool=tool===b.dataset.tool?'':b.dataset.tool;
   document.querySelectorAll('[data-tool]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.tool===tool)));
@@ -357,7 +355,7 @@ function tapPlot(i){
   else if(tool==='harvest')did=doHarvest(i);
   else if(p.c&&progress(p)>=1)did=doHarvest(i);
   else if(p.c&&!isWet(p,Date.now())&&!F.up.sprinkler){did=doWater(i);}
-  else if(!p.c){toast('先選「種植」和種子');}
+  else if(!p.c){did=doPlant(i);}
   if(did){save();updateHud();}
 }
 function bulk(kind){
@@ -521,7 +519,7 @@ function barnArt(){const hen=hens(),pond=!!F.up.pond,now=Date.now(),cooking=(F.k
     '<g stroke="#4F8A3A" stroke-width="2" stroke-linecap="round"><path d="M226 98v-16M231 98v-12M302 96v-15"/></g><g fill="#7A5A2E"><rect x="224" y="78" width="4" height="8" rx="2"/><rect x="300" y="77" width="4" height="8" rx="2"/></g></g>'+
     (pond?'':sign(264,96,'Lv3 挖'))+lab(264,'池塘',barnTab==='pond')+'</g>';
   return s+'</svg>';}
-function barnHead(){return '<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnArt()+barnTabs();}
+function barnHead(){return '<div class="shead"><h3>農舍</h3><button class="btn" type="button" data-close>關閉</button></div>'+barnArt();}
 function buildRows(tab){const lv=level();return UPS.filter(u=>u.barn===tab&&u.need(F)).map(u=>{const lock=u.lv>lv;return '<div class="row"><div class="tx"><b>'+u.n+'</b><span>'+u.d+(lock?'（Lv'+u.lv+' 解鎖）':'')+'</span></div><button class="btn main" type="button" data-bup="'+u.id+'"'+(lock||coins()<u.cost?' disabled':'')+'>● '+u.cost+'</button></div>';}).join('');}
 function barnTabs(){return '<div class="tabs">'+[['kit','加工坊'],['hen','雞舍'],['pond','池塘']].map(([k,n])=>'<button class="tab" type="button" data-btab="'+k+'" aria-pressed="'+(barnTab===k)+'">'+n+'</button>').join('')+'</div>';}
 function bindTabs(b){b.querySelectorAll('[data-btab]').forEach(x=>x.addEventListener('click',()=>openBarn(x.dataset.btab)));
@@ -763,6 +761,7 @@ function boot(){
       (news?'<p class="soft"><b>小菜園更新</b>：上方多了天氣（點一下看明天）；週末有市集；村民有名字和喜歡的作物，訂單可以一鍵交貨；池塘有魚圖鑑；雞有心情；Lv6 起可以買自動收成和自動補種。</p>':'')+
       '<button class="btn main" type="button" data-close style="width:100%">去看看</button>');},300);}
   autoLog={h:0,p:0};
+  renderSeedbar();updateHud();
   requestAnimationFrame(loop);
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&F){sim(Date.now());updateHud();}else save();});
