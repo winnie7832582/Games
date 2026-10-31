@@ -471,7 +471,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   function ensureBanner() {
     if (bannerEl || !document.body) return;
     var st = document.createElement('style');
-    st.textContent = '#gc-note{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 44px);transform:translate(-50%,-8px);opacity:0;z-index:2147483001;max-width:92vw;pointer-events:none;transition:opacity .2s,transform .2s;' +
+    st.textContent = '#gc-note{position:fixed;left:50%;top:var(--gc-note-top,calc(env(safe-area-inset-top,0px) + 44px));bottom:var(--gc-note-bottom,auto);transform:translate(-50%,-8px);opacity:0;z-index:2147483001;max-width:92vw;pointer-events:none;transition:opacity .2s,transform .2s;' +
       'background:#1F2A37;color:#FFF;border:2px solid #F2C14E;border-radius:14px;padding:9px 14px;font:700 14px/1.45 "Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.3)}' +
       '#gc-note.on{opacity:1;transform:translate(-50%,0)}#gc-note small{display:block;font-weight:500;opacity:.8}#gc-note b{color:#F2C14E}' +
       '@media (prefers-reduced-motion:reduce){#gc-note{transition:none}}';
@@ -698,7 +698,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       { t: '真實時間種菜', d: '作物照真實時間長大，關掉遊戲也會繼續長。先送你 4 包小白菜種子，3 分鐘就能收成。' },
       { t: '種植和澆水', d: '點「種植」選種子，再點空的田。田要澆水才會長，水乾了就會停。', el: '#tools' },
       { t: '雜草和蟲', d: '偶爾會長雜草、跑出蟲，點一下就清掉，不處理收成會變少。按住田地可以看這塊田的狀態，也能直接在那裡澆水或收成。', el: '#seedbar' },
-      { t: '訂單和農舍', d: '村民大約 20 分鐘來一位。農舍有加工坊、雞舍和池塘，雞蛋和魚可以拿到其他遊戲用。', el: '#b-kit' }
+      { t: '訂單和農舍', d: '村民大約 20 分鐘來一位，每個人有喜歡的作物。農舍可以蓋雞舍、挖池塘，雞蛋和魚可以拿到其他遊戲用。上方的天氣圖示可以看明天的天氣。', el: '#b-kit' }
     ]
   };
   var TOUR_KEY = '__tour:' + GNAME, tourEl = null, tourI = 0, tourPaused = false, tourSteps = null;
