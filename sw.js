@@ -1,7 +1,7 @@
 /* 離線快取。
    ★ 每次更新都要把下面的 BUILD 改成新版本號，並且上傳這個檔案。
    （iPhone 的 Safari 只看 sw.js 本身有沒有變，sw.js 沒變就不會更新，舊裝置會一直用舊檔案。） */
-var BUILD = '1.17.0';
+var BUILD = '1.17.1';
 importScripts('./config.js?v=' + BUILD);
 var CACHE = 'gc-app-' + BUILD, FONT = 'gc-fonts';
 var SHELL = ['./', './index.html', './config.js', './gc.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png']

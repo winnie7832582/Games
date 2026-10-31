@@ -342,7 +342,7 @@ function settingsSheet(){
   const tog=(id,on)=>'<button class="btn'+(on?' main':'')+'" type="button" id="'+id+'" aria-pressed="'+on+'">'+(on?'開':'關')+'</button>';
   sheet('<div class="shead"><h2>設定</h2><button class="btn sm" type="button" data-close>關閉</button></div><p class="soft">這些設定存在這台裝置上，所有玩家和所有遊戲共用。</p>'+
     '<div class="setr"><div class="tx"><b>遊戲音效</b><span>每款遊戲上方的喇叭按鈕也能切換</span></div>'+tog('st-snd',S.sound)+'</div>'+
-    '<div class="setr"><div class="tx"><b>背景音樂</b><span>拉一杯花、一杯好咖啡有背景音樂，和遊戲音效分開開關。遊戲上方也有音樂按鈕</span></div>'+tog('st-mus',S.music)+'</div>'+
+    '<div class="setr"><div class="tx"><b>背景音樂</b><span>拉一杯花、一杯好咖啡、夜市人生有背景音樂，和遊戲音效分開開關。遊戲上方也有音樂按鈕</span></div>'+tog('st-mus',S.music)+'</div>'+
     '<div class="setr" style="flex-direction:column;align-items:stretch"><div class="tx"><b>音量　<span id="st-vv" style="display:inline">'+Math.round(S.vol*100)+'%</span></b></div><input type="range" id="st-vol" min="0" max="100" step="5" value="'+Math.round(S.vol*100)+'" aria-label="音量"></div>'+
     '<div class="setr"><div class="tx"><b>震動回饋</b><span>按到東西或出錯時手機會輕輕震動（iPhone 的網頁通常不支援）</span></div>'+tog('st-vib',S.vib)+'</div>'+
     '<div class="setr"><div class="tx"><b>減少動畫</b><span>減少閃動和晃動，容易頭暈時可以打開。下次打開遊戲時生效</span></div>'+tog('st-rm',S.rm)+'</div>',b=>{

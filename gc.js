@@ -312,7 +312,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   /* ================= 背景音樂 ================= */
   /* 歌放在根目錄的 audio 資料夾。先用 fetch 抓成 blob 再播（離線也能播，iPhone 的 Service Worker 也不會擋）。
      同一個 audio 元素一直換歌，第一次點畫面時才開始播（瀏覽器規定）。音量走和音效同一個總音量，再乘上 MUS_LEVEL。 */
-  var MUS_FILES = { 'latte-art': 'audio/bgm-latte-art.mp3', 'cafe': 'audio/bgm-cafe.mp3', 'cafe-contest': 'audio/bgm-cafe-contest.mp3' };
+  var MUS_FILES = { 'latte-art': 'audio/bgm-latte-art.mp3', 'cafe': 'audio/bgm-cafe.mp3', 'cafe-contest': 'audio/bgm-cafe-contest.mp3', 'night-market': 'audio/bgm-night-market.mp3' };
   var MUS_LEVEL = 0.4;
   var MU = { el: null, want: null, cur: null, blobs: {}, loading: {}, paused: false, gain: null };
   var MBASE = (function () { try { return new URL(src, location.href).href.replace(/[^\/]*$/, ''); } catch (e) { return ''; } })();
@@ -809,7 +809,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     paint(); sp.addEventListener('click', function () { window.GC.setSound(!soundOn()); });
     window.addEventListener('gc-sound', paint);
     var mp = null;
-    if (GNAME === 'latte-art' || GNAME === 'cafe') {
+    if (GNAME === 'latte-art' || GNAME === 'cafe' || GNAME === 'night-market') {
       mp = document.createElement('button'); mp.type = 'button'; mp.className = 'snd'; mp.id = 'gc-mp';
       var paintM = function () { var on = musicOn(); mp.setAttribute('aria-label', on ? '音樂開著，點一下關閉' : '音樂關著，點一下打開'); mp.setAttribute('aria-pressed', String(on)); mp.style.opacity = on ? '' : '.5';
         mp.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="16.5" cy="16" r="2.5" fill="currentColor"/>' + (on ? '' : '<path d="M3 3l18 18"/>') + '</svg><span>' + (on ? '音樂' : '音樂關') + '</span>'; };
