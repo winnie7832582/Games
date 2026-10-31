@@ -316,6 +316,9 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   var MUS_LEVEL = 0.4;
   var MU = { el: null, want: null, cur: null, blobs: {}, loading: {}, paused: false, gain: null };
   var MBASE = (function () { try { return new URL(src, location.href).href.replace(/[^\/]*$/, ''); } catch (e) { return ''; } })();
+  var SIL = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+  /* 在首頁的遊戲框（iframe）裡開的遊戲：音樂交給首頁播，這樣點卡片那一下就能讓音樂一進遊戲就響 */
+  var HOST = null; try { if (window.parent !== window && window.parent.GC && window.parent.GC.openGame) HOST = window.parent.GC; } catch (e) { HOST = null; }
   function musicOn() { return setting('music', '1') !== '0'; }
   function musLoad(id) {
     if (!MUS_FILES[id] || MU.blobs[id] || MU.loading[id]) return;
@@ -328,9 +331,10 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     } catch (e) { delete MU.loading[id]; }
   }
   function musApply() {
+    if (HOST) { try { HOST.__pause(MU.paused); } catch (e) {} return; }
     var el = MU.el; if (!el) return;
     var go = MU.want && musicOn() && !MU.paused && !document.hidden && MU.blobs[MU.want];
-    if (!go) { if (!el.paused) { try { el.pause(); } catch (e) {} } return; }
+    if (!go) { var waiting = MU.want && musicOn() && !MU.paused && !document.hidden && !MU.blobs[MU.want]; if (!el.paused && !waiting) { try { el.pause(); } catch (e) {} } return; }
     if (MU.cur !== MU.want) { el.src = MU.blobs[MU.want]; MU.cur = MU.want; try { el.currentTime = 0; } catch (e) {} }
     if (el.paused) { try { var p = el.play(); if (p && p.catch) p.catch(function () {}); } catch (e) {} }
   }
@@ -340,18 +344,49 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
       var a = ac();
       try { var s = a.createMediaElementSource(el); MU.gain = a.createGain(); MU.gain.gain.value = MUS_LEVEL; s.connect(MU.gain); MU.gain.connect(MG); }
       catch (e) { el.volume = MUS_LEVEL; }
+      if (!(MU.want && MU.blobs[MU.want])) { try { el.src = SIL; MU.cur = '__sil'; var sp0 = el.play(); if (sp0 && sp0.catch) sp0.catch(function () {}); } catch (e) {} }
     } else ac();
     musApply();
   }
-  ['pointerdown', 'touchstart', 'mousedown', 'click', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (MU.want && musicOn() && (!MU.el || MU.el.paused || (AC && AC.state !== 'running'))) musKick(); }, true); });
+  ['pointerdown', 'touchstart', 'mousedown', 'click', 'touchend', 'keydown'].forEach(function (t) { document.addEventListener(t, function () { if (HOST) { try { HOST.__kick(); } catch (e) {} return; } if (MU.want && musicOn() && (!MU.el || MU.el.paused || (AC && AC.state !== 'running'))) musKick(); }, true); });
   document.addEventListener('visibilitychange', function () { musApply(); });
   /* 換頁（返回、進入別的頁面、重新整理）時先切斷音樂；從上一頁快取回來時再接著播 */
-  function musCut() { MU.last = MU.want || MU.last; MU.want = null; try { if (MU.el) MU.el.pause(); } catch (e) {} }
-  document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a[href]'); if (a && !/^#|^javascript:/i.test(a.getAttribute('href') || '') && a.target !== '_blank') musCut(); }, true);
+  function musCut() { if (HOST) return; MU.last = MU.want || MU.last; MU.want = null; try { if (MU.el) MU.el.pause(); } catch (e) {} }
+  document.addEventListener('click', function (e) { var a = e.target && e.target.closest && e.target.closest('a[href]'); if (HOST && a && /(^|\/)index\.html$/.test(a.getAttribute('href') || '')) { e.preventDefault(); try { HOST.__close(); } catch (x) {} return; } if (a && !/^#|^javascript:/i.test(a.getAttribute('href') || '') && a.target !== '_blank') musCut(); }, true);
   window.addEventListener('pagehide', musCut);
   window.addEventListener('pageshow', function (e) { if (e.persisted && MU.last) { MU.want = MU.last; musApply(); } });
-  function bgm(id) { MU.want = id && MUS_FILES[id] ? id : null; if (MU.want) { musLoad(MU.want); if (!MU.el && musicOn()) { try { musKick(); } catch (e) {} } else musApply(); } else musApply(); }
-  function bgmPreload(id) { musLoad(id); }
+  function bgm(id) { if (HOST) { try { HOST.__bgm(id); } catch (e) {} return; } MU.want = id && MUS_FILES[id] ? id : null; if (MU.want) { musLoad(MU.want); if (!MU.el && musicOn()) { try { musKick(); } catch (e) {} } else musApply(); } else musApply(); }
+  function bgmPreload(id) { if (HOST) { try { HOST.__preload(id); } catch (e) {} return; } musLoad(id); }
+  /* 首頁：音樂遊戲用全螢幕框開啟（點卡片的手勢可以直接啟動音樂） */
+  var FRAME_RE = /^games\/(latte-art|cafe|night-market)\.html(\?.*)?$/, framed = false;
+  function gameClose() {
+    var f = document.getElementById('gc-game'); if (!f) return;
+    if (history.state && history.state.gcGame) { history.back(); return; }
+    gameCleanup();
+  }
+  function gameCleanup() {
+    var f = document.getElementById('gc-game'); if (f) f.remove();
+    MU.want = null; MU.last = null; MU.paused = false; try { if (MU.el) MU.el.pause(); } catch (e) {}
+    window.removeEventListener('popstate', gameCleanup); framed = false;
+    try { location.reload(); } catch (e) {}
+  }
+  function openGame(file) {
+    if (framed) return; framed = true;
+    var m = /games\/([\w-]+)\.html/.exec(file), id = m && m[1];
+    if (id && MUS_FILES[id]) { MU.want = id; musLoad(id); if (musicOn()) { try { musKick(); } catch (e) {} } }
+    var f = document.createElement('iframe'); f.id = 'gc-game'; f.setAttribute('allow', 'autoplay; fullscreen'); f.setAttribute('title', '遊戲');
+    f.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;border:0;z-index:99998;background:#fff';
+    f.src = file; document.body.appendChild(f);
+    try { history.pushState({ gcGame: 1 }, ''); window.addEventListener('popstate', gameCleanup); } catch (e) {}
+  }
+  if (!/\/games\//.test(location.pathname)) {
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button > 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+      var a = e.target && e.target.closest && e.target.closest('a[href]'); if (!a) return;
+      var h = a.getAttribute('href') || ''; if (!FRAME_RE.test(h)) return;
+      e.preventDefault(); openGame(h);
+    }, true);
+  }
   var lastS = {};
   function sfx(n) { if (!soundOn()) return; var now = Date.now(); if (lastS[n] && now - lastS[n] < 45) return; lastS[n] = now; try { SFX[n] && SFX[n](); } catch (e) {} }
   document.addEventListener('pointerdown', function () { if (soundOn()) ac(); }, true);
@@ -565,7 +600,10 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     /* 累加某個數量，例如餵食次數 */
     add: function (game, metric, n) { var m = {}; m[metric] = typeof n === 'number' ? n : 1; record(game, m, 'add'); },
     ACH: ACH, QUESTS: QUESTS, COLL: COLL, THEMES: THEMES,
-    sfx: sfx, soundOn: soundOn, bgm: bgm, bgmPreload: bgmPreload, musicOn: musicOn, loop: loop, loopParam: loopParam, stopLoops: stopLoops,
+    sfx: sfx, soundOn: soundOn, bgm: bgm, bgmPreload: bgmPreload,
+    openGame: openGame, __bgm: bgm, __preload: bgmPreload, __close: gameClose,
+    __pause: function (v) { MU.paused = !!v; if (!MU.el && MU.want && musicOn()) { try { musKick(); } catch (e) {} } else musApply(); },
+    __kick: function () { if (MU.want && musicOn() && (!MU.el || MU.el.paused || (AC && AC.state !== 'running'))) { try { musKick(); } catch (e) {} } }, musicOn: musicOn, loop: loop, loopParam: loopParam, stopLoops: stopLoops,
     settings: function () { return { sound: soundOn(), music: musicOn(), vol: vol(), vib: setting('vib', '1') !== '0', rm: setting('rm', '0') === '1' }; },
     setVolume: function (v) { v = Math.max(0, Math.min(1, v)); try { localStorage.setItem('gc:vol', String(v)); } catch (e) {} if (MG) MG.gain.value = v; },
     setSetting: function (k, on) { try { localStorage.setItem('gc:' + k, on ? '1' : '0'); } catch (e) {} if (k === 'music') { musApply(); try { window.dispatchEvent(new CustomEvent('gc-music', { detail: !!on })); } catch (e) {} } },
