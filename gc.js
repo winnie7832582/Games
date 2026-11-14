@@ -163,7 +163,57 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     { id: 'q-cn', game: 'corner-cafe', metric: 'days', type: 'sum', target: 1, text: '巷口咖啡館經營一天' },
     { id: 'q-fm', game: 'farm', metric: 'harvest', type: 'sum', target: 6, text: '小菜園收成 6 個作物' },
     { id: 'q-fm2', game: 'farm', metric: 'orders', type: 'sum', target: 1, text: '小菜園完成一張村民訂單' },
-    { id: 'q-la2', game: 'latte-art', metric: 'orderAvg', type: 'max', target: 70, text: '拉一杯花的「客人指定」平均 70 分以上' }
+    { id: 'q-la2', game: 'latte-art', metric: 'orderAvg', type: 'max', target: 70, text: '拉一杯花的「客人指定」平均 70 分以上' },
+    /* v1.17.4 新增。lv：玩家等級到了才會抽到；req：這項成績要有過紀錄才會抽到（避免抽到還沒解鎖的內容） */
+    { id: 'q-sf2', game: 'souffle', metric: 'score', type: 'sum', target: 150, text: '舒芙蕾今天累計 150 分' },
+    { id: 'q-sf3', game: 'souffle', metric: 'choc', type: 'max', target: 70, req: 1, text: '舒芙蕾巧克力口味 70 分以上' },
+    { id: 'q-sf4', game: 'souffle', metric: 'matcha', type: 'max', target: 70, req: 1, text: '舒芙蕾抹茶口味 70 分以上' },
+    { id: 'q-sf5', game: 'souffle', metric: 'score', type: 'max', target: 85, lv: 4, text: '「舒芙蕾」遊戲做到 85 分以上' },
+    { id: 'q-sw2', game: 'sanwei-kitchen', metric: 'score', type: 'sum', target: 200, text: '三味廚房今天累計 200 分' },
+    { id: 'q-sw3', game: 'sanwei-kitchen', metric: 'dish_omurice', type: 'sum', target: 1, text: '三味廚房做一份蛋包飯' },
+    { id: 'q-sw4', game: 'sanwei-kitchen', metric: 'dish_oajian', type: 'sum', target: 1, text: '三味廚房做一份蚵仔煎' },
+    { id: 'q-sw5', game: 'sanwei-kitchen', metric: 'stars3', type: 'sum', target: 1, lv: 3, text: '三味廚房拿一次三顆星' },
+    { id: 'q-sw6', game: 'sanwei-kitchen', metric: 'pro', type: 'max', target: 60, lv: 4, text: '三味廚房職人版 60 分以上' },
+    { id: 'q-bt3', game: 'bubble-tea', metric: 'served', type: 'sum', target: 20, text: '搖搖茶舖今天服務 20 位客人' },
+    { id: 'q-bt4', game: 'bubble-tea', metric: 'combo', type: 'max', target: 5, text: '搖搖茶舖連續做對 5 杯' },
+    { id: 'q-bt5', game: 'bubble-tea', metric: 'vip', type: 'max', target: 1, text: '搖搖茶舖招待 1 位 VIP' },
+    { id: 'q-bt6', game: 'bubble-tea', metric: 'multi', type: 'max', target: 1, text: '搖搖茶舖完成 1 張雙杯訂單' },
+    { id: 'q-bt7', game: 'bubble-tea', metric: 'money', type: 'max', target: 500, lv: 4, text: '搖搖茶舖單次營業額 $500' },
+    { id: 'q-bt8', game: 'bubble-tea', metric: 'hardMoney', type: 'max', target: 200, lv: 5, text: '搖搖茶舖只留 1 次失誤，營業額 $200' },
+    { id: 'q-cf2', game: 'cafe', metric: 'pour', type: 'max', target: 75, text: '一杯好咖啡手沖 75 分以上' },
+    { id: 'q-cf3', game: 'cafe', metric: 'latte', type: 'max', target: 75, text: '一杯好咖啡拿鐵 75 分以上' },
+    { id: 'q-cf4', game: 'cafe', metric: 'cup', type: 'sum', target: 220, text: '一杯好咖啡今天累計 220 分' },
+    { id: 'q-cf5', game: 'cafe', metric: 'avg', type: 'max', target: 75, lv: 3, text: '一杯好咖啡四杯平均 75 分' },
+    { id: 'q-la3', game: 'latte-art', metric: 'timedCups', type: 'max', target: 4, text: '拉一杯花限時挑戰拉出 4 杯' },
+    { id: 'q-la4', game: 'latte-art', metric: 's_heart', type: 'max', target: 75, req: 1, text: '拉一杯花愛心課 75 分以上' },
+    { id: 'q-la5', game: 'latte-art', metric: 's_tulip', type: 'max', target: 75, req: 1, text: '拉一杯花三層鬱金香 75 分以上' },
+    { id: 'q-la6', game: 'latte-art', metric: 's_swan', type: 'max', target: 70, req: 1, text: '拉一杯花天鵝課 70 分以上' },
+    { id: 'q-la7', game: 'latte-art', metric: 'score', type: 'sum', target: 200, text: '拉一杯花今天累計 200 分' },
+    { id: 'q-nm3', game: 'night-market', metric: 'served', type: 'sum', target: 50, lv: 3, text: '夜市人生今天服務 50 位客人' },
+    { id: 'q-nm4', game: 'night-market', metric: 'dayProfit', type: 'sum', target: 1200, lv: 3, text: '夜市人生今天淨利累計 $1200' },
+    { id: 'q-cc2', game: 'chef-cards', metric: 'dish', type: 'max', target: 300, text: '主廚牌局單道菜 300 分以上' },
+    { id: 'q-cc3', game: 'chef-cards', metric: 'daily', type: 'max', target: 1, text: '主廚牌局通過今日牌局第一位評審' },
+    { id: 'q-cc4', game: 'chef-cards', metric: 'round', type: 'max', target: 3, lv: 3, text: '主廚牌局通過第 3 位評審' },
+    { id: 'q-cc5', game: 'chef-cards', metric: 'judge', type: 'sum', target: 4, lv: 4, text: '主廚牌局今天通過 4 位評審' },
+    { id: 'q-ph3', game: 'pet-house', metric: 'walked', type: 'sum', target: 1, text: '毛孩小屋帶毛孩出門散步' },
+    { id: 'q-ph4', game: 'pet-house', metric: 'cleaned', type: 'sum', target: 1, req: 1, text: '毛孩小屋幫毛孩清潔一次' },
+    { id: 'q-cn2', game: 'corner-cafe', metric: 'days', type: 'sum', target: 3, text: '巷口咖啡館經營三天' },
+    { id: 'q-fm3', game: 'farm', metric: 'earned', type: 'sum', target: 150, text: '小菜園今天賺 150 金幣' },
+    { id: 'q-fm4', game: 'farm', metric: 'harvest', type: 'sum', target: 12, lv: 3, text: '小菜園收成 12 個作物' },
+    { id: 'q-fm5', game: 'farm', metric: 'orders', type: 'sum', target: 3, lv: 3, text: '小菜園完成 3 張村民訂單' },
+    { id: 'q-fm6', game: 'farm', metric: 'eggs', type: 'sum', target: 2, req: 1, text: '小菜園撿 2 顆雞蛋' },
+    { id: 'q-fm7', game: 'farm', metric: 'fish', type: 'sum', target: 1, req: 1, text: '小菜園釣到 1 條魚' },
+    { id: 'q-fm8', game: 'farm', metric: 'processed', type: 'sum', target: 1, req: 1, text: '小菜園加工坊做 1 批加工品' },
+    /* 挑戰自己：門檻 = 這位玩家的最高紀錄 × pb（四捨五入到 step，最高到 cap）。算出來不到 min 就不會抽到。{t} 會換成門檻 */
+    { id: 'q-pb-sf', game: 'souffle', metric: 'score', type: 'max', pb: 0.95, min: 75, cap: 95, xp: 45, text: '挑戰自己：舒芙蕾 {t} 分以上' },
+    { id: 'q-pb-sw', game: 'sanwei-kitchen', metric: 'score', type: 'max', pb: 0.95, min: 75, cap: 95, xp: 45, text: '挑戰自己：三味廚房 {t} 分以上' },
+    { id: 'q-pb-bt', game: 'bubble-tea', metric: 'money', type: 'max', pb: 0.85, min: 350, step: 10, xp: 45, text: '挑戰自己：搖搖茶舖營業額 ${t}' },
+    { id: 'q-pb-bt2', game: 'bubble-tea', metric: 'perfect', type: 'max', pb: 0.8, min: 7, xp: 45, text: '挑戰自己：搖搖茶舖 {t} 杯完美飲料' },
+    { id: 'q-pb-cf', game: 'cafe', metric: 'cup', type: 'max', pb: 0.95, min: 80, cap: 95, xp: 45, text: '挑戰自己：一杯好咖啡 {t} 分以上' },
+    { id: 'q-pb-la', game: 'latte-art', metric: 'score', type: 'max', pb: 0.95, min: 75, cap: 95, xp: 45, text: '挑戰自己：拉一杯花 {t} 分以上' },
+    { id: 'q-pb-la2', game: 'latte-art', metric: 'timedCups', type: 'max', pb: 0.85, min: 5, xp: 45, text: '挑戰自己：拉花限時挑戰 {t} 杯' },
+    { id: 'q-pb-nm', game: 'night-market', metric: 'dayProfit', type: 'max', pb: 0.5, min: 800, step: 50, xp: 45, text: '挑戰自己：夜市人生單晚淨利 ${t}' },
+    { id: 'q-pb-cc', game: 'chef-cards', metric: 'dish', type: 'max', pb: 0.5, min: 400, step: 50, xp: 45, text: '挑戰自己：主廚牌局單道菜 {t} 分' }
   ];
   var QXP = 30, QBONUS = 60;
 
@@ -401,6 +451,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     { id: 'glaze_fire', slot: 'glaze', n: '煙火紅杯緣', price: 90, val: '#E4572E', theme: 'newyear' },
     { id: 'glaze_sakura', slot: 'glaze', n: '櫻花粉杯緣', price: 90, val: '#F29CB7', theme: 'sakura' },
     { id: 'glaze_ice', slot: 'glaze', n: '冰藍杯緣', price: 90, val: '#59C3EA', theme: 'summer' },
+    { id: 'glaze_maple', slot: 'glaze', n: '楓葉橘杯緣', price: 90, val: '#D2691E', theme: 'harvest' },
     { id: 'pet_crown', slot: 'petacc', n: '小王冠', price: 120, d: '毛孩小屋的配件' },
     { id: 'pet_wreath', slot: 'petacc', n: '花環', price: 90, d: '毛孩小屋的配件' },
     { id: 'pet_witch', slot: 'petacc', n: '魔女帽', price: 100, d: '毛孩小屋的配件', theme: 'halloween' },
@@ -422,12 +473,16 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     { id: 'title_newyear', slot: 'title', n: '跨年倒數王', price: 70, theme: 'newyear' },
     { id: 'title_summer', slot: 'title', n: '夏日冰飲王', price: 70, theme: 'summer' },
     { id: 'title_cny', slot: 'title', n: '團圓大廚', price: 70, theme: 'cny' },
-    { id: 'title_moon', slot: 'title', n: '賞月達人', price: 70, theme: 'midautumn' }
+    { id: 'title_moon', slot: 'title', n: '賞月達人', price: 70, theme: 'midautumn' },
+    { id: 'title_harvest', slot: 'title', n: '豐收小農', price: 70, theme: 'harvest' },
+    { id: 'title_allround', slot: 'title', n: '十項全能', price: 300 },
+    { id: 'title_tycoon', slot: 'title', n: '合集大亨', price: 500 }
   ];
   /* 限時活動：m 是每年固定的 [開始月, 開始日, 結束月, 結束日]；abs 是只有某一年的日期（農曆節日）。
      活動期間：所有獲得的幣 ×1.5；累計完成 10 局、25 局可領獎勵；限時商品可以購買。 */
   var THEMES = [
     { id: 'halloween', n: '萬聖夜祭', m: [10, 24, 11, 1], d: '南瓜、魔女和糖果的夜晚。小菜園的南瓜賣得更貴。', farm: { pumpkin: 1.5 } },
+    { id: 'harvest', n: '秋收祭', m: [11, 10, 11, 30], d: '稻子黃了，菜園大豐收。小菜園的白蘿蔔賣得更貴。', farm: { radish: 1.4 } },
     { id: 'xmas', n: '聖誕市集', m: [12, 18, 12, 28], d: '冬天的市集亮起來了。小菜園的草莓賣得更貴。', farm: { strawberry: 1.4 } },
     { id: 'newyear', n: '跨年煙火', m: [12, 29, 1, 3], d: '倒數完，新的一年開始。' },
     { id: 'cny', n: '春節團圓', abs: ['2027-02-03', '2027-02-14'], d: '紅燈籠掛起來，大家回家團圓。小菜園的玉米賣得更貴。', farm: { corn: 1.4 } },
@@ -445,7 +500,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   var TH_MS = [[10, 60], [25, 120]];
 
   /* ================= 等級 ================= */
-  var TITLES = [[1, '新手店員'], [2, '見習廚師'], [3, '小店老闆'], [4, '街頭人氣王'], [5, '人氣主廚'], [6, '美食達人'], [8, '名店店長'], [10, '傳說店長']];
+  var TITLES = [[1, '新手店員'], [2, '見習廚師'], [3, '小店老闆'], [4, '街頭人氣王'], [5, '人氣主廚'], [6, '美食達人'], [8, '名店店長'], [10, '傳說店長'], [12, '連鎖店老闆'], [14, '美食評審'], [16, '金牌主廚'], [18, '料理名人'], [20, '食神']];
   function levelOf(xp) { return 1 + Math.floor(Math.sqrt(xp / 40)); }
   function xpAt(l) { return 40 * (l - 1) * (l - 1); }
   function titleOf(l) { var t = TITLES[0][1]; for (var i = 0; i < TITLES.length; i++) if (l >= TITLES[i][0]) t = TITLES[i][1]; return t; }
@@ -455,10 +510,21 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   function today() { return dstr(new Date()); }
   function yesterday() { var d = new Date(); d.setDate(d.getDate() - 1); return dstr(d); }
   function rng(seedStr) { var h = 1779033703 ^ seedStr.length; for (var i = 0; i < seedStr.length; i++) { h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; } return function () { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; }; }
-  function pickQuests(day) {
+  /* 這位玩家某項成績的紀錄（最高或累計） */
+  function recOf(p, d) { var s = p && p.s && p.s[d.game]; if (!s) return 0; return Math.max((s.max && s.max[d.metric]) || 0, (s.sum && s.sum[d.metric]) || 0); }
+  /* 「挑戰自己」的門檻；不夠格（還沒有紀錄，或紀錄太低）回傳 0 */
+  function pbTarget(p, d) { var s = p && p.s && p.s[d.game], b = (s && s.max && s.max[d.metric]) || 0, st = d.step || 1, t = Math.round(b * d.pb / st) * st; if (t < d.min) return 0; return Math.min(d.cap || t, t); }
+  function questOk(p, d) {
+    if (d.lv && levelOf((p && p.xp) || 0) < d.lv) return false;
+    if (d.req && recOf(p, d) <= 0) return false;
+    if (d.pb && !pbTarget(p, d)) return false;
+    return true;
+  }
+  /* 順序依日期洗牌（大家一樣），再跳過這位玩家還不適合的題目 */
+  function pickQuests(day, p) {
     var r = rng('gc-' + day), pool = QUESTS.slice(), out = [], used = {};
     for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
-    for (var k = 0; k < pool.length && out.length < 3; k++) { if (!used[pool[k].game]) { used[pool[k].game] = 1; out.push(pool[k]); } }
+    for (var k = 0; k < pool.length && out.length < 3; k++) { if (!used[pool[k].game] && questOk(p, pool[k])) { used[pool[k].game] = 1; out.push(pool[k]); } }
     return out;
   }
   function blank() { return { v: 1, s: {}, ach: {}, xp: 0, last: '', streak: 0, qday: '', q: [], qall: 0, wallet: 0, own: {}, eq: {}, th: null, dc: { day: '', n: 0 } }; }
@@ -481,7 +547,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   };
   function ensureQuests(p) {
     var t = today();
-    if (p.qday !== t) { p.qday = t; p.q = pickQuests(t).map(function (d) { return { id: d.id, pr: 0, done: false }; }); }
+    if (p.qday !== t) { p.qday = t; p.q = pickQuests(t, p).map(function (d) { var q = { id: d.id, pr: 0, done: false }; if (d.pb) q.t = pbTarget(p, d); return q; }); }
   }
   function touchDay(p) {
     var t = today();
@@ -491,6 +557,12 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
   }
   function gs(p, g) { return p.s[g] || (p.s[g] = { plays: 0, max: {}, sum: {} }); }
   function questDef(id) { for (var j = 0; j < QUESTS.length; j++) if (QUESTS[j].id === id) return QUESTS[j]; return null; }
+  /* 今天抽到的那一題：「挑戰自己」的門檻存在 q.t，這裡換成實際的門檻和文字 */
+  function questOf(q) {
+    var d = questDef(q.id); if (!d || !d.pb) return d;
+    var t = q.t || d.min;
+    return { id: d.id, game: d.game, metric: d.metric, type: d.type, target: t, text: d.text.replace('{t}', t), xp: d.xp, pb: d.pb };
+  }
 
   function checkOne(p, c) {
     if (Array.isArray(c[0])) { for (var i = 0; i < c.length; i++) if (!checkOne(p, c[i])) return false; return true; }
@@ -553,14 +625,14 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     ensureQuests(p);
     for (var i = 0; i < p.q.length; i++) {
       var q = p.q[i]; if (q.done) continue;
-      var d = questDef(q.id);
+      var d = questOf(q);
       if (!d || d.game !== game) continue;
       var v = metrics[d.metric]; if (typeof v !== 'number') continue;
       if (d.type === 'max') { if (!useMax) continue; q.pr = Math.max(q.pr, v); }
       else { if (!useSum) continue; q.pr += v; }
       if (q.pr >= d.target) {
-        q.done = true; addXp(p, QXP, lines);
-        var qc = earn(p, 15); lines.push('<b>每日挑戰完成</b>：' + esc(d.text) + '<small>+' + QXP + ' XP　+' + qc + ' 幣</small>');
+        var qx = d.xp || QXP; q.done = true; addXp(p, qx, lines);
+        var qc = earn(p, 15); lines.push('<b>每日挑戰完成</b>：' + esc(d.text) + '<small>+' + qx + ' XP　+' + qc + ' 幣</small>');
         var all = true; for (var k = 0; k < p.q.length; k++) if (!p.q[k].done) all = false;
         if (all) { p.qall = (p.qall || 0) + 1; addXp(p, QBONUS, lines); var bc = earn(p, 30); lines.push('<b>今日三個挑戰全部完成！</b><small>額外 +' + QBONUS + ' XP　+' + bc + ' 幣</small>'); }
       }
@@ -642,7 +714,7 @@ A('sf4', 'souffle', '濃郁巧克力', '巧克力口味拿到 70 分以上', ['m
     get: function () {
       var p = load(); touchDay(p); ensureQuests(p); save(p);
       var lv = levelOf(p.xp), cur = xpAt(lv), nxt = xpAt(lv + 1);
-      var qs = p.q.map(function (q) { var d = questDef(q.id); return d ? { def: d, pr: Math.min(q.pr, d.target), done: q.done } : null; }).filter(Boolean);
+      var qs = p.q.map(function (q) { var d = questOf(q); return d ? { def: d, pr: Math.min(q.pr, d.target), done: q.done } : null; }).filter(Boolean);
       var last = {}; for (var g in p.s) last[g] = p.s[g].last || 0;
       var th = activeTheme(), tid = p.eq.title && p.own[p.eq.title] ? collDef(p.eq.title) : null, tinfo = null;
       if (th) { var ths = p.th && p.th.id === th.t.id && p.th.from === th.from ? p.th : { plays: 0, claimed: {} }; tinfo = { id: th.t.id, n: th.t.n, d: th.t.d, from: th.from, to: th.to, plays: ths.plays, claimed: ths.claimed, ms: TH_MS }; }
