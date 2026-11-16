@@ -353,8 +353,8 @@ const CONDS=[
   {id:'ok',n:'一切正常',d:'今天廚房的狀況很好。',w:3},
   {id:'hot',n:'烤箱偏熱',d:'烤色會比平常快，要早一點出爐。',w:2},
   {id:'cold',n:'烤箱偏冷',d:'烤得比較慢，要多等一下。',w:2},
-  {id:'humid',n:'濕氣很重',d:'蛋白比較難打發，要多刷一會兒。',w:2},
-  {id:'big',n:'今天的蛋比較大',d:'敲蛋的容錯變大，比較好分蛋。',w:1},
+  {id:'humid',n:'濕氣很重',d:'蛋白比較難打發，要多打一會兒。',w:2},
+  {id:'big',n:'今天的蛋比較大',d:'蛋黃比較不容易滑出來，比較好分蛋。',w:1},
   {id:'cool',n:'廚房很冷',d:'麵糊比較慢變稠，要多煮一下。',w:2}
 ];
 const FKEY='souffle-fl';let FL={best:{},pick:'plain'};
@@ -370,80 +370,145 @@ function resetRun(){Object.assign(S,{scores:{},notes:{},contam:0,overflow:0,fina
 resetRun();
 let NOW=0;
 
-/* ---------- stage 1: eggs ---------- */
+/* ---------- stage 1: eggs（v1.18.0：改成真實手勢，敲蛋＋傾斜蛋殼分蛋，不限時） ---------- */
 const eggs={
-  key:'eggs',name:'分蛋',hint:'光標到綠區正中間時點一下',
-  intro:'蛋白待會要打發，蛋黃一點都不能混進去。光標滑到綠區正中間時點一下，把蛋敲開。共三顆，一顆比一顆快。',
-  speeds:[.85,1.2,1.6],ok:[.17,.13,.10],pf:[.055,.045,.035],
-  init(){const k=S.cond==='big'?1.2:1;this.ok=[.17,.13,.10].map(x=>x*k);this.pf=[.055,.045,.035].map(x=>x*k);this.st={n:0,p:.03,dir:1,phase:'aim',t:0,res:[],whites:0,yolks:[],streaks:[],cur:null,done:false};},
-  controls(){return[{label:'敲蛋',onTap:()=>this.tap()}];},
-  down(){this.tap();},
-  key_(k){if(k===' '||k==='Enter')this.tap();},
-  tap(){
-    const st=this.st;if(!running||st.phase!=='aim'||st.done)return;gsfx('crack');
-    const d=Math.abs(st.p-.5),i=st.n;let r;
-    if(d<this.pf[i])r={kind:'clean',pts:100};else if(d<this.ok[i])r={kind:'speck',pts:72};else r={kind:'broken',pts:18};
-    st.res.push(r);st.cur=r;st.phase='anim';st.t=0;
-    if(r.kind==='clean'){toast('完美分離','good');buzz(15);}
-    else if(r.kind==='speck'){toast('混進一點點蛋黃');S.contam+=.15;buzz(25);}
-    else{toast('蛋黃破了！','bad');S.contam+=.45;buzz([30,40,30]);}
+  key:'eggs',name:'分蛋',hint:'按住蛋往下敲在碗邊，再左右拖曳傾斜蛋殼',
+  intro:'蛋白裡一點蛋黃都不能有。按住蛋往下敲在碗邊；打開後左右拖曳傾斜蛋殼，讓蛋白流進碗裡，蛋黃快滑出來就倒回來。共三顆，不限時間。',
+  EX:49,REST:32,HIT:65,SX:30,SY:41,R:11,
+  init(){this.lim=S.cond==='big'?1.2:1;this.st={n:0,res:[],whites:0,yolks:[],streaks:[],bits:[],done:false};this.newEgg();},
+  newEgg(){Object.assign(this.st,{phase:'crack',t:0,idle:0,ey:this.REST,grab:false,off:0,raw:this.REST,vy:0,lt:0,needLift:false,softT:-9,hard:false,kind:'clean',tilt:0,target:0,held:false,kb:false,x0:0,t0:0,yp:0,yv:0,white:1,flow:0,landed:false,side:1,dropTilt:0});},
+  controls(){return[];},
+  down(x,y){const st=this.st;st.idle=0;
+    if(st.phase==='crack'){st.grab=true;st.off=st.ey-y;st.raw=st.ey;st.vy=0;st.lt=performance.now();}
+    else if(st.phase==='sep'){st.held=true;st.kb=false;st.x0=x;st.t0=st.target;}
+  },
+  move(x,y){const st=this.st;
+    if(st.phase==='crack'&&st.grab){
+      const now=performance.now(),dtm=Math.max(.004,(now-st.lt)/1000),raw=y+st.off;
+      st.vy=st.vy*.5+((raw-st.raw)/dtm)*.5;st.raw=raw;st.lt=now;st.ey=clamp(raw,16,this.HIT);
+      if(raw>=this.HIT)this.hit(st.vy);else if(raw<this.HIT-8)st.needLift=false;
+    }else if(st.phase==='sep'&&st.held){st.target=clamp(st.t0+(x-st.x0)/26,-1.3,1.3);}
+  },
+  up(){const st=this.st;st.grab=false;st.held=false;},
+  key_(k){const st=this.st;if(!running||st.done)return;st.idle=0;
+    if(st.phase==='crack'){if(k==='ArrowDown')this.crack(false);}
+    else if(st.phase==='sep'&&(k==='ArrowLeft'||k==='ArrowRight')){st.kb=true;st.target=clamp(st.target+(k==='ArrowLeft'?-.14:.14),-1.3,1.3);}
+  },
+  hit(v){const st=this.st;if(!running||st.needLift)return;
+    if(v<22){st.needLift=true;buzz(8);if(NOW-st.softT>1.2){st.softT=NOW;toast('太輕了，再用力一點');}return;}
+    this.crack(v>380);
+  },
+  crack(hard){const st=this.st;gsfx('crack');buzz(15);st.hard=hard;st.grab=false;st.phase='open';st.t=0;st.ey=this.HIT;
+    if(hard){toast('太大力，碎殼掉進去了','bad');for(let k=0;k<2;k++)st.bits.push({x:36+Math.random()*10,y:72.5+Math.random()*3,a:Math.random()*3});}
+  },
+  endEgg(){const st=this.st;
+    let pts=st.kind==='clean'?100:st.kind==='speck'?72:18;if(st.hard)pts=Math.max(10,pts-12);
+    st.res.push({kind:st.kind,pts,hard:st.hard});st.n++;
+    if(st.n>=3){st.done=true;
+      const avg=st.res.reduce((a,r)=>a+r.pts,0)/3;
+      const nb=st.res.filter(r=>r.kind==='broken').length,ns=st.res.filter(r=>r.kind==='speck').length,nh=st.res.filter(r=>r.hard).length;
+      let note=nb?nb+' 顆蛋黃滑進蛋白裡，蛋白會很難打發':ns?'有 '+ns+' 顆混進一點蛋黃':'三顆都分得乾乾淨淨';
+      if(nh)note+='，有 '+nh+' 顆敲太大力掉了碎殼';
+      finishStage([{key:'eggs',score:avg,note}]);
+    }else this.newEgg();
   },
   update(dt){
     const st=this.st;if(st.done)return;
-    if(st.phase==='aim'){if(!running)return;
-      st.p+=st.dir*this.speeds[st.n]*dt;
-      if(st.p>1){st.p=2-st.p;st.dir=-1;}if(st.p<0){st.p=-st.p;st.dir=1;}
-    }else{
-      st.t+=dt;const r=st.cur;
-      if(st.t>=.75&&!r.landed){r.landed=true;st.whites++;
-        if(r.kind==='broken'){for(let k=0;k<3;k++)st.streaks.push({x:19+Math.random()*16,y:72.5+Math.random()*4,w:3+Math.random()*5,lw:.8+Math.random()*.8});}
-        else{st.yolks.push({x:73.5+st.yolks.length*3.6,y:79.4});if(r.kind==='speck')st.streaks.push({x:22+Math.random()*12,y:73+Math.random()*3,w:2.5,lw:.5});}
+    if(st.phase==='crack'){
+      if(!st.grab)st.ey+=(this.REST-st.ey)*Math.min(1,dt*8);
+      if(running&&!st.grab)st.idle+=dt;
+    }else if(st.phase==='open'){
+      st.t+=dt;if(st.t>=.6){st.phase='sep';st.t=0;st.idle=0;}
+    }else if(st.phase==='sep'){
+      if(!running)return;
+      if(!st.held&&!st.kb)st.target*=Math.pow(.03,dt);
+      st.tilt+=(st.target-st.tilt)*Math.min(1,dt*14);
+      st.yv+=((st.tilt/this.lim-st.yp)*38-st.yv*7)*dt;st.yp+=st.yv*dt;
+      const over=Math.abs(st.tilt)-.38;st.flow=0;
+      if(over>0&&st.white>0){const f=Math.min(st.white,over*.8*(.35+.65*st.white)*dt);st.white-=f;st.whites+=f;st.flow=1;}
+      if(Math.abs(st.tilt)<.3&&!st.held)st.idle+=dt;else st.idle=0;
+      const a=Math.abs(st.yp);
+      if(a>1.08){
+        st.kind='broken';st.side=st.yp<0?-1:1;toast('蛋黃滑進蛋白裡了','bad');buzz([30,40,30]);S.contam+=.45;
+        st.whites+=st.white;st.white=0;st.flow=0;st.phase='fall';st.t=0;st.landed=false;st.held=false;
+      }else{
+        if(a>.96&&st.kind==='clean'){st.kind='speck';toast('蛋黃擦到殼邊，混進一點點');S.contam+=.15;buzz(25);st.streaks.push({x:22+Math.random()*12,y:73+Math.random()*3,w:2.5,lw:.5});}
+        if(st.white<=.05){st.whites+=st.white;st.white=0;st.flow=0;st.phase='drop';st.t=0;st.landed=false;st.held=false;st.dropTilt=st.tilt;
+          if(st.kind==='clean'){toast('分得很乾淨','good');buzz(15);}}
       }
-      if(st.t>=1.2){st.n++;
-        if(st.n>=3){st.done=true;
-          const pts=st.res.reduce((a,r)=>a+r.pts,0)/3;
-          const nb=st.res.filter(r=>r.kind==='broken').length,ns=st.res.filter(r=>r.kind==='speck').length;
-          const note=nb?nb+' 顆蛋黃破進蛋白裡，蛋白會很難打發':ns?'有 '+ns+' 顆混進一點蛋黃':'三顆都分得乾乾淨淨';
-          finishStage([{key:'eggs',score:pts,note}]);
-        }else{st.phase='aim';st.p=Math.random()<.5?.03:.97;st.dir=st.p<.5?1:-1;}
-      }
+    }else if(st.phase==='drop'){
+      st.t+=dt;
+      if(st.t>=.85&&!st.landed){st.landed=true;st.yolks.push({x:73.5+st.yolks.length*3.6,y:79.4});}
+      if(st.t>=1.15)this.endEgg();
+    }else if(st.phase==='fall'){
+      st.t+=dt;
+      if(st.t>=.5&&!st.landed){st.landed=true;for(let k=0;k<3;k++)st.streaks.push({x:19+Math.random()*16,y:72.5+Math.random()*4,w:3+Math.random()*5,lw:.8+Math.random()*.8});}
+      if(st.t>=.95)this.endEgg();
     }
   },
+  /* 半個蛋殼（剖面）：裡面看得到蛋白和蛋黃。yolk 為 null 時不畫蛋黃 */
+  drawCup(c,x,y,tilt,white,yp){
+    const R=this.R;
+    c.save();c.translate(x,y);c.rotate(tilt);
+    const path=()=>{c.beginPath();c.moveTo(-R,0);for(let i=1;i<=6;i++)c.lineTo(-R+i*(R/3),i===6?0:(i%2?-.13*R:.1*R));c.ellipse(0,0,R,R*1.08,0,0,Math.PI);c.closePath();};
+    path();c.fillStyle='#FBF3E2';c.fill();
+    if(white>0){c.save();path();c.clip();c.rotate(-tilt);
+      const ly=R*(1.02-.9*white);c.fillStyle='rgba(250,253,254,.92)';c.fillRect(-R*2,ly,R*4,R*3);
+      c.beginPath();c.moveTo(-R*2,ly);c.lineTo(R*2,ly);c.lineWidth=.35;c.strokeStyle='rgba(130,150,160,.7)';c.stroke();c.restore();}
+    if(yp!=null){const yx=yp*R*.66,yy=R*(.52-.44*Math.min(1.2,yp*yp)),yr=R*.4;
+      ell(c,yx,yy,yr,yr*.92,C.yolk,OUT,.45);ell(c,yx-yr*.32,yy-yr*.3,yr*.26,yr*.18,C.yolkHi);}
+    path();c.lineWidth=1.7;c.strokeStyle=C.shell;c.stroke();path();c.lineWidth=.5;c.strokeStyle=OUT;c.stroke();
+    c.restore();
+  },
+  /* 蛋殼較低那一側的邊緣（蛋白從這裡流下去） */
+  lip(x,y,tilt){const s=tilt<0?-1:1;return{x:x+Math.cos(tilt)*this.R*s,y:y+Math.sin(tilt)*this.R*s};},
   draw(c){
-    const st=this.st,i=Math.min(st.n,2);
+    const st=this.st;
     for(let k=0;k<3;k++){const x=42+k*8,y=7,r=st.res[k];
       c.globalAlpha=r?.35:1;drawEgg(c,x,y,1.9,0);c.globalAlpha=1;
       if(r)ell(c,x,y+4.3,.95,.95,r.kind==='clean'?P.good:r.kind==='speck'?P.yolk:P.bad);
       else if(k===st.n)ell(c,x,y+4.3,.95,.95,null,P.ink,.4);}
     drawBowl(c,30,74,21,15,()=>{
-      const lv=st.whites/3;
+      const lv=clamp(st.whites/3,0,1);
       if(lv>0)ell(c,30,74.8,18*Math.sqrt(lv)+1,4.2*Math.sqrt(lv)+.4,'#FAFDFE','rgba(130,150,160,.6)',.4);
       st.streaks.forEach(s=>{c.beginPath();c.moveTo(s.x,s.y);c.quadraticCurveTo(s.x+s.w*.5,s.y-1.2,s.x+s.w,s.y+.4);c.lineWidth=s.lw;c.strokeStyle=C.yolk;c.stroke();});
+      st.bits.forEach(b=>{c.save();c.translate(b.x,b.y);c.rotate(b.a);c.beginPath();c.moveTo(-.9,.4);c.lineTo(0,-.7);c.lineTo(1,.5);c.closePath();fs(c,C.shell,OUT,.3);c.restore();});
     });
     drawBowl(c,77,79,12,8,()=>{st.yolks.forEach(y=>{ell(c,y.x,y.y,2.2,1.6,C.yolk,OUT,.4);ell(c,y.x-.7,y.y-.5,.6,.4,C.yolkHi);});});
     txt(c,'蛋白',30,93,3.4,P.inkSoft);txt(c,'蛋黃',77,93,3.4,P.inkSoft);
     if(st.done)return;
-    if(st.phase==='aim'){
-      const sw=st.p-.5;drawEgg(c,50+sw*10,29,7,sw*.5);
-      const bx=14,bw=72,by=46,bh=5;
-      rr(c,bx,by,bw,bh,2.5);fs(c,P.track);
-      c.save();rr(c,bx,by,bw,bh,2.5);c.clip();
-      c.fillStyle=rgba(P.good,.35);c.fillRect(bx+bw*(.5-this.ok[i]),by,bw*this.ok[i]*2,bh);
-      c.fillStyle=P.good;c.fillRect(bx+bw*(.5-this.pf[i]),by,bw*this.pf[i]*2,bh);c.restore();
-      rr(c,bx,by,bw,bh,2.5);fs(c,null,P.ink,.5);
-      const mx=bx+bw*st.p;c.beginPath();c.moveTo(mx,by-.5);c.lineTo(mx-2.1,by-3.6);c.lineTo(mx+2.1,by-3.6);c.closePath();fs(c,P.ink);
-      c.fillStyle=P.ink;c.fillRect(mx-.35,by,.7,bh);
-    }else{
-      const t=st.t,r=st.cur;
-      if(t<.18){const sh=Math.sin(t*90)*.8;drawEgg(c,50+sh,29,7,0);
-        c.beginPath();c.moveTo(43.5+sh,29);for(let k=1;k<=6;k++)c.lineTo(43.5+sh+k*2.2,29+(k%2?-1:1));c.lineWidth=.5;c.strokeStyle=OUT;c.stroke();}
-      else{const k=clamp((t-.18)/.5,0,1);c.globalAlpha=1-smooth(.7,1.15,t);
-        drawEgg(c,50-k*7,29-k*2,7,-k*.7,'L');drawEgg(c,50+k*7,29-k*2,7,k*.7,'R');c.globalAlpha=1;
-        if(!r.landed){const g=Math.pow(clamp((t-.18)/.57,0,1),2);
-          ell(c,lerp(50,30,g),lerp(33,72,g),4-g,3+g*1.6,'#FAFDFE','rgba(130,150,160,.7)',.4);
-          const tx=r.kind==='broken'?31:73.5+st.yolks.length*3.6,ty=r.kind==='broken'?72:78.5;
-          const yx=lerp(50,tx,g),yy=lerp(32,ty,g);ell(c,yx,yy,2.5,2.3,C.yolk,OUT,.45);ell(c,yx-.8,yy-.7,.7,.5,C.yolkHi);}
-      }
+    const pulse=.55+.45*Math.sin(NOW*5);
+    if(st.phase==='crack'){
+      drawEgg(c,this.EX,st.ey,8,.12);
+      if(running&&st.idle>1.5){c.globalAlpha=pulse;
+        c.beginPath();c.moveTo(this.EX+12,40);c.lineTo(this.EX+12,58);c.moveTo(this.EX+9.5,54.5);c.lineTo(this.EX+12,58);c.lineTo(this.EX+14.5,54.5);c.lineWidth=.9;c.strokeStyle=P.ink;c.stroke();
+        txt(c,'按住蛋，往下敲在碗邊',50,19,4.4,P.ink);c.globalAlpha=1;}
+    }else if(st.phase==='open'){
+      const t=st.t;
+      if(t<.15){const sh=Math.sin(t*90)*.8;drawEgg(c,this.EX+sh,this.HIT,8,.12);
+        c.beginPath();c.moveTo(this.EX-7.5+sh,this.HIT);for(let k=1;k<=6;k++)c.lineTo(this.EX-7.5+sh+k*2.5,this.HIT+(k%2?-1:1));c.lineWidth=.5;c.strokeStyle=OUT;c.stroke();}
+      else{const k=smooth(.15,.6,t);
+        c.globalAlpha=1-k;drawEgg(c,this.EX+k*16,this.HIT-k*20,8,.12+k*1.2,'R');c.globalAlpha=1;
+        this.drawCup(c,lerp(this.EX,this.SX,k),lerp(this.HIT,this.SY,k),0,1,0);}
+    }else if(st.phase==='sep'){
+      if(st.flow){const p=this.lip(this.SX,this.SY,st.tilt),w=.7+.9*clamp(Math.abs(st.tilt)-.38,0,.6);
+        c.beginPath();c.moveTo(p.x,p.y);c.quadraticCurveTo(p.x+Math.sin(NOW*9)*.5,(p.y+73)/2,p.x*.8+6,73);
+        c.lineWidth=w+.5;c.strokeStyle='rgba(130,150,160,.6)';c.stroke();c.lineWidth=w;c.strokeStyle='#FAFDFE';c.stroke();}
+      this.drawCup(c,this.SX,this.SY,st.tilt,st.white,st.yp);
+      if(Math.abs(st.yp)>.82){c.globalAlpha=pulse;txt(c,'蛋黃要滑出來了',this.SX+4,21,4.4,P.bad);c.globalAlpha=1;}
+      else if(running&&st.idle>1.5){c.globalAlpha=pulse;
+        const ax=this.SX,ay=24;c.beginPath();c.moveTo(ax-12,ay);c.lineTo(ax+12,ay);c.moveTo(ax-8.5,ay-2.5);c.lineTo(ax-12,ay);c.lineTo(ax-8.5,ay+2.5);c.moveTo(ax+8.5,ay-2.5);c.lineTo(ax+12,ay);c.lineTo(ax+8.5,ay+2.5);c.lineWidth=.9;c.strokeStyle=P.ink;c.stroke();
+        txt(c,'左右拖曳，傾斜蛋殼',ax+6,17,4.4,P.ink);c.globalAlpha=1;}
+    }else if(st.phase==='drop'){
+      const t=st.t,k=smooth(0,.55,t),x=lerp(this.SX,66,k),y=lerp(this.SY,62,k),tilt=lerp(st.dropTilt,1.25,k);
+      const g=clamp((t-.55)/.3,0,1);
+      c.globalAlpha=1-smooth(.85,1.15,t);this.drawCup(c,x,y,tilt,0,g>0?null:lerp(st.yp,.95,k));c.globalAlpha=1;
+      if(g>0&&!st.landed){const p=this.lip(x,y,tilt),tx=73.5+st.yolks.length*3.6,q=g*g;
+        const yx=lerp(p.x,tx,q),yy=lerp(p.y-1,78.5,q);ell(c,yx,yy,2.6,2.4,C.yolk,OUT,.45);ell(c,yx-.8,yy-.7,.7,.5,C.yolkHi);}
+    }else if(st.phase==='fall'){
+      const t=st.t,g=Math.pow(clamp(t/.5,0,1),2),p=this.lip(this.SX,this.SY,st.tilt);
+      c.globalAlpha=1-smooth(.5,.95,t);this.drawCup(c,this.SX,this.SY,st.tilt,0,null);c.globalAlpha=1;
+      if(!st.landed){const yx=lerp(p.x,31,g),yy=lerp(p.y,72,g);ell(c,yx,yy,3.4,3.1,C.yolk,OUT,.45);ell(c,yx-1,yy-.9,.9,.6,C.yolkHi);}
     }
   }
 };
@@ -511,41 +576,71 @@ const base={
   }
 };
 
-/* ---------- stage 3: whip ---------- */
+/* ---------- stage 3: whip（v1.18.0：拿掉進度條，放開手指拉起打蛋器看尖角，不限時） ---------- */
 const whip={
-  key:'whip',name:'打發蛋白',hint:'在碗上快速來回刷，到綠區按停',
-  intro:'手指在碗上快速來回刷，把蛋白打發。打到「硬性發泡」綠區時按停。打過頭，蛋白霜會變粗、出水。',
-  init(){this.st={v:0,time:0,cap:clamp(100-S.contam*45,30,100),active:false,px:50,py:44,lx:0,ly:0,acc:0,queue:0,wx:50,wy:44,rot:0,vx:0,idle:0,zone:0,capWarned:false,done:false,grain:seeded(60,11)};},
-  controls(){return[{label:'停，就這樣',onTap:()=>this.stop()}];},
-  down(x,y){const st=this.st;st.active=true;st.px=st.lx=x;st.py=st.ly=y;},
-  move(x,y){const st=this.st;if(!st.active)return;const dx=x-st.lx,dy=y-st.ly;st.acc+=Math.hypot(dx,dy);st.vx=dx;st.lx=x;st.ly=y;st.px=x;st.py=y;},
-  up(){this.st.active=false;},
-  key_(k){if(k==='ArrowLeft'||k==='ArrowRight'){this.st.queue+=16;this.st.vx=k==='ArrowLeft'?-3:3;}},
+  key:'whip',name:'打發蛋白',hint:'在碗裡快速來回攪打，放開手指拉起來看尖角',
+  intro:'在碗裡快速來回攪打。沒有進度條：放開手指，打蛋器會拉起來，尖角彎下來要再打，尖角挺立就按「打好了」。打過頭會變粗。不限時間。',
+  init(){this.st={v:0,cap:clamp(100-S.contam*45,30,100),active:false,px:50,py:48,lx:0,ly:0,acc:0,queue:0,wx:50,wy:48,rot:0,vx:0,idle:0,lift:0,lifted:false,capWarned:false,done:false,grain:seeded(60,11)};},
+  controls(){return[{label:'打好了',onTap:()=>this.stop()}];},
+  zoneOf(v){const FZ=FLV().zone;return v<35?0:v<FZ[0]?1:v<=FZ[1]?2:3;},
+  down(x,y){const st=this.st;st.active=true;st.lifted=false;st.px=st.lx=x;st.py=st.ly=y;},
+  move(x,y){const st=this.st;if(!st.active)return;const dx=x-st.lx,dy=y-st.ly;if(y>38)st.acc+=Math.hypot(dx,dy);st.vx=dx;st.lx=x;st.ly=y;st.px=x;st.py=y;},
+  up(){const st=this.st;if(st.active&&running&&!st.done)st.lifted=true;st.active=false;},
+  key_(k){const st=this.st;if(k==='ArrowLeft'||k==='ArrowRight'){st.lifted=false;st.queue+=16;st.vx=k==='ArrowLeft'?-3:3;}else if(k==='ArrowUp')st.lifted=true;},
   update(dt){
-    const st=this.st;
+    const st=this.st,up=st.lifted&&!st.active;
+    st.lift+=((up?1:0)-st.lift)*Math.min(1,dt*(up?6:14));
     if(st.active){st.wx+=(st.px-st.wx)*Math.min(1,dt*25);st.wy+=(st.py-st.wy)*Math.min(1,dt*25);}
-    else{st.wx+=(50+Math.sin(NOW*1.5)*6-st.wx)*Math.min(1,dt*3);st.wy+=(44-st.wy)*Math.min(1,dt*3);}
+    else if(up){st.wx+=(50-st.wx)*Math.min(1,dt*6);st.wy+=(48-st.wy)*Math.min(1,dt*6);}
+    else{st.wx+=(50+Math.sin(NOW*1.5)*6-st.wx)*Math.min(1,dt*3);st.wy+=(48-st.wy)*Math.min(1,dt*3);}
     st.rot+=(clamp(st.vx*.12,-.6,.6)-st.rot)*Math.min(1,dt*10);st.vx*=Math.pow(.02,dt);
     if(st.done||!running){st.acc=0;st.queue=0;return;}
-    st.time+=dt;
     const q=Math.min(st.queue,300*dt);st.queue-=q;
     const travel=Math.min(st.acc+q,420*dt);st.acc=0;
-    if(travel>.05)st.idle=0;else st.idle+=dt;
+    if(travel>.05||up)st.idle=0;else st.idle+=dt;
     let gain=travel*.024*(S.cond==='humid'?.75:1);
     if(st.v>st.cap-8)gain*=clamp((st.cap-st.v)/8,0,1);
     st.v+=gain;
-    const FZ=FLV().zone,z=st.v<35?0:st.v<FZ[0]?1:st.v<FZ[1]?2:3;
-    if(z>st.zone){st.zone=z;toast(['','濕性發泡了','硬性發泡！可以停了','打過頭了'][z],z===2?'good':z===3?'bad':'');if(z===2)buzz(20);}
     if(!st.capWarned&&st.cap<85&&st.v>st.cap-2){st.capWarned=true;toast('蛋黃讓蛋白打不上去了','bad');}
-    if(st.time>=30){toast('時間到');this.stop();}
   },
   stop(){
-    const st=this.st;if(!running||st.done)return;st.done=true;st.active=false;
+    const st=this.st;if(!running||st.done)return;st.done=true;st.active=false;st.lifted=true;
     const v=st.v;let score;
     if(v>=FLV().zone[0]&&v<=FLV().zone[1])score=100-Math.abs(v-(FLV().zone[0]+FLV().zone[1])/2)*2;else if(v>FLV().zone[1])score=Math.max(10,75-(v-FLV().zone[1])*4);else if(v>=45)score=30+(v-45)*2.2;else score=v*.66;
     let note=v>FLV().zone[1]?'打過頭，蛋白霜變得粗糙分離':v>=FLV().zone[0]?'硬性發泡，尖角挺立':v>=45?'只到濕性發泡，撐不太起來':'蛋白幾乎沒打發';
     if(st.cap<85)note+='，蛋黃混入也拖累了蛋白';
+    toast(v>FLV().zone[1]?'打過頭了':v>=FLV().zone[0]?'硬性發泡，剛剛好':'還不夠挺',v>=FLV().zone[0]&&v<=FLV().zone[1]?'good':'bad');
     finishStage([{key:'whip',score,note}]);
+  },
+  /* 打蛋器倒過來（頭朝上）時，頭上那一坨蛋白霜的樣子。(x,y) 是打蛋器頭的頂端 */
+  drawPeak(c,x,y,z,v){
+    const st=this.st,FZ=FLV().zone,white=z===3?'#F3EFE0':'#FFFFFF';
+    if(z===0){
+      const k=clamp(v/35,0,1);
+      c.beginPath();c.moveTo(x-3.6,y+5);c.quadraticCurveTo(x,y-1-k*1.5,x+3.6,y+5);c.quadraticCurveTo(x,y+7,x-3.6,y+5);fs(c,'rgba(250,253,254,.9)','rgba(130,150,160,.7)',.4);
+      for(let i=0;i<3;i++){const ph=(NOW*.9+i*.37)%1,dx=[-3.2,3.4,.4][i];c.globalAlpha=1-ph;ell(c,x+dx,y+7+ph*16,.9,1.3+ph*.6,'#FAFDFE','rgba(110,130,140,.85)',.35);}c.globalAlpha=1;
+      return;
+    }
+    if(z===1){
+      const k=clamp((v-35)/(FZ[0]-35),0,1),h=6+k*5,bend=7-k*3.5;
+      c.beginPath();c.moveTo(x-4.4,y+5.5);c.bezierCurveTo(x-4.2,y-1,x-1.6,y-h*.6,x-.2,y-h);
+      c.bezierCurveTo(x+1.5,y-h-2.2,x+bend,y-h-1,x+bend+.6,y-h+3.4);
+      c.bezierCurveTo(x+bend-1.4,y-h+1,x+2.6,y-h+1.6,x+3,y-1);c.bezierCurveTo(x+3.6,y+2,x+4.4,y+3.5,x+4.4,y+5.5);
+      c.quadraticCurveTo(x,y+7.5,x-4.4,y+5.5);fs(c,white,OUT,.55);
+      return;
+    }
+    if(z===2){
+      const h=13.5;
+      c.beginPath();c.moveTo(x-4.5,y+5.5);c.bezierCurveTo(x-4.4,y-.5,x-1.5,y-h*.55,x+.2,y-h);
+      c.bezierCurveTo(x+1.3,y-h*.55,x+4.4,y-.5,x+4.5,y+5.5);c.quadraticCurveTo(x,y+7.5,x-4.5,y+5.5);fs(c,white,OUT,.55);
+      c.beginPath();c.moveTo(x-1.6,y-2);c.quadraticCurveTo(x-.9,y-6,x-.1,y-9.5);c.lineWidth=.35;c.strokeStyle='rgba(130,150,160,.6)';c.stroke();
+      return;
+    }
+    const g=st.grain;c.beginPath();c.moveTo(x-5,y+5.5);
+    for(let i=0;i<=10;i++){const u=i/10,a=Math.PI*(1-u),rx=5+g[i]*1.2,ry=7.5+g[i+11]*3.2;c.lineTo(x+Math.cos(a)*rx,y+5.5-Math.sin(a)*ry*(.75+.25*Math.sin(u*Math.PI)));}
+    c.quadraticCurveTo(x,y+7.5,x-5,y+5.5);fs(c,white,OUT,.55);
+    c.fillStyle='rgba(150,130,90,.6)';for(let i=0;i<14;i++){c.beginPath();c.arc(x-3.6+g[i+22]*7.2,y+3.5-g[i+36]*7,.34,0,Math.PI*2);c.fill();}
+    for(let i=0;i<2;i++){const ph=(NOW*.6+i*.5)%1;c.globalAlpha=1-ph;ell(c,x+(i?4.6:-4.2),y+7+ph*14,.55,.9,'#DDE9EE','rgba(130,150,160,.7)',.3);}c.globalAlpha=1;
   },
   draw(c){
     const st=this.st,v=st.v,bx=50,by=56,r=36,d=24;
@@ -567,17 +662,14 @@ const whip={
       c.beginPath();pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.lineWidth=.6;c.strokeStyle=OUT;c.stroke();
       if(v>85){c.fillStyle='rgba(150,130,90,.55)';for(let k=0;k<40;k++){const u=st.grain[k],w=st.grain[(k+17)%60];const x=bx-half*.8+u*half*1.6;const xn=(x-bx)/half;const top=by+1.5-hgt*Math.pow(Math.max(0,1-xn*xn),.7);c.beginPath();c.arc(x,lerp(top+1,by+.5,w),.32,0,Math.PI*2);c.fill();}}
     }
-    drawWhisk(c,st.wx,st.wy-6,st.rot);
-    const mx=8,mw=84,my=91,mh=4;
-    c.save();rr(c,mx,my,mw,mh,2);c.clip();
-    c.fillStyle=P.track;c.fillRect(mx,my,mw,mh);const FZ=FLV().zone;c.fillStyle=rgba(P.yolk,.45);c.fillRect(mx+mw*.35,my,mw*(FZ[0]/100-.35),mh);
-    c.fillStyle=P.good;c.fillRect(mx+mw*FZ[0]/100,my,mw*(FZ[1]-FZ[0])/100,mh);c.fillStyle=P.bad;c.fillRect(mx+mw*FZ[1]/100,my,mw*(1-FZ[1]/100),mh);c.restore();
-    rr(c,mx,my,mw,mh,2);fs(c,null,P.ink,.45);
-    txt(c,'起泡',mx+mw*.175,87,3,P.inkSoft);txt(c,'濕性發泡',mx+mw*.5,87,3,P.inkSoft);txt(c,'硬性發泡',mx+mw*.75,87,3,P.ink);txt(c,'過頭',mx+mw*.925,87,3,P.inkSoft);
-    if(st.cap<100){const cx=mx+mw*st.cap/100;c.setLineDash([.8,.8]);c.beginPath();c.moveTo(cx,my-1.2);c.lineTo(cx,my+mh+1.2);c.lineWidth=.5;c.strokeStyle=P.bad;c.stroke();c.setLineDash([]);}
-    const vx=mx+mw*clamp(v,0,100)/100;c.beginPath();c.moveTo(vx,my+mh+.4);c.lineTo(vx-1.8,my+mh+3.2);c.lineTo(vx+1.8,my+mh+3.2);c.closePath();fs(c,P.ink);
-    c.fillStyle=P.ink;c.fillRect(vx-.35,my-.6,.7,mh+1.2);
-    if(running&&!st.done&&st.idle>1.2){c.globalAlpha=.55+.45*Math.sin(NOW*5);txt(c,'在碗上快速來回刷',50,14,4,P.ink);c.globalAlpha=1;}
+    /* 拉起來：打蛋器升高並倒過來，頭上帶著一坨蛋白霜 */
+    const L=st.lift,e=L*L*(3-2*L),wx=lerp(st.wx,50,e),wy=lerp(st.wy-6,25,e),rot=lerp(st.rot,Math.PI,e);
+    if(e>.7){c.globalAlpha=clamp((e-.7)/.25,0,1);this.drawPeak(c,wx,wy-8,this.zoneOf(v),v);c.globalAlpha=1;}
+    drawWhisk(c,wx,wy,rot);
+    if(e>.85){
+      const z=this.zoneOf(v),s=['還是液體，會滴下來','濕性發泡：尖角彎下來，再打一下','硬性發泡：尖角挺立','打過頭：變粗、出水'][z];
+      c.globalAlpha=clamp((e-.85)/.12,0,1);txt(c,s,50,93,4.4,z===2?P.good:z===3?P.bad:P.ink);c.globalAlpha=1;
+    }else if(running&&!st.done&&st.idle>1.5){c.globalAlpha=.55+.45*Math.sin(NOW*5);txt(c,'在碗裡快速來回攪打',50,93,4.4,P.ink);c.globalAlpha=1;}
   }
 };
 
@@ -910,8 +1002,8 @@ let ptrDown=false;cv.addEventListener('pointerdown',()=>{ptrDown=true;});['point
 function soundTick(){
   const on=screen==='game'&&cur&&running,k=cur&&cur.key,st=cur&&cur.st||{};
   gl('boil',!!(on&&k==='base'&&st.holding));
-  gl('stir',!!(on&&(k==='whip'||k==='fold')&&ptrDown));
-  gl('pour',!!(on&&k==='fill'&&(st.holding||st.pending>.05)));
+  gl('stir',!!(on&&(k==='whip'||k==='fold')&&ptrDown&&!(k==='whip'&&st.py<38)));
+  gl('pour',!!(on&&((k==='fill'&&(st.holding||st.pending>.05))||(k==='eggs'&&st.flow))));
   gl('oven',!!(on&&k==='bake'&&st.phase==='bake'));
 }
 function loop(now){
